@@ -1,0 +1,412 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+<link href="coqdoc.css" rel="stylesheet" type="text/css"/>
+<title>GenTacs</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library GenTacs</h1>
+
+<div class="code">
+
+<br/>
+</div>
+
+<div class="doc">
+This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
+School of Computer Science and Statistics, Trinity College, Dublin, Ireland.
+<div class="paragraph"> </div>
+
+ This file contains generic tactics for making the proofs more concise. Some of these
+are truly generic e.g. eliminating conjunctions, others are more speicialised for this
+development.
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+<span class="id" type="keyword">Require</span> <span class="id" type="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Arith.Arith.html#"><span class="id" type="library">Arith</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Turn a &lt; into a &lt;=.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">ltToLe</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Peano.html#le_S"><span class="id" type="constructor">le_S</span></a> <span class="id" type="keyword">in</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">apply</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Arith.Le.html#le_S_n"><span class="id" type="lemma">le_S_n</span></a> <span class="id" type="keyword">in</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Adds H to the context.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">addHyp</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">generalize</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">intro</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Adds H to the context as Q
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">addHypAs</span> <span class="id" type="var">H</span> <span class="id" type="var">Q</span> := <span class="id" type="tactic">generalize</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">intro</span> <span class="id" type="var">Q</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Inverts and then clears a hypothesis.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">invertClear</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">inversion</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">swap</span> <span class="id" type="var">A</span> <span class="id" type="var">B</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">rename</span> <span class="id" type="var">A</span> <span class="id" type="var">into</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">rename</span> <span class="id" type="var">B</span> <span class="id" type="var">into</span> <span class="id" type="var">A</span>; <span class="id" type="tactic">rename</span> <span class="id" type="var">H</span> <span class="id" type="var">into</span> <span class="id" type="var">B</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">introz</span> <span class="id" type="var">U</span> := <span class="id" type="tactic">repeat</span> <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">intro</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">appDisj</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">destruct</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">try</span> <span class="id" type="tactic">apply</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">doappsnd</span> <span class="id" type="var">t</span> <span class="id" type="var">H</span> := <span class="id" type="var">t</span>;[ | <span class="id" type="tactic">apply</span> <span class="id" type="var">H</span>].<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+If the hypothesis in question is invertible into exactly one other hypothesis, then
+this tactic changes the current hypothesis to the inverted hypothesis. It does this by a
+regular inversion, then a clear, then a rename.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">invertChange</span> <span class="id" type="var">H</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">IVC</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">inversion</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">IVC</span>];<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">rename</span> <span class="id" type="var">IVC</span> <span class="id" type="var">into</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">unwrap_apply2</span> <span class="id" type="var">d</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">x</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">y</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="tactic">destruct</span> <span class="id" type="var">d</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">x</span> <span class="id" type="var">y</span>]; <span class="id" type="tactic">apply</span> <span class="id" type="var">y</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">unwrap2_apply2</span> <span class="id" type="var">d</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">x</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">destruct</span> <span class="id" type="var">d</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">x</span>];<br/>
+&nbsp;&nbsp;<span class="id" type="var">unwrap_apply2</span> <span class="id" type="var">x</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x</span> <span class="id" type="var">y</span> := <span class="id" type="tactic">first</span> [<span class="id" type="var">is_evar</span> <span class="id" type="var">x</span> |<br/>
+&nbsp;&nbsp;(<span class="id" type="tactic">replace</span> <span class="id" type="var">x</span> <span class="id" type="keyword">with</span> <span class="id" type="var">y</span>; [ |<span class="id" type="tactic">try</span> <span class="id" type="tactic">reflexivity</span>])].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">my_applys_eq1</span> <span class="id" type="var">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;| [ |- ?<span class="id" type="var">F</span> ?<span class="id" type="var">x1</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">H</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (?<span class="id" type="var">G</span> ?<span class="id" type="var">y1</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x1</span> <span class="id" type="var">y1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">end</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="tactic">apply</span> <span class="id" type="var">H</span> |..]<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">my_applys_eq2</span> <span class="id" type="var">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;| [ |- ?<span class="id" type="var">F</span> ?<span class="id" type="var">x1</span> ?<span class="id" type="var">x2</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">H</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (?<span class="id" type="var">G</span> ?<span class="id" type="var">y1</span> ?<span class="id" type="var">y2</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x1</span> <span class="id" type="var">y1</span>; [<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x2</span> <span class="id" type="var">y2</span> | ..]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">end</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="tactic">apply</span> <span class="id" type="var">H</span> |..]<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">my_applys_eq3</span> <span class="id" type="var">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;| [ |- ?<span class="id" type="var">F</span> ?<span class="id" type="var">x1</span> ?<span class="id" type="var">x2</span> ?<span class="id" type="var">x3</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">H</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (?<span class="id" type="var">G</span> ?<span class="id" type="var">y1</span> ?<span class="id" type="var">y2</span> ?<span class="id" type="var">y3</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x1</span> <span class="id" type="var">y1</span>; [<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x2</span> <span class="id" type="var">y2</span> | ..];<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x3</span> <span class="id" type="var">y3</span> | ..]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">end</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="tactic">apply</span> <span class="id" type="var">H</span> |..]<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">my_applys_eq4</span> <span class="id" type="var">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;| [ |- ?<span class="id" type="var">F</span> ?<span class="id" type="var">x1</span> ?<span class="id" type="var">x2</span> ?<span class="id" type="var">x3</span> ?<span class="id" type="var">x4</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">H</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (?<span class="id" type="var">G</span> ?<span class="id" type="var">y1</span> ?<span class="id" type="var">y2</span> ?<span class="id" type="var">y3</span> ?<span class="id" type="var">y4</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x1</span> <span class="id" type="var">y1</span>; [<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x2</span> <span class="id" type="var">y2</span> | ..];<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x3</span> <span class="id" type="var">y3</span> | ..]; [<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x4</span> <span class="id" type="var">y4</span> | ..]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">end</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="tactic">apply</span> <span class="id" type="var">H</span> |..]<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">my_applys_eq5</span> <span class="id" type="var">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;| [ |- ?<span class="id" type="var">F</span> ?<span class="id" type="var">x1</span> ?<span class="id" type="var">x2</span> ?<span class="id" type="var">x3</span> ?<span class="id" type="var">x4</span> ?<span class="id" type="var">x5</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">H</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (?<span class="id" type="var">G</span> ?<span class="id" type="var">y1</span> ?<span class="id" type="var">y2</span> ?<span class="id" type="var">y3</span> ?<span class="id" type="var">y4</span> ?<span class="id" type="var">y5</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x1</span> <span class="id" type="var">y1</span>; [<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x2</span> <span class="id" type="var">y2</span> | ..];<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x3</span> <span class="id" type="var">y3</span> | ..]; [<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x4</span> <span class="id" type="var">y4</span> | ..];<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="var">replace_nontriv</span> <span class="id" type="var">x5</span> <span class="id" type="var">y5</span> | ..]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">end</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id" type="tactic">apply</span> <span class="id" type="var">H</span> |..]<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">my_applys_eq</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">first</span> [<span class="id" type="var">my_applys_eq5</span> <span class="id" type="var">H</span> | <span class="id" type="var">my_applys_eq4</span> <span class="id" type="var">H</span> |<br/>
+&nbsp;&nbsp;<span class="id" type="var">my_applys_eq3</span> <span class="id" type="var">H</span> | <span class="id" type="var">my_applys_eq2</span> <span class="id" type="var">H</span> | <span class="id" type="var">my_applys_eq1</span> <span class="id" type="var">H</span>].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">invertClearAs1</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span> := <span class="id" type="tactic">inversion</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">U</span>]; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span> <span class="id" type="var">V</span> := <span class="id" type="tactic">inversion</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">U</span> <span class="id" type="var">V</span>]; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">invertClearAs3</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span> <span class="id" type="var">V</span> <span class="id" type="var">W</span> := <span class="id" type="tactic">inversion</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">U</span> <span class="id" type="var">V</span> <span class="id" type="var">W</span>]; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">invertClearAs4</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span> <span class="id" type="var">V</span> <span class="id" type="var">W</span> <span class="id" type="var">X</span> := <span class="id" type="tactic">inversion</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">U</span> <span class="id" type="var">V</span> <span class="id" type="var">W</span> <span class="id" type="var">X</span>]; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">elim_intro</span> <span class="id" type="var">H</span> <span class="id" type="var">H1</span> <span class="id" type="var">H2</span> := <span class="id" type="tactic">elim</span> <span class="id" type="var">H</span>; [<span class="id" type="tactic">intro</span> <span class="id" type="var">H1</span> | <span class="id" type="tactic">intro</span> <span class="id" type="var">H2</span>]; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompOr3</span> <span class="id" type="var">P</span> <span class="id" type="var">P1</span> <span class="id" type="var">P2</span> <span class="id" type="var">P3</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">elim_intro</span> <span class="id" type="var">P</span> <span class="id" type="var">P1</span> <span class="id" type="var">H</span>;[ |<br/>
+&nbsp;&nbsp;<span class="id" type="var">elim_intro</span> <span class="id" type="var">H</span> <span class="id" type="var">P2</span> <span class="id" type="var">P3</span>].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">elimOr2</span> <span class="id" type="var">P</span> <span class="id" type="var">U</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span> <span class="id" type="var">elim_intro</span> <span class="id" type="var">P</span> <span class="id" type="var">U1</span> <span class="id" type="var">U1</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">elimOr3</span> <span class="id" type="var">P</span> <span class="id" type="var">U</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="var">elim_intro</span> <span class="id" type="var">P</span> <span class="id" type="var">U1</span> <span class="id" type="var">H</span>;[ | <span class="id" type="var">elimOr2</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span>].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">elimOr4</span> <span class="id" type="var">P</span> <span class="id" type="var">U</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="var">elim_intro</span> <span class="id" type="var">P</span> <span class="id" type="var">U1</span> <span class="id" type="var">H</span>;[ | <span class="id" type="var">elimOr3</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span>].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">elimOr5</span> <span class="id" type="var">P</span> <span class="id" type="var">U</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="var">elim_intro</span> <span class="id" type="var">P</span> <span class="id" type="var">U1</span> <span class="id" type="var">H</span>;[ | <span class="id" type="var">elimOr4</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span>].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">elimOr6</span> <span class="id" type="var">P</span> <span class="id" type="var">U</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="var">elim_intro</span> <span class="id" type="var">P</span> <span class="id" type="var">U1</span> <span class="id" type="var">H</span>;[ | <span class="id" type="var">elimOr5</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span>].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompAnd2</span> <span class="id" type="var">H</span> <span class="id" type="var">H1</span> <span class="id" type="var">H2</span> := <span class="id" type="tactic">elim</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">intros</span> <span class="id" type="var">H1</span> <span class="id" type="var">H2</span>; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompAnd3</span> <span class="id" type="var">H</span> <span class="id" type="var">H1</span> <span class="id" type="var">H2</span> <span class="id" type="var">H3</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">Q</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">elim</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">intros</span> <span class="id" type="var">H1</span> <span class="id" type="var">Q</span>; <span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="var">decompAnd2</span> <span class="id" type="var">Q</span> <span class="id" type="var">H2</span> <span class="id" type="var">H3</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">and_flat_step</span> <span class="id" type="var">W</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">V1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">W</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">V2</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">W</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;[ <span class="id" type="var">H</span> : ?<span class="id" type="var">P</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'/\'_x"><span class="id" type="notation">/\</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'/\'_x"><span class="id" type="notation">?</span></a><span class="id" type="var">Q</span> |- <span class="id" type="var">_</span>] =&gt; <span class="id" type="var">decompAnd2</span> <span class="id" type="var">H</span> <span class="id" type="var">V1</span> <span class="id" type="var">V2</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">andflat</span> <span class="id" type="var">W</span> := <span class="id" type="tactic">repeat</span> <span class="id" type="var">and_flat_step</span> <span class="id" type="var">W</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompEx2</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">Q</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">H1</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H1</span> <span class="id" type="var">b</span> <span class="id" type="var">Q</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompEx3</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">Q</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">H1</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="var">decompEx2</span> <span class="id" type="var">H1</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">Q</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompEx4</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">Q</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">H1</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="var">decompEx3</span> <span class="id" type="var">H1</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">Q</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompEx5</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">e</span> <span class="id" type="var">Q</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">H1</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="var">decompEx4</span> <span class="id" type="var">H1</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">e</span> <span class="id" type="var">Q</span>.<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompEx6</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">e</span> <span class="id" type="var">f</span> <span class="id" type="var">Q</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">H</span> <span class="id" type="var">a</span> <span class="id" type="var">H1</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="var">decompEx5</span> <span class="id" type="var">H1</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">e</span> <span class="id" type="var">f</span> <span class="id" type="var">Q</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">dofirst2</span> <span class="id" type="var">t</span> := <span class="id" type="var">t</span>;[<span class="id" type="var">t</span> |..].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">dofirst3</span> <span class="id" type="var">t</span> := <span class="id" type="var">t</span>;[<span class="id" type="var">dofirst2</span> <span class="id" type="var">t</span> |..].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">dofirst4</span> <span class="id" type="var">t</span> := <span class="id" type="var">t</span>;[<span class="id" type="var">dofirst3</span> <span class="id" type="var">t</span> |..].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">dofirst5</span> <span class="id" type="var">t</span> := <span class="id" type="var">t</span>;[<span class="id" type="var">dofirst4</span> <span class="id" type="var">t</span> |..].<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">dofirst6</span> <span class="id" type="var">t</span> := <span class="id" type="var">t</span>;[<span class="id" type="var">dofirst5</span> <span class="id" type="var">t</span> |..].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">decompExAnd</span> <span class="id" type="var">H</span> <span class="id" type="var">x</span> <span class="id" type="var">H1</span> <span class="id" type="var">H2</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">Q</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">destruct</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">x</span> <span class="id" type="var">Q</span>]; <span class="id" type="var">decompAnd2</span> <span class="id" type="var">Q</span> <span class="id" type="var">H1</span> <span class="id" type="var">H2</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">unfold_somewhere</span> <span class="id" type="var">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">first</span> [<span class="id" type="tactic">progress</span> <span class="id" type="tactic">unfold</span> <span class="id" type="var">f</span> |<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span> [<span class="id" type="var">U</span> : <span class="id" type="keyword">context</span>[<span class="id" type="var">f</span>] |- <span class="id" type="var">_</span>] =&gt;<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">unfold</span> <span class="id" type="var">f</span> <span class="id" type="keyword">in</span> <span class="id" type="var">U</span> <span class="id" type="keyword">end</span>].<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Used to solve the goal which is an inequality between two objects.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">neq_inversion</span> := <span class="id" type="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#not"><span class="id" type="definition">not</span></a>; <span class="id" type="keyword">let</span> <span class="id" type="var">Q</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="tactic">intro</span> <span class="id" type="var">Q</span>; <span class="id" type="tactic">inversion</span> <span class="id" type="var">Q</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">eassertArg</span> <span class="id" type="var">Y</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">P</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="tactic">evar</span> (<span class="id" type="var">P</span>:<span class="id" type="keyword">Prop</span>); <span class="id" type="tactic">assert</span> <span class="id" type="var">P</span> <span class="id" type="keyword">as</span> <span class="id" type="var">Y</span>;[<span class="id" type="tactic">unfold</span> <span class="id" type="var">P</span>; <span class="id" type="tactic">clear</span> <span class="id" type="var">P</span><br/>
+&nbsp;&nbsp;| <span class="id" type="tactic">unfold</span> <span class="id" type="var">P</span> <span class="id" type="keyword">in</span> <span class="id" type="var">Y</span>; <span class="id" type="tactic">clear</span> <span class="id" type="var">P</span>].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">eassert</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="var">eassertArg</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Tactic Notation</span> "eassert" "as" <span class="id" type="var">ident</span>(<span class="id" type="var">Y</span>) := <span class="id" type="var">eassertArg</span> <span class="id" type="var">Y</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">genDep2</span> <span class="id" type="var">x1</span> <span class="id" type="var">x2</span> := <span class="id" type="tactic">generalize</span> <span class="id" type="tactic">dependent</span> <span class="id" type="var">x1</span>; <span class="id" type="tactic">generalize</span> <span class="id" type="tactic">dependent</span> <span class="id" type="var">x2</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">genDep3</span> <span class="id" type="var">x1</span> <span class="id" type="var">x2</span> <span class="id" type="var">x3</span> := <span class="id" type="var">genDep2</span> <span class="id" type="var">x1</span> <span class="id" type="var">x2</span>; <span class="id" type="tactic">generalize</span> <span class="id" type="tactic">dependent</span> <span class="id" type="var">x3</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">genDep4</span> <span class="id" type="var">x1</span> <span class="id" type="var">x2</span> <span class="id" type="var">x3</span> <span class="id" type="var">x4</span>:= <span class="id" type="var">genDep3</span> <span class="id" type="var">x1</span> <span class="id" type="var">x2</span> <span class="id" type="var">x3</span>; <span class="id" type="tactic">generalize</span> <span class="id" type="tactic">dependent</span> <span class="id" type="var">x4</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">genDep5</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span> <span class="id" type="var">e</span> := <span class="id" type="var">genDep4</span> <span class="id" type="var">a</span> <span class="id" type="var">b</span> <span class="id" type="var">c</span> <span class="id" type="var">d</span>; <span class="id" type="tactic">generalize</span> <span class="id" type="tactic">dependent</span> <span class="id" type="var">e</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">uncurry_aux</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">intro</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">intros</span>; <span class="id" type="tactic">apply</span> <span class="id" type="var">H</span>;<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">repeat</span> (<span class="id" type="tactic">split</span>;[<span class="id" type="tactic">assumption</span> | ]); <span class="id" type="tactic">assumption</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">uncurry_step</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">H</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;| [ |- ?<span class="id" type="var">P1</span> -&gt; ?<span class="id" type="var">P2</span> -&gt; ?<span class="id" type="var">Q</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" type="tactic">cut</span> (<span class="id" type="var">P1</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'/\'_x"><span class="id" type="notation">/\</span></a> <span class="id" type="var">P2</span> -&gt; <span class="id" type="var">Q</span>); [<span class="id" type="var">uncurry_aux</span> <span class="id" type="var">H</span> | ]<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">uncurry</span> := <span class="id" type="tactic">repeat</span> <span class="id" type="var">uncurry_step</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">eexists_safe</span> := <span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span> [ |- <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#ex"><span class="id" type="inductive">ex</span></a> <span class="id" type="var">_</span>] =&gt; <span class="id" type="tactic">eexists</span> <span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">name_evars</span> := <span class="id" type="tactic">repeat</span> <span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span> |- <span class="id" type="keyword">context</span>[?<span class="id" type="var">V</span>] =&gt; <span class="id" type="var">is_evar</span> <span class="id" type="var">V</span>; <span class="id" type="tactic">set</span> <span class="id" type="var">V</span> <span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">constructor_rep</span> := <span class="id" type="tactic">first</span> [<span class="id" type="tactic">solve</span> [<span class="id" type="tactic">constructor</span>] |<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">constructor</span> (<span class="id" type="var">constructor_rep</span>)].<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">econstructor_rep</span> := <span class="id" type="tactic">first</span> [<span class="id" type="tactic">solve</span> [<span class="id" type="tactic">econstructor</span>] |<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">econstructor</span> (<span class="id" type="var">constructor_rep</span>)].<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Given an equality U : a = b, this tactic first tries to rewrite U
+in the goal, then if this does not work rewrites it in a hypothesis.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">subst_once</span> <span class="id" type="var">U</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">first</span> [<span class="id" type="tactic">rewrite</span> <span class="id" type="var">U</span> |<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">U</span> <span class="id" type="keyword">with</span> ?<span class="id" type="var">a</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'='_x"><span class="id" type="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'='_x"><span class="id" type="notation">?</span></a><span class="id" type="var">b</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span> [<span class="id" type="var">U1</span> : <span class="id" type="keyword">context</span>[<span class="id" type="var">a</span>] |- <span class="id" type="var">_</span>] =&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" type="tactic">rewrite</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span> <span class="id" type="var">U1</span><br/>
+&nbsp;&nbsp;&nbsp;<span class="id" type="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>].<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Given a hypothesis a = b, substitutes all occurrences of a with b, then
+clears the hypothesis.
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">subst_all</span> <span class="id" type="var">U</span> := <span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">U</span> <span class="id" type="keyword">with</span> ?<span class="id" type="var">a</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'='_x"><span class="id" type="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'='_x"><span class="id" type="notation">?</span></a><span class="id" type="var">b</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">move</span> <span class="id" type="var">U</span> <span class="id" type="tactic">at</span> <span class="id" type="var">top</span>; <span class="id" type="tactic">repeat</span> <span class="id" type="var">subst_once</span> <span class="id" type="var">U</span>; <span class="id" type="tactic">clear</span> <span class="id" type="var">U</span> <span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">neq_symmetry</span> <span class="id" type="var">H</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">U</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="var">type</span> <span class="id" type="var">of</span> <span class="id" type="var">H</span> <span class="id" type="keyword">with</span> (?<span class="id" type="var">a</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'<>'_x"><span class="id" type="notation">&lt;&gt;</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'<>'_x"><span class="id" type="notation">?</span></a><span class="id" type="var">b</span>) =&gt; <span class="id" type="tactic">assert</span> (<span class="id" type="var">b</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'<>'_x"><span class="id" type="notation">&lt;&gt;</span></a> <span class="id" type="var">a</span>) <span class="id" type="keyword">as</span> <span class="id" type="var">U</span>; [<span class="id" type="tactic">unfold</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#not"><span class="id" type="definition">not</span></a>;<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">intro</span>; <span class="id" type="tactic">apply</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">symmetry</span>; <span class="id" type="tactic">assumption</span> | ]; <span class="id" type="tactic">try</span> (<span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>; <span class="id" type="tactic">rename</span> <span class="id" type="var">U</span> <span class="id" type="var">into</span> <span class="id" type="var">H</span>)<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">or_flat_step</span> <span class="id" type="var">W</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">V1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">W</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">V2</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">W</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;[ <span class="id" type="var">H</span> : ?<span class="id" type="var">P</span> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'\/'_x"><span class="id" type="notation">\/</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#:type_scope:x_'\/'_x"><span class="id" type="notation">?</span></a><span class="id" type="var">Q</span> |- <span class="id" type="var">_</span>] =&gt; <span class="id" type="var">elim_intro</span> <span class="id" type="var">H</span> <span class="id" type="var">V1</span> <span class="id" type="var">V2</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">or_flat_step_norm</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">OR</span> := <span class="id" type="tactic">fresh</span> "OR" <span class="id" type="keyword">in</span> <span class="id" type="var">or_flat_step</span> <span class="id" type="var">OR</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">or_flat</span> := <span class="id" type="tactic">repeat</span> <span class="id" type="var">or_flat_step_norm</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">and_flat</span> := <span class="id" type="keyword">let</span> <span class="id" type="var">A</span> := <span class="id" type="tactic">fresh</span> "AND" <span class="id" type="keyword">in</span> <span class="id" type="var">andflat</span> <span class="id" type="var">A</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Every time it encounters an existential, decomposes that existential
+into a fresh hypothesis and a variable based on "x".
+</div>
+<div class="code">
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">ex_flat</span> := <span class="id" type="tactic">repeat</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">U</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">x</span> := <span class="id" type="tactic">fresh</span> "x" <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span><br/>
+&nbsp;&nbsp;[<span class="id" type="var">U1</span> : <span class="id" type="keyword">context</span>[<a class="idref" href="http://coq.inria.fr/distrib/8.4pl3/stdlib/Coq.Init.Logic.html#ex"><span class="id" type="inductive">ex</span></a>] |- <span class="id" type="var">_</span>] =&gt;  <span class="id" type="var">invertClearAs2</span> <span class="id" type="var">U1</span> <span class="id" type="var">x</span> <span class="id" type="var">U</span><br/>
+&nbsp;&nbsp;<span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">unfold_all_step</span> <span class="id" type="var">r</span> := <span class="id" type="keyword">match</span> <span class="id" type="keyword">goal</span> <span class="id" type="keyword">with</span> [<span class="id" type="var">V</span> : <span class="id" type="keyword">context</span>[<span class="id" type="var">r</span>] |- <span class="id" type="var">_</span>] =&gt;<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">unfold</span> <span class="id" type="var">r</span> <span class="id" type="keyword">in</span> <span class="id" type="var">V</span> <span class="id" type="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">unfold_all</span> <span class="id" type="var">r</span> := <span class="id" type="tactic">repeat</span> <span class="id" type="var">unfold_all_step</span> <span class="id" type="var">r</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">exand_flat</span> := <span class="id" type="tactic">repeat</span> (<span class="id" type="tactic">progress</span> (<span class="id" type="var">ex_flat</span>; <span class="id" type="var">and_flat</span>)).<br/>
+
+<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">state_pred_elim</span> <span class="id" type="var">U1</span> <span class="id" type="var">U2</span> := <span class="id" type="tactic">inversion</span> <span class="id" type="var">U1</span>; <span class="id" type="tactic">subst</span>; <span class="id" type="tactic">inversion</span> <span class="id" type="var">U2</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">state_pred_net_destr</span> <span class="id" type="var">U</span> :=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">e</span> := <span class="id" type="tactic">fresh</span> "e" <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U2</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="tactic">inversion</span> <span class="id" type="var">U</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">e</span> <span class="id" type="var">U1</span> <span class="id" type="var">U2</span>]; <span class="id" type="tactic">inversion</span> <span class="id" type="var">U1</span>; <span class="id" type="tactic">subst</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">listGen</span> <span class="id" type="var">H</span> <span class="id" type="var">l</span> := <span class="id" type="var">remember</span> <span class="id" type="var">l</span> <span class="id" type="keyword">as</span> <span class="id" type="var">LG</span>; <span class="id" type="tactic">repeat</span> (<span class="id" type="tactic">destruct</span> <span class="id" type="var">LG</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">LG</span>|]; <span class="id" type="var">invertChange</span> <span class="id" type="var">H</span>);<br/>
+&nbsp;&nbsp;<span class="id" type="tactic">clear</span> <span class="id" type="var">H</span>.<br/>
+
+<br/>
+<span class="id" type="keyword">Ltac</span> <span class="id" type="var">netprottrip</span> <span class="id" type="var">H</span> <span class="id" type="var">U</span> <span class="id" type="var">q</span> <span class="id" type="var">l</span> <span class="id" type="var">h</span> <span class="id" type="var">k</span>:=<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">U1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U2</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">e</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="tactic">destruct</span> <span class="id" type="var">H</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">e</span> <span class="id" type="var">U1</span> <span class="id" type="var">U2</span>];<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">p</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U3</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="tactic">destruct</span> <span class="id" type="var">U1</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">p</span> <span class="id" type="var">l</span> <span class="id" type="var">h</span> <span class="id" type="var">k</span> <span class="id" type="var">U3</span>];<br/>
+&nbsp;&nbsp;<span class="id" type="keyword">let</span> <span class="id" type="var">q0</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">q</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">q1</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">q</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">q2</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">q</span> <span class="id" type="keyword">in</span> <span class="id" type="keyword">let</span> <span class="id" type="var">U4</span> := <span class="id" type="tactic">fresh</span> <span class="id" type="var">U</span> <span class="id" type="keyword">in</span><br/>
+&nbsp;&nbsp;<span class="id" type="tactic">destruct</span> <span class="id" type="var">U3</span> <span class="id" type="keyword">as</span> [<span class="id" type="var">q0</span> <span class="id" type="var">q1</span> <span class="id" type="var">q2</span> <span class="id" type="var">U4</span>].<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>
