@@ -159,7 +159,7 @@ Lemma delAddInput : forall (l l' l'' : InputList) (d d' : Delay),
   destruct l'. destruct inList1. apply delNonIncSizeIL in H0.
   inversion H0. rename t into b. destruct l. destruct inList2.
   apply delNonIncSizeIL in H. inversion H. rename t into c.
-  swap a c. inversion H. inversion H0.
+  inversion H. inversion H0.
   constructor. eapply delAddTL. apply H4. assumption. Qed.
   
 (** An input list l is action enabled for the action a iff
