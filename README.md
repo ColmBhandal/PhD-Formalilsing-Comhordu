@@ -45,7 +45,15 @@ The software component of the language is the language in which the protocol its
 
 There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves. 
 
-## Building the CoqDoc
+## CoqDoc
+
+### Online DocDoc
+
+The code is pretty-printed online. There are two versions - one with proofs, one without. Below are links to the table of contents for each:
+ 1. [Without Proofs](https://colmbhandal.github.io/PhD-Comhordu-CoqDoc/light/toc.html)
+ 2. [With Proofs](https://colmbhandal.github.io/PhD-Comhordu-CoqDoc/verbose/toc.html)
+
+### Building the CoqDoc Locally
 
 CoqDoc is pretty-printed documentation of Coq code. For more info, see [Documenting Files...](https://coq.inria.fr/refman/using/tools/coqdoc.html)
 
