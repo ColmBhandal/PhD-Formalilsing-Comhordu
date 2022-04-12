@@ -66,8 +66,14 @@ Note: the ``Index.html`` file renders with a bunch of broken links so I ignore i
 
 ## Potential Improvements
 
- - Not all results in this project were proved in Coq. About 30% of the results were admitted. The file [coq_proj.pdf](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/coq_proj.pdf) gives more detail on this. In particular, it outlines what needs to be done and how.
- - Ideally, this project should be decomposed into a number of repos, to make it clear what the various components do and to better expose and document them for reuse.
+I originally started to entitle this section "Future Work" but that would be misleading: I do not at the moment plan to carry out any future updates to this repository. That could change though, or others may want to contribute, so for that reason I am documenting a number of potential improvements to this project. More or less, they are in order of priority, by my estimation.
+
+ - All general-purpose results in ``StandardResults.v`` should be extracted from this repo and shared as a standalone library. However, when doing so, any results which already exist in other libraries should be removed, and their usage should be replaced with usage of the more standard results. Similar reasoning applies to ``GenTacs.v``, which contains mostly general-purose tactics.
+ - Ideally, this project should be decomposed into a number of repos, to make it clear what the various components do and to better expose and document them for reuse. As an MVP, the language components should be separated to their own repo, with results proved about the language independent of the protocol. This would allow for reuse of the language. It may also yield some research papers e.g. a paper defining the language, proving some general properties e.g. non-Zenoness, showing some examples and example applications. Such a paper would be a modular extraction of the content of my PhD thesis in much the same manner as the extraction of repos from this one would modularise the code.
+ - Once this project is decomposed into various repos, they should be published and made available for others to use.
+ - Not all results in this project were proved in Coq. About 30% of the results were ``Admitted``. The file [coq_proj.pdf](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/coq_proj.pdf) gives more detail on this. In particular, it outlines what needs to be done and how. It would be nice to prove everything completely, but strategically I think a better move would be to first decompose and better modularise the repo. It's unclear whether there is high demand for the proof of safety for this protocol itself, and unless/until there is I don't see much merit in completing a lengthy proof just for the sake of it.
+
+More improvements are outlined in [Issues](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/issues).
 
 ## Notes
 
