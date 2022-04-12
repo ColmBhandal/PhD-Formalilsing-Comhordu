@@ -57,9 +57,9 @@ Coercion delToTime (d : Delay) : Time :=
 Record Distance := mkDistance {distance :> nonnegreal}.
 
 Ltac foldDist l l0 H := replace (dist_euc (xCoord l) (yCoord l) (xCoord l0) (yCoord l0)) with
-  (nonneg (dist l l0)) in H;[ | simpl;ring].
+  (nonneg (dist2d l l0)) in H;[ | simpl;ring].
 
-Definition distFun p1 p2 := mkDistance (dist p1 p2).
+Definition distFun p1 p2 := mkDistance (dist2d p1 p2).
 
 Lemma timeEqNonneg : forall (t1 t2 : Time), (time t1) = (time t2) -> t1 = t2.
   destruct t1, t2. simpl. intros. f_equal. assumption. Qed.

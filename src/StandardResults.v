@@ -588,7 +588,7 @@ Notation "~- p" := (oppPos p) (at level 40).
 Hint Unfold oppPos.
 
 (** The Euclidean distance between a pair of positions.*)
-Definition dist (p1 p2 : Position) : nonnegreal :=
+Definition dist2d (p1 p2 : Position) : nonnegreal :=
   mknonnegreal
   (dist_euc (xCoord p1) (yCoord p1) (xCoord p2) (yCoord p2))
   (dist_euc_nonneg (xCoord p1) (yCoord p1) (xCoord p2) (yCoord p2)).
@@ -598,7 +598,7 @@ Definition origin := mkPosition 0 0.
 
 (** The vector length of a position. Defined to be the distance between
 that position and (0, 0).*)
-Definition displacement (p : Position) : nonnegreal := dist p origin.
+Definition displacement (p : Position) : nonnegreal := dist2d p origin.
 
 Ltac unfoldPosDefs := unfold addPos; unfold minusPos; unfold oppPos;
   unfold dist; unfold origin; unfold displacement.
@@ -638,8 +638,8 @@ Lemma minusPlusCancelPos : forall (p1 p2 : Position),
   f_equal; simpl; ring. Qed.
 
 (** The distance function is symmetric.*)
-Lemma distSymmetric : forall (p1 p2 : Position), dist p1 p2 = dist p2 p1.
-  intros. unfold dist. f_equal. apply nonnegRealEqR. simpl.
+Lemma distSymmetric : forall (p1 p2 : Position), dist2d p1 p2 = dist2d p2 p1.
+  intros. unfold dist2d. f_equal. apply nonnegRealEqR. simpl.
   apply distance_symm. Qed.
 
 (** Adding the difference between two vectors to the subtracted
@@ -648,51 +648,51 @@ Theorem minusPlusInvPos : forall (p1 p2 : Position),
   p1 = p2 +p+ (p1 -~p- p2). intros. destruct p1. unfoldPosDefs. simpl.
   repeat rewrite Rplus_minus. reflexivity. Qed.
 
-(** Adding the same vector to the arguments of dist preserves the result.*)
+(** Adding the same vector to the arguments of dist2d preserves the result.*)
 Theorem distAddPres : forall (p1 p2 p3 : Position),
-  dist p1 p2 = dist (p1 +p+ p3) (p2 +p+ p3). intros.
-  unfold dist. destruct p1, p2, p3. simpl.
+  dist2d p1 p2 = dist2d (p1 +p+ p3) (p2 +p+ p3). intros.
+  unfold dist2d. destruct p1, p2, p3. simpl.
   generalize (dist_euc_nonneg xCoord0 yCoord0 xCoord1 yCoord1).
   generalize (dist_euc_nonneg (xCoord0 + xCoord2) (yCoord0 + yCoord2)
                  (xCoord1 + xCoord2) (yCoord1 + yCoord2)).
   rewrite <- dist_eucAddPres with (x3 := xCoord2) (y3 := yCoord2).
   intros. f_equal. apply proof_irrelevance. Qed.
 
-(** Subtracting the same vector to the arguments of dist preserves the result.*)
+(** Subtracting the same vector to the arguments of dist2d preserves the result.*)
 Theorem distMinusPres : forall (p1 p2 p3 : Position),
-  dist p1 p2 = dist (p1 -~p- p3) (p2 -~p- p3). intros.
+  dist2d p1 p2 = dist2d (p1 -~p- p3) (p2 -~p- p3). intros.
   repeat rewrite minusPlusOppPos. apply distAddPres. Qed.
 
 (** The distance between p1 and p2 is the same as the length of p1 - p2.*)
 Theorem minusLengthDistance : forall (p1 p2 : Position),
-  dist p1 p2 = displacement (p1 -~p- p2). intros. unfold displacement.
+  dist2d p1 p2 = displacement (p1 -~p- p2). intros. unfold displacement.
   rewrite (distAddPres (p1 -~p- p2) origin p2). rewrite minusPlusCancelPos.
   f_equal. rewrite plusLeftUnitPos. reflexivity. Qed.
 
 (** Adding p3 to p1 changes the distance between p1 and p2 by
 at most |p3|.*)
 Theorem distAddLe : forall (p1 p2 p3 : Position),
-  dist (p1 +p+ p3) (p2) <= dist p1 p2 + displacement p3. intros.
+  dist2d (p1 +p+ p3) (p2) <= dist2d p1 p2 + displacement p3. intros.
   destruct p1, p2, p3. unfoldPosDefs. simpl. apply dist_eucAddLe. Qed.
 
 (** Adding p3 to p1 changes the distance between p1 and p2 by
 at most r if |p3| <= r.*)
 Theorem distAddLeLe : forall (p1 p2 p3 : Position) (r : R),
-  displacement p3 <= r -> dist (p1 +p+ p3) (p2) <= dist p1 p2 + r. intros.
-  Open Scope R_scope. apply Rle_trans with (r2 := (dist p1 p2 + displacement p3)).
+  displacement p3 <= r -> dist2d (p1 +p+ p3) (p2) <= dist2d p1 p2 + r. intros.
+  Open Scope R_scope. apply Rle_trans with (r2 := (dist2d p1 p2 + displacement p3)).
   apply distAddLe. apply Rplus_le_compat_l. assumption. Qed.
 
 (** If the distance between p1 and p1' is bounded above by r, and the
 same holds for p2 and p2', then the distance between p1 and p2 is
 at most the difference between p1' and p2' + 2r.*)
 Theorem posDiffBound : forall (p1 p2 p1' p2' : Position) (r : R),
-  dist p1  p1' <= r -> dist p2 p2' <= r ->
-  dist p1 p2 <= dist p1' p2' + 2*r. intros. assert (2*r = r + r).
+  dist2d p1  p1' <= r -> dist2d p2 p2' <= r ->
+  dist2d p1 p2 <= dist2d p1' p2' + 2*r. intros. assert (2*r = r + r).
   ring. rewrite H1. rewrite <- Rplus_assoc.
   eapply Rle_trans. rewrite (minusPlusInvPos p1 p1'). apply distAddLeLe.
   rewrite <- minusLengthDistance. apply H. rewrite (minusPlusInvPos p2 p2').
   apply Rplus_le_compat_r. rewrite distSymmetric.
-  replace (dist p1' p2') with (dist p2' p1'); try apply distSymmetric.
+  replace (dist2d p1' p2') with (dist2d p2' p1'); try apply distSymmetric.
   apply distAddLeLe. rewrite <- minusLengthDistance. apply H0. Qed.
 
 Lemma eqDecPosition : eqDec Position. unfold eqDec.
@@ -704,11 +704,11 @@ Lemma eqDecPosition : eqDec Position. unfold eqDec.
   reflexivity. Qed.
 
 Lemma dist_tri_ineq : forall (l1 l2 l3 : Position),
-  dist l1 l3 <= dist l1 l2 + dist l2 l3. intros l1 l2 l3. apply triangle.
+  dist2d l1 l3 <= dist2d l1 l2 + dist2d l2 l3. intros l1 l2 l3. apply triangle.
   Qed.
 
-Lemma dist_refl : forall l : Position, dist l l = zeroNonneg. intros.
-  apply nonnegRealEqR. unfold dist. simpl. apply distance_refl. Qed.
+Lemma dist_refl : forall l : Position, dist2d l l = zeroNonneg. intros.
+  apply nonnegRealEqR. unfold dist2d. simpl. apply distance_refl. Qed.
 
 (****************************** Interval ******************************)
 

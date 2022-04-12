@@ -504,7 +504,7 @@ Lemma gotMsg_gotRange_track_ent (m m' : Mode) (l l' l1 : Position)
   gotRangeStateEnt m' r ([|p', l', h', k'|]) ->
   [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
   l = l' /\ m = m' /\
-  r = {| distance := dist l l1 -nn- speedMax *nn* msgLatency |}.
+  r = {| distance := dist2d l l1 -nn- speedMax *nn* msgLatency |}.
   Admitted.
 (*Proof: Entity tracking result: possibly use generic tactic? Use software tracking
 result? Use inter-component relationship result/tactics?*)

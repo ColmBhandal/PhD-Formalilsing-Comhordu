@@ -242,7 +242,7 @@ Inductive evalExp : Exp -> Base -> Prop :=
   evalExp (ePeriod e) (period m)
   | evalDist : forall (e1 e2 : Exp) (p1 p2 : Position),
   evalExp e1 p1 -> evalExp e2 p2 -> 
-  evalExp (eDist e1 e2) (mkDistance (dist p1 p2))
+  evalExp (eDist e1 e2) (mkDistance (dist2d p1 p2))
   | evalFailSafeSucc : forall (e : Exp) (m : Mode),
   evalExp e m -> evalExp (eFailSafeSucc e) (failSafeSucc m).
 Notation "e |_| b" := (evalExp e b) (at level 50).
@@ -316,7 +316,7 @@ Fixpoint evalExpFun (e : Exp) : option Base :=
     | Some b1, Some b2 =>
       match b1, b2 with
       | basePosition p1, basePosition p2 =>
-        Some (baseDistance ((mkDistance (dist p1 p2))))
+        Some (baseDistance ((mkDistance (dist2d p1 p2))))
       | _, _ => None
       end
     | _, _ => None

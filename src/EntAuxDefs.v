@@ -97,7 +97,7 @@ liftProcEnt listenerStateProt.
 
 Inductive msgBadPathEnt : Entity -> Prop :=
   | mbpMsg p l h k m'' m l' : gotMsgStateProt m'' l' p -> currModeMState k = m -> 
-    possiblyIncompatible m m'' (dist l l' -nn- speedMax *nn* msgLatency)
+    possiblyIncompatible m m'' (dist2d l l' -nn- speedMax *nn* msgLatency)
     -> msgBadPathEnt ([| p, l, h, k|])
   | mbpRng p l h k m'' m r : gotRangeStateProt m'' r p -> currModeMState k = m ->
     possiblyIncompatible m m'' r -> msgBadPathEnt ([|p, l, h, k|])
@@ -110,7 +110,7 @@ Inductive notifBadPathEnt : Entity -> Prop :=
 
 Inductive msgAbortPathEnt : Entity -> Prop :=
   | mapMsg p l h k m'' m m' l' :
-    let r' := dist l l' -nn- speedMax *nn* msgLatency in
+    let r' := dist2d l l' -nn- speedMax *nn* msgLatency in
     gotMsgStateProt m'' l' p -> currModeMState k = m ->
     ~possiblyIncompatible m m'' r' -> 
     nextModeMState k = Some m' ->

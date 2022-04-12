@@ -42,7 +42,7 @@ Theorem incomp_incomingNet_bad (n n' : Network) (a : ActDiscNet) (l l' : Positio
   (m m' : Mode) :
   n -NA- a -NA> n' -> inPosNet l i n -> currModeNet m i n ->
   incomingNet [baseMode m', basePosition l'] i n ->
-  dist l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
+  dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
   incomingNet [baseMode m', basePosition l'] i n' \/
   msgBadPathNet i n'.
   introz U. 
@@ -91,7 +91,7 @@ or we have entered the msgAbortPath.*)
 Theorem incomp_incomingNet_abort (n n' : Network) (a : ActDiscNet) (l l' : Position) (i : nat)
   (m m' : Mode) : n -NA- a -NA> n' -> inPosNet l i n -> nextModeNet m i n ->
   incomingNet [baseMode m', basePosition l'] i n ->
-  dist l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
+  dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
   incomingNet [baseMode m', basePosition l'] i n' \/ msgAbortPathNet i n'.
   Admitted. (*3*)
 (**Proof: Analogous to incomp_incomingNet_bad.*)
@@ -250,7 +250,7 @@ Theorem instant_incomp_abort (n : Network) (t : Time) (l l' : Position) (i : nat
   (m m' : Mode) (p : reachableNet n) :
   nextSince m t i n p -> inPosNet l i n -> 0 < t ->
   received [baseMode m', basePosition l'] zeroTime i n p ->
-  dist l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
+  dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
   incomingNet [baseMode m', basePosition l'] i n  \/
   msgAbortPathNet i n.
   intros U U0 LT U1 U2.
@@ -296,7 +296,7 @@ Theorem incomp_abort (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   (m m' : Mode) (p : reachableNet n) :
   nextSince m t i n p -> inPosNet l i n ->
   received [baseMode m', basePosition l'] t' i n p -> zeroTime < t' -> t' < t ->
-  dist l l' -nn- speedMax *nn* msgLatency + speedMax*t' < possIncDist m m' ->
+  dist2d l l' -nn- speedMax *nn* msgLatency + speedMax*t' < possIncDist m m' ->
   False.
   intros U0 U1 U2 U3 U4 U5. 
   (*First, we show that 0 < t because t' < t.*)
@@ -336,7 +336,7 @@ Theorem incomp_abort (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   we are pending consumption of the message, or processing it (instant_incomp_abort).*)
   apply timeEqR in TZ2. rewrite <- TZ2 in U2.
   (* Another annoying inequality to show.*)
-  assert (dist l l' -nn- speedMax *nn* msgLatency < possIncDist m m') as DP.
+  assert (dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m') as DP.
   eapply Rle_lt_trans;[ | apply Y1]. lets DT : dist_tri_ineq l l0 l'.
   simpl. rewrite Rmult_plus_distr_l. Rplus3_swap_2_3_free.
   apply Rplus_le_weaken_rr. apply Rmult_le_0_compat; apply cond_nonneg.
@@ -358,7 +358,7 @@ Theorem instant_incomp_tfs (n : Network) (t : Time) (l l' : Position) (i : nat)
   (m m' : Mode) (p : reachableNet n) :
   currSince m t i n p -> inPosNet l i n -> 0 < t ->
   received [baseMode m', basePosition l'] zeroTime i n p ->
-  dist l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
+  dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
   incomingNet [baseMode m', basePosition l'] i n \/
   msgBadPathNet i n \/ tfs m zeroTime i n p.
   intros H H0 U. intros.
@@ -427,7 +427,7 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   currSince m t i n p -> inPosNet l i n ->
   received [baseMode m', basePosition l'] t' i n p ->
   zeroTime < t' -> t' < t  ->
-  dist l l' -nn- speedMax*nn*msgLatency + speedMax*t' < possIncDist m m' ->
+  dist2d l l' -nn- speedMax*nn*msgLatency + speedMax*t' < possIncDist m m' ->
   tfs m t' i n p. intros.
   (*We first need to show that speedMax * t is less than possIncDist m m' in order
   to be able to apply a special equivalence result later for our (annoying!)
@@ -468,15 +468,15 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   |l1 - l| + |l - l'| - Smax*mL + Smax*(t' + d) < Dpi m m' + Smax*d.*)
   (*Convert H4 from subNonnegTot to Rminus*)
   apply subNonnegTot_plus_lt_Rminus in H4.
-  addHyp (Rplus_le_lt_compat (dist l1 l) (speedMax * d)
-  (dist l l' - speedMax * msgLatency + speedMax * (t' +dt+ d))
+  addHyp (Rplus_le_lt_compat (dist2d l1 l) (speedMax * d)
+  (dist2d l l' - speedMax * msgLatency + speedMax * (t' +dt+ d))
   (possIncDist m m') H8 H4).
   (*A bit of algebra allows us to cancel the Smax*d on both sides, giving
   |l1 - l| + |l - l'| - Smax*mL + Smax*t' < Dpi m m' (@).*)
-  replace (nonneg (dist l1 l) +
-  (nonneg (dist l l') - nonneg speedMax * nonneg (time msgLatency) +
-  nonneg speedMax * pos (delay (t' +dt+ d)))) with (nonneg (dist l1 l) +
-  nonneg (dist l l') - nonneg speedMax * nonneg (time msgLatency) +
+  replace (nonneg (dist2d l1 l) +
+  (nonneg (dist2d l l') - nonneg speedMax * nonneg (time msgLatency) +
+  nonneg speedMax * pos (delay (t' +dt+ d)))) with (nonneg (dist2d l1 l) +
+  nonneg (dist2d l l') - nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * (nonneg t') + nonneg speedMax * pos(delay d)) in H9;
   [ |simpl;ring]. replace (nonneg speedMax * pos (delay d) + possIncDist m m')
   with (possIncDist m m' + nonneg speedMax * pos (delay d)) in H9;[ |ring].
@@ -485,7 +485,7 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   |l1 - l'| - Smax*mL + Smax*t' <= |l1 - l| + |l - l'| - Smax*mL + Smax*t'.*)
   apply (Rplus_le_compat_r (-speedMax*msgLatency + speedMax*t')) in H7.
   (*By transitivity on (@) then we have |l1 - l'| - Smax*mL + Smax*t' < Dpi m m'.*)
-  assert (nonneg (dist l1 l') - nonneg speedMax * nonneg (time msgLatency) +
+  assert (nonneg (dist2d l1 l') - nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * nonneg (time t') < possIncDist m m'). eapply Rle_lt_trans.
   eapply Rle_trans;[ | apply H7]. apply Req_le. ring.
   eapply Rle_lt_trans;[ | apply H9]. apply Req_le. ring.
@@ -512,19 +512,19 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   normal -.*)
   apply subNonnegTot_plus_lt_Rminus in H4.
   (*And now back to the proof as normal.*)
-  addHyp (Rplus_le_lt_compat (dist l1 l) (speedMax * d)
-  (dist l l' - speedMax * msgLatency + speedMax * (t' +dt+ d))
+  addHyp (Rplus_le_lt_compat (dist2d l1 l) (speedMax * d)
+  (dist2d l l' - speedMax * msgLatency + speedMax * (t' +dt+ d))
   (possIncDist m m') H8 H4).
-  replace (nonneg (dist l1 l) +
-  (nonneg (dist l l') - nonneg speedMax * nonneg (time msgLatency) +
-  nonneg speedMax * pos (delay (t' +dt+ d)))) with (nonneg (dist l1 l) +
-  nonneg (dist l l') - nonneg speedMax * nonneg (time msgLatency) +
+  replace (nonneg (dist2d l1 l) +
+  (nonneg (dist2d l l') - nonneg speedMax * nonneg (time msgLatency) +
+  nonneg speedMax * pos (delay (t' +dt+ d)))) with (nonneg (dist2d l1 l) +
+  nonneg (dist2d l l') - nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * (nonneg t') + nonneg speedMax * pos(delay d)) in H9;
   [ |simpl;ring]. replace (nonneg speedMax * pos (delay d) + possIncDist m m')
   with (possIncDist m m' + nonneg speedMax * pos (delay d)) in H9;[ |ring].
   apply Rplus_lt_reg_l in H9. 
   apply (Rplus_le_compat_r (-speedMax*msgLatency + speedMax*t')) in H7.
-  assert (nonneg (dist l1 l') - nonneg speedMax * nonneg (time msgLatency) +
+  assert (nonneg (dist2d l1 l') - nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * nonneg (time t') < possIncDist m m'). eapply Rle_lt_trans.
   eapply Rle_trans;[ | apply H7]. apply Req_le. ring.
   eapply Rle_lt_trans;[ | apply H9]. apply Req_le. ring.

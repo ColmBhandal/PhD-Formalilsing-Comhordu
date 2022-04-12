@@ -73,7 +73,7 @@ Theorem nextSince_fst_deliv_suff (n : Network) (t : Time) (m : Mode)
   let s' := Rlt_le msgLatency t s in
   exists l0 l1 r,
   delivered ([-[baseMode m, basePosition l0], l1, r-]) (minusTime t msgLatency s') i n p /\ 
-  sufficient m r /\ dist l l0 <= speedMax*t. 
+  sufficient m r /\ dist2d l l0 <= speedMax*t. 
   intros U0 U1 q. simpl.
   (*Well since mL + AN < t, then mL < t.*)
   assert (msgLatency < t) as MT. eapply Rplus_lt_weaken_lr. apply q.
@@ -414,7 +414,7 @@ Theorem currSince_fst_deliv_suff (n : Network) (m : Mode) (t : Time)
   let s' := Rlt_le msgLatency t s in
   exists r l0 l1,
   delivered ([-[baseMode m, basePosition l0], l1, r-]) (minusTime t msgLatency s') i n p /\ 
-  sufficient m r /\ dist l l0 <= speedMax*t. 
+  sufficient m r /\ dist2d l l0 <= speedMax*t. 
   (*Induction on currSince.*)
   intro. generalize dependent l. induction H; intros.
   (*In the base case, we have that the previous entity was nextSince m t and in
@@ -490,7 +490,7 @@ Theorem pre_del_suff (n : Network) (m : Mode) (t : Time)
   exists t' r l0 l1,
   delivered ([-[baseMode m, basePosition l0], l1, r-]) t' i n p /\ 
   sufficient m r /\ t' [:] (preDeliveredInterval m) /\ t' < t /\
-  dist l l0 <= speedMax*(msgLatency+ t'). intros.
+  dist2d l l0 <= speedMax*(msgLatency+ t'). intros.
   match goal with [ H : ~failSafe m |- _ ] => rename H into Q end.
   (*Let us first recall the definition of
   Ipd = (max AN trans, max AN trans + period m + trans m]).*)  

@@ -98,7 +98,7 @@ Open Scope R_scope.
 of the entities is less than or equal to the separation of the
 entities in space, then they are compatible.*)
 Definition compatible (e1 e2 : Entity) : Prop :=
-  (minDistComp e1 e2) <= (dist e1 e2).
+  (minDistComp e1 e2) <= (dist2d e1 e2).
 Notation "e1 ~~ e2" := (compatible e1 e2) (left associativity, at level 40).
 
 (** Compatibility is a symmetric relation.*)
@@ -166,14 +166,14 @@ Inductive stepDiscEnt : Entity -> ActDiscEnt -> Entity -> Prop :=
   (** If the message sent was too far away, it gets ignored.*)
   | stepDeIgnore : forall (p : ProcTerm) (l l' : Position)
     (i : Interface) (k : ModeState) (v : list Base) (r : Distance),
-     r < dist l l' -> 
+     r < dist2d l l' -> 
     [| p , l , i , k |] -EA- [-v, l', r-]#: ->> [| p , l , i , k |]
   (** If the message sent was within range, then it gets input. This can be proven not
   to block by analysing the behaviour of interface components. Therefore, a message
   should always be accepted.*)
   | stepDeIn : forall (p : ProcTerm) (l l' : Position)
     (i i' : Interface) (k : ModeState) (v : list Base) (r : Distance),
-    dist l l' <= r -> i -i- chanIOEnv {? v -i> i' ->
+    dist2d l l' <= r -> i -i- chanIOEnv {? v -i> i' ->
     [| p , l , i , k |] -EA- [-v, l', r-]#? ->> [| p , l , i' , k |]
   | stepDeOut : forall (p : ProcTerm) (l : Position)
     (i i' : Interface) (k : ModeState) (v : list Base) (r : Distance),
@@ -255,7 +255,7 @@ Theorem ignoreEqEnt : forall (e e' : Entity) (m : Message),
 Theorem inOrIgEnt : forall (e : Entity) (m : Message),
   discActEnabledEnt e (m#?) \/ discActEnabledEnt e (m#:). intros.
   destruct m as [v l' r]. destruct e as [p l i k].
-  addHyp (Rlt_or_le r (dist l l')). invertClear H. right.
+  addHyp (Rlt_or_le r (dist2d l l')). invertClear H. right.
   exists ([|p, l, i, k|]). apply stepDeIgnore. assumption. 
   left. addHyp (interfaceInEnabled i v). invertClear H.
   rename x into i'. exists ([|p, l, i', k|]).

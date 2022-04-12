@@ -396,7 +396,7 @@ Open Scope R_scope.
 (** If an entity evolves by time delay d, then the change in its
 position is bounded by d times the assumed maximum speed.*)
 Theorem boundedMovement : forall (e e' : Entity) (d : Delay),
-  e -ED- d ->> e' -> dist e e' <= (d * speedMax). intros.
+  e -ED- d ->> e' -> dist2d e e' <= (d * speedMax). intros.
   destruct e, e'. inversion H. destruct posEnt as [x y].
   destruct delta as [dx dy]. simpl. unfold displacement in H12.
   simpl in H12. rewrite distance_symm. rewrite Rplus_comm.
@@ -584,11 +584,11 @@ are the derivatives of e1 and e2 respectively.*)
 Theorem bndDistLwr :
   forall (n n' : Network) (e1 e2 e1' e2' : Entity) (i j : nat) (d : Delay),
   n -ND- d -ND> n' -> e1 @ i .: n -> e1' @ i .: n' -> e2 @ j .: n -> e2' @ j .: n' ->
-  dist e1 e2 - (2*d*speedMax) <= dist e1' e2'. intros.
+  dist2d e1 e2 - (2*d*speedMax) <= dist2d e1' e2'. intros.
   lets H4 : link_net_ent_delW H H1 H0. lets H5 : link_net_ent_delW H H3 H2.
   apply boundedMovement in H4. apply boundedMovement in H5. rewrite Rmult_assoc.
   apply Rplus_le_reg_r with (r := 2 * (d * speedMax)).
-  assert (dist e1 e2 - 2 * (d * speedMax) + 2 * (d * speedMax) = dist e1 e2). ring.
+  assert (dist2d e1 e2 - 2 * (d * speedMax) + 2 * (d * speedMax) = dist2d e1 e2). ring.
   rewrite H6. destruct d. destruct delay. apply posDiffBound; assumption. Qed.
 
 (** If a network n delays by d to n', and e1 e2 are separated by x in n,
@@ -597,7 +597,7 @@ are the derivatives of e1 and e2 respectively.*)
 Theorem bndDistUpper :
   forall (n n' : Network) (e1 e2 e1' e2' : Entity) (i j : nat) (d : Delay),
   n -ND- d -ND> n' -> e1 @ i .: n -> e1' @ i .: n' -> e2 @ j .: n -> e2' @ j .: n' ->
-  dist e1' e2' <= dist e1 e2 + (2*d*speedMax). intros.
+  dist2d e1' e2' <= dist2d e1 e2 + (2*d*speedMax). intros.
   lets H4 : link_net_ent_delW H H1 H0. lets H5 : link_net_ent_delW H H3 H2.
   apply boundedMovement in H4. apply boundedMovement in H5. rewrite Rmult_assoc.
   destruct d. destruct delay. apply posDiffBound. rewrite distSymmetric.

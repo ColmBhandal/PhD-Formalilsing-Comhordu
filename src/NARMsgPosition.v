@@ -219,7 +219,7 @@ between l0 and the position of that entity is at most Smax*t.*)
 Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   (l l0 : Position) (p : reachableNet n) :
   sent [baseMode m, basePosition l0] t i n p -> inPosNet l i n ->
-  dist l l0 <= speedMax*t.
+  dist2d l l0 <= speedMax*t.
   (**Proof: By induction on the proof of sent.*)
   intros. generalize dependent l. induction H; intros.
   rename H3 into QQ. rename H2 into H3. rename H1 into H2. rename H0 into H1.
@@ -278,7 +278,7 @@ Theorem fst_delivered (n : Network) (m : Mode) (t : Time) (i : nat)
   exists l0 l1 r,
   delivered ([-[baseMode m, basePosition l0], l1, r-])
   (minusTime t msgLatency (Rlt_le msgLatency t q)) i n p /\
-  dist l l0 <= speedMax*t.
+  dist2d l l0 <= speedMax*t.
   (*Proof: We call on (fst_sent) to achieve sent <m, l0> r t i n p.*)
   introz U. lets FS : fst_sent U. invertClearAs2 FS l0 SEN.
   (*Now we use (sent_pos_bound) to get that |l - l0| <= Smax*t.*)

@@ -373,7 +373,7 @@ Lemma goMsg_gotRange_track m m' l r p p' a :
   gotMsgState m l p -> gotRangeState m' r p' ->
   p -PA- a -PA> p' -> exists l',
   a = chanPos ;? [basePosition l'] /\
-  r = mkDistance (dist l l' -nn- speedMax *nn* msgLatency). Admitted.
+  r = mkDistance (dist2d l l' -nn- speedMax *nn* msgLatency). Admitted.
 
 Lemma currOK_listening_track m p p' a : currOKState m p ->
   listeningState p' -> p -PA- a -PA> p' -> a = (chanMStable *?).

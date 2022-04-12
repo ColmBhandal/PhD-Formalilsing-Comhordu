@@ -70,7 +70,7 @@ Inductive inPosNet (l : Position) (i : nat) (n : Network) : Prop :=
   | ipWitness (p : ProcTerm) (h : Interface) (k : ModeState) :
     [| p , l , h , k |] @ i .: n -> inPosNet l i n.
 
-(*dist i i' n x says that the entities i and i' are separated by x in n.*)
+(*dist2d i i' n x says that the entities i and i' are separated by x in n.*)
 Inductive distNet (i i' : nat) (n : Network) : Distance -> Prop :=
   | dnWitness (l l' : Position) : inPosNet l i n -> inPosNet l' i' n ->
     distNet i i' n (distFun l l').	
@@ -723,7 +723,7 @@ then i is in inPosNet l i n for some l and the difference between the positions 
 speedMax*d*)
 Lemma inPos_del_bound_bkwd (n n' : Network) (d : Delay) (l' : Position) (i : nat) :
   inPosNet l' i n' -> n -ND- d -ND> n' -> exists l,
-  inPosNet l i n /\ dist l l' <= speedMax * d. Admitted. (*5*)
+  inPosNet l i n /\ dist2d l l' <= speedMax * d. Admitted. (*5*)
 (**Proof: Salvaged from old Coq model (pos_bound?).*)
 
 Conjecture currMode_intro : forall (m : Mode) (e : Entity) (i : nat) (n : Network),
@@ -735,7 +735,7 @@ Conjecture inPos_ex : forall (i : nat) (n : Network) (e : Entity),
 (**Proof: Obvious- every entity has a position*)
 
 Conjecture distNet_intro : forall (e1 e2 : Entity) (i j : nat) (n : Network) (x : Distance),
-  e1 @ i .: n -> e2 @ j .: n -> x = mkDistance (dist e1 e2) -> distNet i j n x.
+  e1 @ i .: n -> e2 @ j .: n -> x = mkDistance (dist2d e1 e2) -> distNet i j n x.
 (**Proof: Obvious from definitions of things*)
 
 Conjecture inPos_pos : forall (e : Entity) (i : nat) (l : Position) (n : Network),
@@ -761,7 +761,7 @@ Conjecture del_link_distNet_bkwd : forall (n n' : Network) (d : Delay)
 
 Conjecture distNet_elim : forall (i j : nat) (n : Network) (x : Distance),
   distNet i j n x -> exists e1 e2,
-  e1 @ i .: n /\ e2 @ j .: n /\ x = {| distance := dist e1 e2 |}. 
+  e1 @ i .: n /\ e2 @ j .: n /\ x = {| distance := dist2d e1 e2 |}. 
 
 (*Delay link from network to entity.*)
 Lemma del_net_ent (e : Entity) (i : nat) (n n' : Network) (d : Delay) :
@@ -774,7 +774,7 @@ Lemma del_net_ent (e : Entity) (i : nat) (n n' : Network) (d : Delay) :
 (*If a network accepts some value*)
 Lemma inRange_acc_input (n n' : Network) (v : list Base) (l : Position)
   (r : Distance) (i : nat) (e : Entity) :
-  n -NA- ([-v, l, r-]) /?: -NA> n' -> e @ i .: n -> dist l (posEnt e) <= r ->
+  n -NA- ([-v, l, r-]) /?: -NA> n' -> e @ i .: n -> dist2d l (posEnt e) <= r ->
   exists e', e -EA- ([-v, l, r-]) #? ->> e' /\ e' @ i .: n'. Admitted. (*7*)
 
 (*Any entity within range of a broadcast inputs that broadcast.*)
@@ -892,7 +892,7 @@ Lemma net_del_elim q q0 q1 l h k i n n' d :
   [|q' $||$ q0' $||$ q1', l', h', k'|] @ i .: n' /\
   q -PD- d -PD> q' /\ q0 -PD- d -PD> q0' /\ q1 -PD- d -PD> q1' /\
   h -i- d -i> h' /\ k -ms- d -ms> k' /\
-  dist l l' <= speedMax * d. Admitted. (*7*)
+  dist2d l l' <= speedMax * d. Admitted. (*7*)
 (**Proof: First apply linking theorem for the entity. Then destruct the derivative entity. Then show that the delay between the entities
 can only happen when the interface and mode state components also delay, and the distance inequality condition holds, giving the final three goals.
 The first four goals then follow from an application of a result for software components: triples of processes always delay to triples, with each

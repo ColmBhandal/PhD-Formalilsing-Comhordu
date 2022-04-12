@@ -33,7 +33,7 @@ Require Import ComhCoq.NARTop.
 from where it is applied*)
 Theorem safety_aux (n : Network) (X : reachableNet n) (e1 e2 : Entity)
   (i j : nat) (H : (i <> j)%nat) (H0 : e1 @ i .: n) (H1 : e2 @ j .: n)
-  (x : Distance) (Heqx : x = mkDistance (dist e1 e2)) (mdc : Distance) (m1 : Mode)
+  (x : Distance) (Heqx : x = mkDistance (dist2d e1 e2)) (mdc : Distance) (m1 : Mode)
   (Heqm1 : m1 = e1) (m2 : Mode) (Heqm2 : m2 = e2) (Heqmdc : mdc = minDistComp m1 m2)
   (H2 : x < mdc) (H3 : ~ failSafe m1) (H4 : ~ failSafe m2) (H5 : currModeNet m1 i n)
   (H6 : currModeNet m2 j n) (t1 : Time) (H7 : currSince m1 t1 i n X) (t2 : Time)
@@ -95,9 +95,9 @@ Theorem safety_aux (n : Network) (X : reachableNet n) (e1 e2 : Entity)
   addHyp (inPos_ex j n e2 H1). invertClear H26. rename x0 into l2.
   addHyp (inPos_pos e1 i l1 n H0 H13). addHyp (inPos_pos e2 j l2 n H1 H27).
   rewrite H26, H28 in Heqx. addHyp (dist_tri_ineq l2 l1 l').
-  assert ((distance x) = dist l2 l1). rewrite distSymmetric. 
+  assert ((distance x) = dist2d l2 l1). rewrite distSymmetric. 
   rewrite Heqx. reflexivity. rewrite <- H30 in H29.
-  assert (nonneg (dist l2 l') <= nonneg (distance x) +
+  assert (nonneg (dist2d l2 l') <= nonneg (distance x) +
   nonneg speedMax * (nonneg (time msgLatency) + nonneg (time t))).
   eapply Rle_trans. apply H29. apply Rplus_le_compat. apply Rle_refl.
   assumption.
@@ -108,7 +108,7 @@ Theorem safety_aux (n : Network) (X : reachableNet n) (e1 e2 : Entity)
   nonneg speedMax * nonneg (time t)) < mdc +
   (nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * nonneg (time t))). apply Rplus_lt_le_compat.
-  assumption. apply Rle_refl. assert (dist l2 l' < mdc +
+  assumption. apply Rle_refl. assert (dist2d l2 l' < mdc +
   (nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * nonneg (time t))). eapply Rle_lt_trans. apply H31.
   assumption. replace (nonneg (distance mdc) +
@@ -119,11 +119,11 @@ Theorem safety_aux (n : Network) (X : reachableNet n) (e1 e2 : Entity)
   apply (Rplus_lt_compat_r (speedMax*t)) in H33.
   replace (mdc + nonneg speedMax * nonneg (time t) + nonneg speedMax * nonneg (time t)) with
   (mdc + 2*nonneg speedMax * nonneg (time t)) in H33; [ | ring].
-  assert (nonneg (dist l2 l') - nonneg speedMax * nonneg (time msgLatency) +
+  assert (nonneg (dist2d l2 l') - nonneg speedMax * nonneg (time msgLatency) +
   nonneg speedMax * nonneg (time t) <
   nonneg (distance mdc) + 2 * nonneg speedMax * upper (preDeliveredInterval m1)).  
   eapply Rlt_le_trans. apply H33. apply Rplus_le_compat. apply Rle_refl.
-  assumption. rewrite Heqmdc in H34. remember (dist l2 l') as q0. simpl in H34.
+  assumption. rewrite Heqmdc in H34. remember (dist2d l2 l') as q0. simpl in H34.
   rewrite minDistCompSymmetric in H34.
   fold (possIncDist m2 m1) in H34. rewrite Heqq0 in H34.
   (*Now, 5 (a) states that t is in Ipd, and therefore 0 < t. Applying the result
@@ -171,7 +171,7 @@ Theorem safety (n : Network) : reachableNet n -> safe n.
   e1[m1]-------------|-x-|---------------e2[m2]
   (e1 in m1 and e2 in m2 separated by distance x)*)
   unfold safe. intros. addHyp (dec_compatible e1 e2). appDisj H2.
-  unfold compatible in H2. remember (dist e1 e2) as x.
+  unfold compatible in H2. remember (dist2d e1 e2) as x.
   apply not_Rle_lt in H2. remember (minDistComp e1 e2) as mdc.
   remember (currModeEnt e1) as m1. remember (currModeEnt e2) as m2. apply False_ind.
   (*We know that both m1 and m2 are non-fail-safe modes because otherwise the

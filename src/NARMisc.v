@@ -224,7 +224,7 @@ Theorem delivered_received (n : Network) (v : list Base) (t : Time) (r x : Dista
   remember (reachNetDel n n' d p w) as p'.
   assert (delivered ([-v, l, r-]) (t +dt+ d) i n' p'). rewrite Heqp'. constructor.
   assumption.
-  (*Let's call the distance at n' x'. Then we have that dist i j n' x' and x' + 2*Smax*(t + d) <= r*)
+  (*Let's call the distance at n' x'. Then we have that dist2d i j n' x' and x' + 2*Smax*(t + d) <= r*)
   rename x into x'.
   (*The latter rearranges to x' + 2*Smax*t + 2*Smax*d <= r.*)
   assert (nonneg (distance x') +
@@ -232,7 +232,7 @@ Theorem delivered_received (n : Network) (v : list Base) (t : Time) (r x : Dista
   <= nonneg (distance r)). rewrite Rmult_assoc in H2. simpl in H2.
   repeat rewrite Rmult_plus_distr_l in H2. rewrite <- Rplus_assoc in H2.
   repeat rewrite <- Rmult_assoc in H2. assumption.
-  (*But we can also prove that x <= x' + 2*Smax*d, where dist i i' n x.*)
+  (*But we can also prove that x <= x' + 2*Smax*d, where dist2d i i' n x.*)
   addHyp (del_link_distNet_bkwd n n' d i j x' w H1). invertClear H5.
   invertClear H6.
   (*Strategically adding 2*Smax*t to each side of the inequality we get
