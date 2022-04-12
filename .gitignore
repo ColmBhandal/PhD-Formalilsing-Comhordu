@@ -1,5 +1,9 @@
 CoqDoc/
 
+#Coq Build Output to Ignore
+*.aux
+*.glob
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
