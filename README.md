@@ -47,6 +47,8 @@ There are a number of other modules for defining other components of the languag
 
 ## Building the CoqDoc
 
+CoqDoc is pretty-printed documentation of Coq code. For more info, see [Documenting Files...](https://coq.inria.fr/refman/using/tools/coqdoc.html)
+
 The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is recommended to build any CoqDoc locally here. There are many arguments you can pass to CoqDoc e.g. you can choose to omit proofs; for a full explanation of those arguments just run ``coqdoc --help``. Here are just two options that I think are useful:
 
  1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``coqdoc --html -d "CoqDoc/verbose" src/*.v --no-index --toc``
