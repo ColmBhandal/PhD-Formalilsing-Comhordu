@@ -6,6 +6,10 @@ Using the multi-tiered language I define, I write a protocol which builds upon t
 
 The proof found in my thesis has been formalised in Coq. However, some of the results in Coq are not proved completely. Those are marked as ``Admitted``, meaning we are assuming the results to be true without proof. There is more information on this in the future work section below.
 
+## Warning
+
+In its current state, this code is not recommended for inclusion in any downstream projects. The code contains many ``Admitted`` results which are effectively axioms, and thus there is no guarantee of consistency. If various modules of the code were refactored to separate repos e.g. ``StandardResults.v``, then those would be fine for reuse. But as of the time of writing, this is not planned.
+
 ## Repo Roadmap
 
 All source ``.v`` files can be found in the repo ``src``. The folder ``Extras`` contains content which I did not write but needed to include - this was not available through standard import.
