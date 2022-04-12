@@ -1495,14 +1495,14 @@ Lemma decMatchExp (e1 e2 : Exp) :
   (*Just did a swap because I had matchExp matching the wrong way originally
    before I did this proof, then I changed it around, but wanted to keep the
    hard earned proof script.*)
-  swap e1 e2. generalize dependent e2. induction e1; intros;
-  (**For the special case where e1 is a variable.*)
-  try solve [left; exists ([(v, e2)]); constructor]; destruct e2;
-  (**For all the cases where the structures of e1 and e2 differ.*)
+  generalize dependent e1. induction e2; intros;
+  (**For the special case where e2 is a variable.*)
+  try solve [left; exists ([(v, e1)]); constructor]; destruct e1;
+  (**For all the cases where the structures of e2 and e1 differ.*)
   try solve [right; unfold not; intros; inversion H; inversion H0];
   (**For the inductive case with two hypotheses*)
-  try (addHyp (IHe1_1 e2_1); clear IHe1_1; rename H into Q1;
-  addHyp (IHe1_2 e2_2); clear IHe1_2; rename H into Q2;
+  try (addHyp (IHe2_1 e1_1); clear IHe2_1; rename H into Q1;
+  addHyp (IHe2_2 e1_2); clear IHe2_2; rename H into Q2;
   invertClear Q1;[invertClear Q2;
   [invertClear H; invertClear H0; addHyp (decLubBindList x x0);
   invertClear H0;[invertClear H2; left; exists x1;
@@ -1522,12 +1522,12 @@ Lemma decMatchExp (e1 e2 : Exp) :
   rewrite H0. constructor. right. unfold not. intro. inversion H.
   apply H0. inversion H1. reflexivity.
   (*Case: Period*)
-  addHyp (IHe1 e2). clear IHe1. invertClear H. invertClear H0.
+  addHyp (IHe2 e1). clear IHe2. invertClear H. invertClear H0.
   left. exists x. constructor. assumption.
   right. unfold not. intro. apply H0. invertClear H. exists x.
   invertClear H1. assumption.
   (*Case Fail Safe Succ*)
-  addHyp (IHe1 e2). clear IHe1. invertClear H. invertClear H0.
+  addHyp (IHe2 e1). clear IHe2. invertClear H. invertClear H0.
   left. exists x. constructor. assumption.
   right. unfold not. intro. apply H0. invertClear H. exists x.
   invertClear H1. assumption. Qed.
