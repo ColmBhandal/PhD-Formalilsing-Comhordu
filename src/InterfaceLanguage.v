@@ -1,7 +1,6 @@
 (** This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
-Add LoadPath "Extras".
 Require Import ComhCoq.Extras.LibTactics.
 
 Require Import ComhCoq.LanguageFoundations.

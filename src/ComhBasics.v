@@ -4,7 +4,6 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (** Various constants relating to the comhordu model are assumed here. Also some basic notions
 are defined here such as the notion of a network of entities.*)
 
-Add LoadPath "Extras".
 Require Import ComhCoq.Extras.LibTactics.
 Require Import Fourier_util.
 

@@ -5,7 +5,6 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Require Import Equality.
 
-Add LoadPath "Extras".
 Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)

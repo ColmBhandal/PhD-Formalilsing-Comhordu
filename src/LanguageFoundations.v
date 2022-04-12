@@ -1,7 +1,6 @@
 (** This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
-Add LoadPath "Extras".
 Require Import ComhCoq.Extras.LibTactics.
 
 (** This file lays down the foundation for the software language file by defining things like expressions and evaluation of expressions.*)

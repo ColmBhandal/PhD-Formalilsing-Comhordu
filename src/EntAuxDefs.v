@@ -3,7 +3,6 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 
-Add LoadPath "Extras".
 
 (***************************** Specialised Imports *****************************)
 

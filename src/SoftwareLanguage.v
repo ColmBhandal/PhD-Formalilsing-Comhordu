@@ -1,7 +1,6 @@
 (** This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
-Add LoadPath "Extras".
 (** The software component of the language is here defined.*)
 
 Require Import ComhCoq.GenTacs.

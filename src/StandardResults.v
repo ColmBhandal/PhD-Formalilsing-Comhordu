@@ -5,7 +5,6 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 
-Add LoadPath "Extras".
 Require Import ComhCoq.Extras.LibTactics.
 Require Export Reals.
 Require Export Logic.ProofIrrelevance.
