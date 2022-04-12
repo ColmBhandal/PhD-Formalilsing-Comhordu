@@ -7,11 +7,11 @@ Add LoadPath "Extras".
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import GenTacs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.GenTacs.
 
 (********************** Bisimulation **********************)
 
@@ -59,7 +59,7 @@ Ltac plus_le_left_red := match goal with [Q : ?a + ?b = ?a + ?c |-
   ?b = ?c] => replace b with (a + b - a);[ | ring];
   rewrite Q; ring end.
 
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
 
 (*TOGO: Wherever the sort shit is.*)

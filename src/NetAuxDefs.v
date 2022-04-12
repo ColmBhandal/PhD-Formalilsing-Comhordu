@@ -5,20 +5,20 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Require Import List.
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntityLanguage.
-Require Import NetworkLanguage.
-Require Import EntAuxDefs.
-Require Import NetAuxBasics.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntityLanguage.
+Require Import ComhCoq.NetworkLanguage.
+Require Import ComhCoq.EntAuxDefs.
+Require Import ComhCoq.NetAuxBasics.
 
 (*tfs m t i n p says that the entity i in the network n has been transitioning
 to a fail safe mode from the mode m for a time of t. Transitioning to fail safe

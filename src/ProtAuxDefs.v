@@ -7,11 +7,11 @@ Add LoadPath "Extras".
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import ProcEquiv.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.ProcEquiv.
 
 (********************** Single ProcTerm State Predicates **********************)
 

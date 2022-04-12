@@ -217,13 +217,6 @@ Ltac uncurry := repeat uncurry_step.
 Ltac eexists_safe := match goal with [ |- ex _] => eexists end.
 
 Ltac name_evars := repeat match goal with |- context[?V] => is_evar V; set V end.
-
-(**Tries to solve goal using multiple constructor tactics.*)
-Ltac constructor_rep := first [solve [constructor] |
-  constructor (constructor_rep)].
-
-Ltac econstructor_rep := first [solve [econstructor] |
-  econstructor (constructor_rep)].
   
 (** Given an equality U : a = b, this tactic first tries to rewrite U
 in the goal, then if this does not work rewrites it in a hypothesis.*)

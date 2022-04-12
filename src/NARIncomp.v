@@ -5,26 +5,26 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Require Import Coq.Program.Equality.
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import GenTacs.
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntityLanguage.
-Require Import ProtAuxDefs.
-Require Import ProtAuxResults.
-Require Import EntAuxDefs.
-Require Import EntAuxResults.
-Require Import NetworkLanguage.
-Require Import NetAuxBasics.
-Require Import NetAuxDefs.
-Require Import NARMisc.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntityLanguage.
+Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.ProtAuxResults.
+Require Import ComhCoq.EntAuxDefs.
+Require Import ComhCoq.EntAuxResults.
+Require Import ComhCoq.NetworkLanguage.
+Require Import ComhCoq.NetAuxBasics.
+Require Import ComhCoq.NetAuxDefs.
+Require Import ComhCoq.NARMisc.
 
 
 (*If any entity has an incomingNet message the network can't delay.*)

@@ -6,23 +6,23 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 Require Import Equality.
 
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
 (*
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import ProtAuxDefs.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntityLanguage.*)
-Require Import NetworkLanguage.
-(*Require Import EntAux.*)
-Require Import NetAuxBasics.
-Require Import NetAuxDefs.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntityLanguage.*)
+Require Import ComhCoq.NetworkLanguage.
+(*Require Import ComhCoq.EntAux.*)
+Require Import ComhCoq.NetAuxBasics.
+Require Import ComhCoq.NetAuxDefs.
 
 
 (*If an entity is pending then it cannot delay.*)

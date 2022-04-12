@@ -6,10 +6,10 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (***************************** Standard Imports *****************************)
 
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 Require Export Reals.
 Require Export Logic.ProofIrrelevance.
-Require Import GenTacs.
+Require Import ComhCoq.GenTacs.
 
 Open Scope R_scope.
 

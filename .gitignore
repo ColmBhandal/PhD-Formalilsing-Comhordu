@@ -3,6 +3,10 @@ CoqDoc/
 #Coq Build Output to Ignore
 *.aux
 *.glob
+*.vo
+*.vos
+*.vok
+*Makefile.coq*
 
 # Windows image file caches
 Thumbs.db

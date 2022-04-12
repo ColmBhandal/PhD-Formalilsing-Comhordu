@@ -2,12 +2,12 @@
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
-Require Import LanguageFoundations.
-Require Import ComhBasics.
-Require Import GenTacs.
-Require Import StandardResults.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
 
 (***************** Timed lists *****************)
 

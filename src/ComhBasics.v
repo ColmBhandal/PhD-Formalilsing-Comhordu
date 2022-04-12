@@ -5,7 +5,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 are defined here such as the notion of a network of entities.*)
 
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 Require Import Fourier_util.
 
 (*********Imports********)
@@ -16,8 +16,8 @@ Notation "[ ]" := nil.
 Notation "[ x , .. , y ]" := (cons x .. (cons y nil) ..).
 Notation "e _: n" := (In e n) (at level 60).
 Require Export Logic.Decidable.
-Require Import GenTacs.
-Require Import StandardResults.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
 Require Import ListSet.
 
 

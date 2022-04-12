@@ -6,23 +6,23 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 Require Import Reals.
 Require Import List.
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntityLanguage.
-Require Import NetworkLanguage.
-Require Import ProtAuxDefs.
-Require Import ProtAuxResults.
-Require Import EntAuxDefs.
-Require Import EntAuxResults.
-Require Import GenTacs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntityLanguage.
+Require Import ComhCoq.NetworkLanguage.
+Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.ProtAuxResults.
+Require Import ComhCoq.EntAuxDefs.
+Require Import ComhCoq.EntAuxResults.
+Require Import ComhCoq.GenTacs.
 
 (*IDEA: MIGRATE SOME OF THE CONTENTS OF THE FILE OVER VARIUOS NAB (NET-AUX-BASICS)
 PREFIXED FILES, THEN *EXPORT* THEM HERE, SO THAT THIS FILE JUST ACTS AS A

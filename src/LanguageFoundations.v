@@ -2,18 +2,18 @@
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (** This file lays down the foundation for the software language file by defining things like expressions and evaluation of expressions.*)
 
-Require Import GenTacs.
-Require Import StandardResults.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
 Require Export Relations.
 Require Export Lists.ListSet.
 Require Export Reals.
 Require Export List.
 Require Export Logic.FunctionalExtensionality.
-Require Import ComhBasics.
+Require Import ComhCoq.ComhBasics.
 
 Open Scope nat_scope.
 

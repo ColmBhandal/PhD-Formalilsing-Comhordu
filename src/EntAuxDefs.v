@@ -7,14 +7,14 @@ Add LoadPath "Extras".
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import SoftwareLanguage.
-Require Import EntityLanguage.
-Require Import ProtAuxDefs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.EntityLanguage.
+Require Import ComhCoq.ProtAuxDefs.
 
 
 (***************************** Lifting *****************************) 

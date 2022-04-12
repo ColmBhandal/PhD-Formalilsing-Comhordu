@@ -6,36 +6,36 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 Require Import Equality.
 
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import GenTacs.
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
 (*
-Require Import SoftwareLanguage.
-Require Import ProtAuxDefs.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntityLanguage.*)
-Require Import NetworkLanguage.
-(*Require Import EntAux.*)
-Require Import NetAuxBasics.
-Require Import NetAuxDefs.
-Require Import SoftwareLanguage.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntAuxDefs.
-Require Import ProtAuxDefs.
-Require Import EntAuxResults.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntityLanguage.*)
+Require Import ComhCoq.NetworkLanguage.
+(*Require Import ComhCoq.EntAux.*)
+Require Import ComhCoq.NetAuxBasics.
+Require Import ComhCoq.NetAuxDefs.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntAuxDefs.
+Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.EntAuxResults.
 
 (*** Net Aux Results Imports ***)
-Require Import NARInsuff.
-Require Import NARMisc.
-Require Import NARMsgPosition.
-Require Import NAROvlpTime.
+Require Import ComhCoq.NARInsuff.
+Require Import ComhCoq.NARMisc.
+Require Import ComhCoq.NARMsgPosition.
+Require Import ComhCoq.NAROvlpTime.
 
 (* Let's say we can show that a network is currSince m t i n, then we can show
 that the time parameter to this relation is always greater than mL + max AN trans,

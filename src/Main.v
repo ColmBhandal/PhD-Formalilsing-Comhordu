@@ -7,28 +7,27 @@ if time allowed it.*)
 (***************************** Standard Imports *****************************)
 
 Require Import Reals.
-Require Import GenTacs.
-Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.GenTacs.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import InterfaceLanguage.
-Require Import ModeStateLanguage.
-Require Import EntityLanguage.
-Require Import NetworkLanguage.
-(*Require Import ProtAuxDefs.
-Require Import EntAux.*)
-Require Import NetAuxBasics.
-Require Import NetAuxDefs.
-Require Import NARNonFS_currSince.
-Require Import NARMisc.
-Require Import NARIncomp.
-Require Import NARTop.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.InterfaceLanguage.
+Require Import ComhCoq.ModeStateLanguage.
+Require Import ComhCoq.EntityLanguage.
+Require Import ComhCoq.NetworkLanguage.
+(*Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.EntAux.*)
+Require Import ComhCoq.NetAuxBasics.
+Require Import ComhCoq.NetAuxDefs.
+Require Import ComhCoq.NARNonFS_currSince.
+Require Import ComhCoq.NARMisc.
+Require Import ComhCoq.NARIncomp.
+Require Import ComhCoq.NARTop.
 
 (**Used to exploit a symmetry in the following proof, essentially continues on the proof
 from where it is applied*)

@@ -4,19 +4,19 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (***************************** Standard Imports *****************************)
 
 Add LoadPath "Extras".  
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import GenTacs.
-Require Import StandardResults.
-Require Import ComhBasics.
-Require Import LanguageFoundations.
-Require Import SoftwareLanguage.
-Require Import ProtAuxDefs.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.ProtAuxDefs.
 Require Import Bool.
-Require Import EntityLanguage.
-Require Import ProcEquiv.
+Require Import ComhCoq.EntityLanguage.
+Require Import ComhCoq.ProcEquiv.
 
 (****************** (TIDY?) General Stuff ******************)
 

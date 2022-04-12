@@ -4,12 +4,12 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 Add LoadPath "Extras".
 (** The software component of the language is here defined.*)
 
-Require Import GenTacs.
-Require Import StandardResults.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
 Require Import Decidable.
 Require Import ListSet.
-Require Import LanguageFoundations.
-Require Import ComhBasics.
+Require Import ComhCoq.LanguageFoundations.
+Require Import ComhCoq.ComhBasics.
 
 (******************Syntax*******************)
 
@@ -720,7 +720,7 @@ Corollary sortDerivEquiv (a : DiscAct) (d d' : Delay) (p p' : ProcTerm) :
   Qed.
 
 
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
 
 (**Sort captures at least all the actions that are available within the delay d. The converse

@@ -6,15 +6,15 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Require Import Coq.Program.Equality.
 Add LoadPath "Extras".
-Require Import LibTactics.
+Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import GenTacs.
-Require Import StandardResults.
-Require Import ComhBasics.
+Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.ComhBasics.
 Require Export EntityLanguage.
-Require Import EntAuxResults.
+Require Import ComhCoq.EntAuxResults.
 
 (***************Network syntax stuff*********************)
 
