@@ -66,7 +66,7 @@ Note: the ``Index.html`` file renders with a bunch of broken links so I ignore i
 
 ## Potential Improvements
 
- - Not all results in this project were proved in Coq. About 30% of the results were admitted. The [file coq_proj.pdf](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/coq_proj.pdf) gives more detail on this. In particular, it outlines what needs to be done and how.
+ - Not all results in this project were proved in Coq. About 30% of the results were admitted. The file [coq_proj.pdf](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/coq_proj.pdf) gives more detail on this. In particular, it outlines what needs to be done and how.
  - Ideally, this project should be decomposed into a number of repos, to make it clear what the various components do and to better expose and document them for reuse.
 
 ## Notes
