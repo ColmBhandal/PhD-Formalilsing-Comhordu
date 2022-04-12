@@ -12,14 +12,20 @@ In its current state, this code is not recommended for inclusion in any downstre
 
 ## Building the Project
 
+### Prerequisites
+
+[Install Coq](https://coq.inria.fr/download).
+
+#### Windows Users
+
+If you are a Windows user, then you will need to first install GNU ``make``, and possibly GNU CoreUtils. See [this SO post](https://stackoverflow.com/questions/47242800/coqide-make-on-windows) for more info.
+
+### Local Build
+
 The project is built in two steps using a ``_CoqProject`` file and then a make file. The first step builds a make file, and then the second step makes the project using the make file. This is standard procedure for a Coq repository. In more detail, here is how to build:
 
  1. First step is to build the makefile itself from the ``_CoqProject`` file. In the top-level directory of this repo, run: ``coq_makefile -f _CoqProject -o Makefile.coq``
  1. Next step is to make the project by calling make on the make file. The main module in this project is ``Main.v`` so this is the file to build to ``Main.vo``, using the following command: ``make -f Makefile.coq src/Main.vo``
-
-### Note for Windows Users
-
-If you are a Windows user, then you will need to first install GNU ``make``, and possibly GNU CoreUtils. See [this SO post](https://stackoverflow.com/questions/47242800/coqide-make-on-windows) for more info.
 
 ## Repo Roadmap
 
@@ -38,6 +44,15 @@ The software component of the language is the language in which the protocol its
 ### Other Modules
 
 There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves. 
+
+## Building the CoqDoc
+
+The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is recommended to build any CoqDoc locally here. There are many arguments you can pass to CoqDoc e.g. you can choose to omit proofs; for a full explanation of those arguments just run ``coqdoc --help``. Here are just two options that I think are useful:
+
+ 1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``coqdoc --html -d "CoqDoc/verbose" src/*.v --no-index --toc``
+ 1. To build light HTML, without proofs, use: ``coqdoc --html -g -d "CoqDoc/light" src/*.v --no-index --toc``
+
+Note: the ``Index.html`` file renders with a bunch of broken links so I ignore it with ``--no-index`` and instead use a table of contents file as the entry point, using ``--toc``. This could probably be improved in future.
 
 ## Potential Improvements
 
