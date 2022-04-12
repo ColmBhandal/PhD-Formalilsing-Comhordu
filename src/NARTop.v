@@ -358,7 +358,7 @@ Theorem currSince_periodic_sent (n : Network) (m : Mode) (t t' : Time)
   invertClear H2. rename x into t''. invertClear H1. rewrite Rplus_comm in H2.
   exists (mkTime (mknonnegreal t'' H3)). apply H2. invertClear H1. rename x into t''.
   (*Now, we also know t' < t + d, so t'' < t*)
-  assert (t'' < t). rewrite H3 in H0. simpl in H0. eapply Rplus_lt_reg_l in H0.
+  assert (t'' < t). rewrite H3 in H0. simpl in H0. eapply Rplus_lt_reg_r in H0.
   assumption.
   (*So we can apply the I.H. for t'' and the previous state*)
   apply IHcurrSince in H1. clear IHcurrSince. decompose [ex] H1. clear H1.
