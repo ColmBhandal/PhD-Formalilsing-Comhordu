@@ -244,7 +244,7 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   rewrite H8. constructor. apply BO. lets BP : bcReady_pos H4 H9.
   (*Then the goal is reduced to: |l - l| <= Smax*0 == 0 <= 0... which is trivial.*)
   eapply inPos_ent_net in BP. assert (l0 = l). eapply inPos_unique. apply BP.
-  apply Q. rewrite H10. rewrite dist_refl. simpl. rewrite Rmult_0_r. apply Rle_refl.
+  apply Q. rewrite H10. rewrite dist2D_refl. simpl. rewrite Rmult_0_r. apply Rle_refl.
   assumption.
   (*We use an analogous argument for the overlap case using (ovlp_outProc_out)*)
   lets OO : ovlp_outProc_out Y H6. decompEx2 OO u r OO'.
@@ -253,7 +253,7 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   rewrite Heqe. constructor. rewrite H8. constructor. apply OO'.
   lets OP : ovReady_pos H4 H9. eapply inPos_ent_net in OP.
   assert (l0 = l). eapply inPos_unique. apply OP. apply Q. rewrite H10.
-  rewrite dist_refl. simpl. rewrite Rmult_0_r. apply Rle_refl. assumption.
+  rewrite dist2D_refl. simpl. rewrite Rmult_0_r. apply Rle_refl. assumption.
   (*The inductive cases follow immediately from the definition of sent and the semantics.*)
   (*Either a discrete action happens, in which case both t and the position of entity i don't change,
   and so the goal carries over directly from the previous case.*)

@@ -707,7 +707,7 @@ Lemma dist_tri_ineq : forall (l1 l2 l3 : Position),
   dist2d l1 l3 <= dist2d l1 l2 + dist2d l2 l3. intros l1 l2 l3. apply triangle.
   Qed.
 
-Lemma dist_refl : forall l : Position, dist2d l l = zeroNonneg. intros.
+Lemma dist2D_refl : forall l : Position, dist2d l l = zeroNonneg. intros.
   apply nonnegRealEqR. unfold dist2d. simpl. apply distance_refl. Qed.
 
 (****************************** Interval ******************************)
