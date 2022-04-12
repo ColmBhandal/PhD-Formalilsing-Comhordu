@@ -8,6 +8,8 @@ The proof found in my thesis has been formalised in Coq. However, some of the re
 
 ## Repo Roadmap
 
+All source ``.v`` files can be found in the repo ``src``. The folder ``Extras`` contains content which I did not write but needed to include - this was not available through standard import.
+
 ### Top-Level Result
 
 The top-level safety condition is proved in [Main.v](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/Main.v). The top-level Theorem is called ``safety``:
