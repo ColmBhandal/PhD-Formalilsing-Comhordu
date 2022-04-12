@@ -23,7 +23,7 @@ Require Import ComhCoq.ModeStateLanguage.
 Record Message : Type :=
 mkMsg
 {
-  msgPayload :> list Base;
+  msgPayload :> list BaseType;
   msgPos : Position;
   msgCoverage : Distance
 }.
@@ -34,7 +34,7 @@ Definition rangeMsg (m : Message) : Distance :=
    match m with [-v, l, r-] => r end.
 
 (** Return the first mode that occurs in v, or None if there is no such mode.*)
-Fixpoint firstMode (v : list Base) : option Mode :=
+Fixpoint firstMode (v : list BaseType) : option Mode :=
   match v with
   | [] => None
   | b :: vs => match b with
@@ -128,15 +128,15 @@ Inductive stepDiscEnt : Entity -> ActDiscEnt -> Entity -> Prop :=
   | stepDeProcTau : forall (p p' : ProcTerm) (l : Position) (i : Interface) (k : ModeState),
     p -PA- tauAct -PA> p' -> [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k |]
   | stepDeIOProcInter : forall (p p' : ProcTerm) (l : Position)
-    (i i' : Interface) (k : ModeState) (v : list Base),
+    (i i' : Interface) (k : ModeState) (v : list BaseType),
     p -PA- chanOutProc ;! v -PA> p' -> i -i- chanOutProc {? v -i> i' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i' , k |]
   | stepDeIOInterProc : forall (p p' : ProcTerm) (l : Position)
-    (i i' : Interface) (k : ModeState) (v : list Base),
+    (i i' : Interface) (k : ModeState) (v : list BaseType),
     p -PA- chanInProc ;? v -PA> p' -> i -i- chanInProc {! v -i> i' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i' , k |]
   | stepDeNotif : forall (p p' : ProcTerm) (l : Position)
-    (i i' : Interface) (k : ModeState) (v : list Base),
+    (i i' : Interface) (k : ModeState) (v : list BaseType),
     p -PA- chanAN ;? v -PA> p' -> i -i- chanAN {! v -i> i' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i' , k |]
   | stepDeRdStbl : forall (p p' : ProcTerm) (l : Position)
@@ -165,18 +165,18 @@ Inductive stepDiscEnt : Entity -> ActDiscEnt -> Entity -> Prop :=
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k |]
   (** If the message sent was too far away, it gets ignored.*)
   | stepDeIgnore : forall (p : ProcTerm) (l l' : Position)
-    (i : Interface) (k : ModeState) (v : list Base) (r : Distance),
+    (i : Interface) (k : ModeState) (v : list BaseType) (r : Distance),
      r < dist2d l l' -> 
     [| p , l , i , k |] -EA- [-v, l', r-]#: ->> [| p , l , i , k |]
   (** If the message sent was within range, then it gets input. This can be proven not
   to block by analysing the behaviour of interface components. Therefore, a message
   should always be accepted.*)
   | stepDeIn : forall (p : ProcTerm) (l l' : Position)
-    (i i' : Interface) (k : ModeState) (v : list Base) (r : Distance),
+    (i i' : Interface) (k : ModeState) (v : list BaseType) (r : Distance),
     dist2d l l' <= r -> i -i- chanIOEnv {? v -i> i' ->
     [| p , l , i , k |] -EA- [-v, l', r-]#? ->> [| p , l , i' , k |]
   | stepDeOut : forall (p : ProcTerm) (l : Position)
-    (i i' : Interface) (k : ModeState) (v : list Base) (r : Distance),
+    (i i' : Interface) (k : ModeState) (v : list BaseType) (r : Distance),
     i -i- chanIOEnv _! v !_ r -i> i' ->
     [| p , l , i , k |] -EA- [-v, l, r-]#! ->> [| p , l , i' , k |]
   | stepDeTest : forall (p : ProcTerm) (l : Position)

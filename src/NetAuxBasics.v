@@ -76,21 +76,21 @@ Inductive distNet (i i' : nat) (n : Network) : Distance -> Prop :=
     distNet i i' n (distFun l l').	
 
 (*outgoing v t i n says that the message v with timestamp t is in the output queue of the interface component of the entity i in the network n.*)
-Inductive outgoing (v : list Base) (t : Time) (i : nat) (n : Network) : Prop :=
+Inductive outgoing (v : list BaseType) (t : Time) (i : nat) (n : Network) : Prop :=
   | ogWitness (p : ProcTerm) (l : Position) (li : InputList) (lo : OutputList) (ln : NotifList) (k : ModeState) :
     [| p , l , (mkInterface li lo ln) , k |] @ i .: n -> In (<( v , t )>) (outList lo) -> outgoing v t i n.
 
 (*incomingNet v i n says that the message v is in the input queue of the interface component of the entity i in the network n.
 Note: Even though the input queue is effectively untimed messages, it is modelled as a timed list, with 
 timestamps simply set to 0, hence "v in Li" becomes "<v, 0> in Li" to be more pedantic about it.*)
-Inductive incomingNet (v : list Base) (i : nat) (n : Network) : Prop :=
+Inductive incomingNet (v : list BaseType) (i : nat) (n : Network) : Prop :=
   | icWitness (p : ProcTerm) (l : Position) (li : InputList) (lo : OutputList) (ln : NotifList) (k : ModeState) :
     [| p , l , (mkInterface li lo ln) , k |] @ i .: n -> In (<( v , zeroTime )>) (inList li) -> incomingNet v i n.
 
 
 (*incomingNetNotif v t i n says that the message v with timestamp t is in the
 notification queue of the interface component of the entity i in the network n.*)
-Inductive incomingNetNotif (v : list Base) (t : Time) (i : nat) (n : Network) : Prop :=
+Inductive incomingNetNotif (v : list BaseType) (t : Time) (i : nat) (n : Network) : Prop :=
   | icnWitness (p : ProcTerm) (l : Position) (li : InputList) (lo : OutputList) (ln : NotifList) (k : ModeState) :
     [| p , l , (mkInterface li lo ln) , k |] @ i .: n -> In (<( v , t )>) (notifList ln) -> incomingNetNotif v t i n.
 			 
@@ -599,7 +599,7 @@ entities are preserved forwards in a network.*)
 (*If v is outgoing with timestamp t, and the network can delay, then in
 the derivative network v is outgoing with timestamp t - d.
 A useful corollary of this is that if t = 0, then delay is impossible.*)
-Theorem outgoing_del (n n' : Network) (d : Delay) (v : list Base) (t : Time) (i : nat) : 
+Theorem outgoing_del (n n' : Network) (d : Delay) (v : list BaseType) (t : Time) (i : nat) : 
   n -ND- d -ND> n' -> outgoing v t i n ->
   {p : d <= t | outgoing v (minusTime t d p) i n'}. Admitted. (*5*)
 (**Proof: Idea is to invert/destruct outgoing to [p, l, {li, lo, ln}, k] @ i.: n & v, t : lo
@@ -612,13 +612,13 @@ contstructor & assumption
 .*)
 
 Corollary outgoing_del_contra (n n' : Network) (d : Delay)
-  (v : list Base) (i : nat) : n -ND- d -ND> n' ->  outgoing v zeroTime i n -> False. intros. 
+  (v : list BaseType) (i : nat) : n -ND- d -ND> n' ->  outgoing v zeroTime i n -> False. intros. 
   addHyp (outgoing_del n n' d v zeroTime i H H0). invertClear H1.
   eapply Rle_not_lt. apply x. simpl. delPos. Qed.
 
 (*If v is outgoing with non-zero timestamp t, and the network performs a
 discrete action, then v is still outgoing in the derivative network.*)	 
-Theorem outgoing_disc_pres (n n' : Network) (a : ActDiscNet) (v : list Base) (t : Time) (i : nat) :
+Theorem outgoing_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time) (i : nat) :
   n -NA- a -NA> n' -> outgoing v t i n -> 0 < t ->
   outgoing v t i n'. introz U.
   inversion U0.
@@ -642,7 +642,7 @@ Theorem outgoing_disc_pres (n n' : Network) (a : ActDiscNet) (v : list Base) (t 
 (*If v is incomingNetNotif with timestamp t, and the network can delay, then in
 the derivative network v is incomingNetNotif with timestamp t - d.
 Corollary is that whenever t = 0 delay is impossible.*)
-Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list Base)
+Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
   (t : Time) (i : nat) : 
   reachableNet n -> n -ND- d -ND> n' -> incomingNetNotif v t i n ->
   {p : d <= t | incomingNetNotif v (minusTime t d p) i n'}.
@@ -713,7 +713,7 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list Base)
 
 (*If v is incomingNetNotif with non-zero timestamp t, and the network performs a discrete
 action, then v is still incomingNetNotif in the derivative network.*)
-Theorem incomingNetNotif_disc_pres (n n' : Network) (a : ActDiscNet) (v : list Base) (t : Time) (i : nat) :
+Theorem incomingNetNotif_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time) (i : nat) :
   n -NA- a -NA> n' -> incomingNetNotif v t i n -> 0 < t ->
   incomingNetNotif v t i n'. Admitted. (*4*)
 (**Proof: Analogous to (outgoing_disc_pres).*)
@@ -772,13 +772,13 @@ Lemma del_net_ent (e : Entity) (i : nat) (n n' : Network) (d : Delay) :
   eassumption. Qed.
 
 (*If a network accepts some value*)
-Lemma inRange_acc_input (n n' : Network) (v : list Base) (l : Position)
+Lemma inRange_acc_input (n n' : Network) (v : list BaseType) (l : Position)
   (r : Distance) (i : nat) (e : Entity) :
   n -NA- ([-v, l, r-]) /?: -NA> n' -> e @ i .: n -> dist2d l (posEnt e) <= r ->
   exists e', e -EA- ([-v, l, r-]) #? ->> e' /\ e' @ i .: n'. Admitted. (*7*)
 
 (*Any entity within range of a broadcast inputs that broadcast.*)
-Lemma inRange_out_input (n n' : Network) (v : list Base) (l : Position)
+Lemma inRange_out_input (n n' : Network) (v : list BaseType) (l : Position)
   (r x: Distance) (i j : nat) (e : Entity) :
   n -NA- ([-v, l, r-]) /! i -NA> n' -> e @ j .: n -> i <> j -> distNet i j n' x ->
   x <= r -> exists e', e -EA- ([-v, l, r-]) #? ->> e' /\ e' @ j .: n'.
@@ -858,19 +858,19 @@ Conjecture inPos_unique : forall (l l' : Position) (i : nat) (n : Network),
 
 (*An output by entity i from the network n means that the message is now pending
 notification with timestamp AN.*)
-Lemma outNet_incomingNetNotif (n n' : Network) (v : list Base) (r : Distance)
+Lemma outNet_incomingNetNotif (n n' : Network) (v : list BaseType) (r : Distance)
   (l : Position) (i : nat) : n -NA- ([-v, l, r-]) /! i -NA> n' ->
   incomingNetNotif ((baseDistance r)::v) adaptNotif i n'. Admitted. (*5*)
 (**Proof: Follows from interface semantics.*)
 
 (** Linking theorem.*)
-Lemma incoming_net_ent (v : list Base) (i : nat) (n : Network) :
+Lemma incoming_net_ent (v : list BaseType) (i : nat) (n : Network) :
   incomingNet v i n -> exists e, incomingEnt v e /\ e @ i .: n. intro U.
   invertClear U. exists ([|p, l, {| li := li; lo := lo; ln := ln |}, k|]).
   split. repeat constructor. assumption. assumption. Qed.
 
 (** Linking theorem.*)
-Lemma incoming_ent_net (v : list Base) (e : Entity) (i : nat) (n : Network) :
+Lemma incoming_ent_net (v : list BaseType) (e : Entity) (i : nat) (n : Network) :
   incomingEnt v e -> e @ i .: n -> incomingNet v i n.
   (*Proof: Follows directly from the definition*)
   introz U. inversion U. subst. destruct h. econstructor. eassumption.

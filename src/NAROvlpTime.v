@@ -54,7 +54,7 @@ Theorem pending_time2 (n : Network) (m : Mode) (i : nat)
   pending i n p -> ovReadyStateNet m u l i n ->
   exists m0 q, u = addTime (waitTime m0 m q) (period m).
   Admitted. (*1*)
-(**Proof: Induction on pending. Base case fails because it only applies to ovWait.
+(**Proof: Induction on pending. BaseType case fails because it only applies to ovWait.
 Discrete inductive case can be shown by (backtracking + automation) to follow from
 ovWaitState m u t' i n. But then by (pending_time1), we have that u = tw(m0, m) + period m.
 And since the u is the same across the transition, it holds now. The delay inductive case
@@ -111,7 +111,7 @@ Theorem nextSince_switchBc_lower (n : Network) (m : Mode) (i : nat)
   (t : Time) (p : reachableNet n) :
   nextSince m t i n p -> switchBcStateNet m i n ->
   msgLatency + Rmax adaptNotif transMax < t. Admitted. (*1*)
-(**Proof: Induction on nextSince. Base case fails. Delay follows by monotonicity of t with
+(**Proof: Induction on nextSince. BaseType case fails. Delay follows by monotonicity of t with
 nextSince, as does the discrete case where the previous state is still switchBCState. So
 the only case of any complexity is the discrete inductive case where the previous state was
 not a switchBcState m. In which case we can show that it must be ovWaitState m u 0 y for

@@ -64,7 +64,7 @@ Ltac lift_act_sum p1 p2 :=
 
 (*Generates a trivial list of base values of the specified length. The list
 just consists of a string of zeros (times).*)
-Fixpoint genBaseList (n : nat) : list Base :=
+Fixpoint genBaseList (n : nat) : list BaseType :=
   match n with
   | 0 => []
   | S n' => (baseTime zeroTime) :: (genBaseList n')
@@ -346,7 +346,7 @@ Lemma tfsListen_unpause_out_sort d p : tfsListenState p -> sort (chanUnpause *!)
 (*Come up with an anti-activation tactic: inversion on the transition that was claimed
 and show that none of the cases generated match any of the cases for the state predicate.*)
 (**A listener process cannot output on the channel outProc.*)
-Theorem listener_outProc_out_not (p p' : ProcTerm) (v : list Base) : 
+Theorem listener_outProc_out_not (p p' : ProcTerm) (v : list BaseType) : 
   listenerState p -> p -PA- chanOutProc ;! v -PA> p' -> False. Admitted. (*5*)
 (**Proof sketch: Because none of its constituents can output on said channel.*)
 
@@ -742,7 +742,7 @@ Ltac link_partripdelex_tac2 p1' p2' p3' :=
   end.
 
 Lemma link_par_triple_out (p1 p2 p3 p1' p2' p3' : ProcTerm)
-  (c : Channel) (v : list Base) :
+  (c : Channel) (v : list BaseType) :
   p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
   (p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
   p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
@@ -762,7 +762,7 @@ Ltac link_partripout_tac U :=
   end.
 
 Lemma link_par_triple_in (p1 p2 p3 p1' p2' p3' : ProcTerm)
-  (c : Channel) (v : list Base) :
+  (c : Channel) (v : list BaseType) :
   p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
   (p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
   p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
@@ -872,7 +872,7 @@ Theorem ovlp_outProc_out (p p' : ProcTerm) (m : Mode) (l : Position) :
 (**Proof: Brute force. Analogous to bc_outProc_out but with overlap states*)
 
 (**A protocol process cannot input on the channel outProc.*)
-Theorem prot_outProc_in_not (p p' : ProcTerm) (v : list Base) : 
+Theorem prot_outProc_in_not (p p' : ProcTerm) (v : list BaseType) : 
   p -PA- chanOutProc ;? v -PA> p' -> protocolState p -> False. Admitted. (*6*)
 (**Proof sketch: Brute force. Because none of its constituents can input on said channel.*)
 

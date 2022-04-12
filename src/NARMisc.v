@@ -138,7 +138,7 @@ level using a tactic- netState_auto_tac or some variant?*)
 Lemma tfsNext_tfs_mode_eq : forall (n : Network) (t : Time)
   (i : nat) (m1 m2 : Mode) (p : reachableNet n),
   tfs m1 t i n p -> tfsNextStateNet m2 i n -> m1 = m2. 
-(**Proof: Induction on tfs. Base case fails by state pred elim with tfsNext. Discrete inductive
+(**Proof: Induction on tfs. BaseType case fails by state pred elim with tfsNext. Discrete inductive
 case can use back-tracking to show that the previous state was either tfsStart or tfsNext. In the former
 case, we use an auxiliary theorem (...write it...) like this one except instead of tfsNextStateNet m2 i n we
 have tfsStartStateNet i n  and currModeNet m2. In the latter case, as in the delay inductive case (due to delay pres),
@@ -191,7 +191,7 @@ Then split into the different nextSinceState cases and use an aux lemma for each
 (*Let's say two entities e1 and e2 are separated by a distance x. If e1 has delivered
 message v to radius r t time units ago, and x + 2*Smax*t <= r, then e2 has received v t time
 units ago.*)
-Theorem delivered_received (n : Network) (v : list Base) (t : Time) (r x : Distance)
+Theorem delivered_received (n : Network) (v : list BaseType) (t : Time) (r x : Distance)
   (i j : nat) (p : reachableNet n) (l : Position) :
   delivered ([-v, l, r-]) t i n p -> i <> j ->
   distNet i j n x -> x + 2*speedMax*t <= r -> received v t j n p.
@@ -387,7 +387,7 @@ Theorem tfs_bound (n : Network) (m : Mode) (t : Time) (i : nat)
 then in the resultant network, v is either still timed out and outgoing or it has just
 been delivered in this instant.*)
 Theorem outgoing_timeout_disc (n n' : Network) (a : ActDiscNet) (i : nat)
-  (p : reachableNet n) (w : n -NA- a -NA> n') (v : list Base) (l : Position) :
+  (p : reachableNet n) (w : n -NA- a -NA> n') (v : list BaseType) (l : Position) :
   outgoing v zeroTime i n ->
   outgoing v zeroTime i n' \/
   exists r, delivered ([-v, l, r-]) zeroTime i n' (reachNetDisc n n' a p w).

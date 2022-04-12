@@ -80,7 +80,7 @@ Theorem ovReady_nextSince_pending (n : Network) (m : Mode) (t : Time) (i : nat)
 
 Lemma pending_urgent i n n' p d :
   pending i n p -> n -ND- d -ND> n' -> False. Admitted. (*5*) 
-(**Proof: Induction on pending. Base case: ovWait is ready to input a position,
+(**Proof: Induction on pending. BaseType case: ovWait is ready to input a position,
 and so is urgent. This readiness is not perverted by any other discreet action,
 so the ovWait-ovWait inductive case follows. Both inductive cases with ovReady
 as the current state follows immediately from the fact that ovWaitState is
@@ -91,7 +91,7 @@ then the nextSince relation holds.*)
 Theorem ovWait_zero_nextSince (n : Network) (m : Mode) (t y : Time) (i : nat)
   (p : reachableNet n) : ovWaitStateNet m t zeroTime y i n ->
   exists t, nextSince m t i n p. Admitted. (*2*)
-(**Proof: Induction on reachable. Base case fails. For the inductive case(s),
+(**Proof: Induction on reachable. BaseType case fails. For the inductive case(s),
 case analyse- is the last state ovWait? If yes, then the result follows easily
 by induction. If not, then use (...ovWait_prev...) to get the possible shapes of
 the previous state. Well, it can't be initState m, because this would give us

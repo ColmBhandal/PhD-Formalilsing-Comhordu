@@ -27,7 +27,7 @@ Require Import ComhCoq.NARMisc.
 
 
 (*If any entity has an incomingNet message the network can't delay.*)
-Theorem incomingNet_urgent (n n' : Network) (v : list Base) (i : nat) (d : Delay) :
+Theorem incomingNet_urgent (n n' : Network) (v : list BaseType) (i : nat) (d : Delay) :
   reachableNet n -> incomingNet v i n -> ~n -ND- d -ND> n'. Admitted. (*3*)
 (**Proof: First we show by inversion on incomingNet v i n that there is some e @ i .: n.
 Now assume there was such a del towards a contradiction. Then by (del_listening) we'd have

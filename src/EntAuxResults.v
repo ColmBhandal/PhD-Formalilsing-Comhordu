@@ -117,7 +117,7 @@ Lemma tfsListen_paused p1 p2 p3 :
   Admitted. (*C*)(*Need to add process reachability as a hypothesis*)
 
 (** If an entity inputs a message then that message is incoming.*)
-Lemma input_incomingEnt (v : list Base) (e e' : Entity) (l : Position) (r : Distance) :
+Lemma input_incomingEnt (v : list BaseType) (e e' : Entity) (l : Position) (r : Distance) :
   e -EA- ([-v, l, r-]) #? ->> e' -> incomingEnt v e'.
   (*Proof: Obvious from the definition of incoming.*)
   introz U. inversion U. constructor. inversion H5.

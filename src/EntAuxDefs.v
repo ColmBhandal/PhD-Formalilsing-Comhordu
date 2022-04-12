@@ -133,7 +133,7 @@ Inductive notifAbortPathEnt : Entity -> Prop :=
 (***************************** Misc *****************************)
 
 (** incomingEnt v e means v is in the incoming list of the interface of e.*)
-Inductive incomingEnt (v : list Base) : Entity -> Prop :=
+Inductive incomingEnt (v : list BaseType) : Entity -> Prop :=
   | incent P l h K : incomingInter v h -> incomingEnt v ([|P, l, h, K|]).
 
 (*When defining this, I don't think you need to bother with a restriction to "full action"s. First of all,

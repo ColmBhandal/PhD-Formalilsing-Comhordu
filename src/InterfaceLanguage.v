@@ -13,7 +13,7 @@ Require Import ComhCoq.StandardResults.
 (** A timed element is a vector of base values, along with a timestamp.*)
 Record TimedEl : Type := mkTimedEl
 {
-  msg : list Base;
+  msg : list BaseType;
   stamp : Time
 }.
 Notation "<( m , t )>" := (mkTimedEl m t) (at level 40).
@@ -33,8 +33,8 @@ Definition TimedList : Type := list TimedEl.
 (**An action is either a delay, an input or an output.*)
 Inductive ActTimedList :=
   | atlDel :> Delay -> ActTimedList
-  | atlIn : list Base -> ActTimedList
-  | atlOut : list Base -> ActTimedList.
+  | atlIn : list BaseType -> ActTimedList
+  | atlOut : list BaseType -> ActTimedList.
 
 Notation "v ?? " := (atlIn v) (at level 30).
 Notation "v !! " := (atlOut v) (at level 30).
@@ -46,11 +46,11 @@ to be defined separately for each of the sub-type lists individually,
 because it is parametrised on a time T.*)
 Inductive stepTimedList : TimedList -> ActTimedList -> TimedList -> Prop :=
   (** If the head of the list has timed out (zero time) then it can be output.*)
-  | stepTlFwdHd : forall (v : list Base) (l : TimedList),
+  | stepTlFwdHd : forall (v : list BaseType) (l : TimedList),
     <(v, zeroTime)> :: l -tl- v!! -tl> l 
   (** If the tail can evolve by outputting an element, then the whole list can evolve as
   such.*)
-  | stepTlFwd : forall (l l' : TimedList) (v1 : list Base) (e : TimedEl),
+  | stepTlFwd : forall (l l' : TimedList) (v1 : list BaseType) (e : TimedEl),
     l -tl- v1!! -tl> l' -> e :: l -tl- v1!! -tl> e :: l'
   (** The empty list can delay by any amount and stay as the empty list.*)
   | stepTlDelEmp : forall d : Delay, [] -tl- d -tl> [] 
@@ -59,7 +59,7 @@ Inductive stepTimedList : TimedList -> ActTimedList -> TimedList -> Prop :=
   Note that this differs slightly from the formulation on paper, which asserts that the
   timestamp of the head element is t >= d, and then the resulting timestamp is t - d.
   The reason for this alternative formulation is to avoid subtraction of delays/times.*)
-  | stepTlDel : forall (l l' : TimedList) (d : Delay) (v : list Base) (t t' : Time),
+  | stepTlDel : forall (l l' : TimedList) (d : Delay) (v : list BaseType) (t t' : Time),
     l -tl- d -tl> l' -> t = t' +dt+ d -> <(v, t)> :: l -tl- d -tl> 
     <(v, t')> :: l'
   where "l -tl- a -tl> l'" := (stepTimedList l a l').
@@ -130,7 +130,7 @@ Record NotifList : Type := mkNotifList {notifList : TimedList}.
 (** Semantics for the input list.*)
 Inductive stepInputList : InputList -> ActTimedList -> InputList -> Prop :=
   (** Buffer a message and stamp it with zero time.*)
-  | stepIlBuff : forall (l : TimedList) (v : list Base),
+  | stepIlBuff : forall (l : TimedList) (v : list BaseType),
     mkInputList l -il- v ?? -il> mkInputList (<(v, zeroTime)> :: l)
   (** Delay causes all the messages in the list to be lost. In other words,
   any list can delay and become the empty list.*)
@@ -168,14 +168,14 @@ Definition actEnabledInList (l : InputList) (a : ActTimedList) : Prop :=
   exists l', l -il- a -il> l'.
 
 (** An input list can always input a message.*)
-Lemma inListInEnabled : forall (l : InputList) (v : list Base),
+Lemma inListInEnabled : forall (l : InputList) (v : list BaseType),
   actEnabledInList l (v??). intros. destruct l as [l].
   exists (mkInputList (<(v, zeroTime)> :: l)). constructor. Qed.
 
 (**Semantics for the output list.*)
 Inductive stepOutputList : OutputList -> ActTimedList -> OutputList -> Prop :=
   (** Buffer a message and stamp it with a timestamp of msgLatency.*)
-  | stepOlBuff : forall (l : TimedList) (v : list Base),
+  | stepOlBuff : forall (l : TimedList) (v : list BaseType),
     mkOutputList l -ol- v?? -ol> mkOutputList (<(v, msgLatency)> :: l)
   (** Lift the timed list semantics to these specialised semantics.*)
   | stepOlLift : forall (l l' : TimedList) (a : ActTimedList),
@@ -191,12 +191,12 @@ Lemma delAddOutput : forall (l l' l'' : OutputList) (d d' : Delay),
 (**Semantics for the notification list.*)
 Inductive stepNotifList : NotifList -> ActTimedList -> NotifList -> Prop :=
   (** Buffer a message and stamp it with a timestamp of adaptNotif.*)
-  | stepNlBuff : forall (l : TimedList) (v : list Base),
+  | stepNlBuff : forall (l : TimedList) (v : list BaseType),
     mkNotifList l -nl- v?? -nl> mkNotifList (<(v, adaptNotif)> :: l)
   (** If the tail can delay to some l', and the head has timed out, then the whole
   list can delay to l', essentially dropping the head.*)
   | stepNlDrop : forall (l : TimedList) (l' : NotifList)
-    (d : Delay) (v : list Base), mkNotifList l -nl- d -nl> l' ->
+    (d : Delay) (v : list BaseType), mkNotifList l -nl- d -nl> l' ->
     mkNotifList (<(v, zeroTime)> :: l) -nl- d -nl> l'
   | stepNlDelAdd : forall (l l' l'' : NotifList) (d d' : Delay),
     l -nl- d -nl> l' -> l' -nl- d' -nl> l'' ->
@@ -280,10 +280,10 @@ on a channel, output of the same, and finally output of a list of base values on
 channel augmented with coverage information.*)
 Inductive ActInter :=
   | aiDel :> Delay -> ActInter 
-  | aiIn : Channel -> list Base -> ActInter
-  | aiOut : Channel -> list Base -> ActInter
+  | aiIn : Channel -> list BaseType -> ActInter
+  | aiOut : Channel -> list BaseType -> ActInter
   (** The final parameter is the coverage.*)
-  | aiOutCov : Channel -> list Base -> Distance -> ActInter.
+  | aiOutCov : Channel -> list BaseType -> Distance -> ActInter.
 
 Notation "c !I!" := (aiOut c []) (at level 30).
 Notation "c {? v" := (aiIn c v) (at level 30).
@@ -299,20 +299,20 @@ Inductive stepInter : Interface -> ActInter -> Interface -> Prop :=
     l2 -ol- d -ol> l2' -> l3 -nl- d -nl> l3' ->
     (mkInterface l1 l2 l3) -i- d -i> (mkInterface l1' l2' l3')
   | stepIntBuffIn : forall (l1 l1': InputList) (l2 : OutputList)
-    (l3 : NotifList) (v : list Base), l1 -il- v?? -il> l1' ->
+    (l3 : NotifList) (v : list BaseType), l1 -il- v?? -il> l1' ->
     (mkInterface l1 l2 l3) -i- chanIOEnv {? v -i> (mkInterface l1' l2 l3)
   | stepIntFwdIn : forall (l1 l1': InputList) (l2 : OutputList)
-    (l3 : NotifList) (v : list Base), l1 -il- v!! -il> l1' ->
+    (l3 : NotifList) (v : list BaseType), l1 -il- v!! -il> l1' ->
     (mkInterface l1 l2 l3) -i- chanInProc {! v -i> (mkInterface l1' l2 l3)
   | stepIntBuffOut : forall (l1 : InputList) (l2 l2' : OutputList)
-    (l3 : NotifList) (v : list Base), l2 -ol- v?? -ol> l2' ->
+    (l3 : NotifList) (v : list BaseType), l2 -ol- v?? -ol> l2' ->
     (mkInterface l1 l2 l3) -i- chanOutProc {? v -i> (mkInterface l1 l2' l3)
   | stepIntFwdOut : forall (l1 : InputList) (l2 l2' : OutputList)
-    (l3 l3' : NotifList) (v : list Base) (r : Distance),
+    (l3 l3' : NotifList) (v : list BaseType) (r : Distance),
     l2 -ol- v!! -ol> l2' -> l3 -nl- ((baseDistance r) :: v) ?? -nl> l3' ->
     (mkInterface l1 l2 l3) -i- chanIOEnv _! v !_ r -i> (mkInterface l1 l2' l3')
   | stepIntFwdNotif : forall (l1 : InputList) (l2 : OutputList)
-    (l3 l3' : NotifList) (v : list Base), l3 -nl- v!! -nl> l3' ->
+    (l3 l3' : NotifList) (v : list BaseType), l3 -nl- v!! -nl> l3' ->
     (mkInterface l1 l2 l3) -i- chanAN {! v -i> (mkInterface l1 l2 l3')
   where "i -i- a -i> i'" := (stepInter i a i').
 
@@ -322,7 +322,7 @@ Definition actEnabledInter (i : Interface) (a : ActInter) : Prop :=
   exists i', i -i- a -i> i'.
 
 (** incomingInter v i means v is in the incoming list of the interface i.*)
-Inductive incomingInter (v : list Base) : Interface -> Prop :=
+Inductive incomingInter (v : list BaseType) : Interface -> Prop :=
   iciWitness (li : InputList) (lo : OutputList) (ln : NotifList) :
   <( v, zeroTime )> _: inList li ->
   incomingInter v (mkInterface li lo ln).
@@ -331,15 +331,15 @@ Inductive incomingInter (v : list Base) : Interface -> Prop :=
 action. The actions in question can be input or output, but there will be no case
 for tau because interfaces can't do a tau action.*)
 Inductive discActEnabledInter : DiscAct -> Interface -> Prop :=
-  | daeiIn : forall (c : Channel) (v : list Base) (i i' : Interface),
+  | daeiIn : forall (c : Channel) (v : list BaseType) (i i' : Interface),
     i -i- c {? v -i> i' -> discActEnabledInter (c ;? v) i
-  | daeiOut : forall (c : Channel) (v : list Base) (i i' : Interface),
+  | daeiOut : forall (c : Channel) (v : list BaseType) (i i' : Interface),
     i -i- c {! v -i> i' -> discActEnabledInter (c ;! v) i.
 
 (***************** Results *****************)
 
 (** An interface is always enabled on an input on the channel chanIOEnv.*)
-Theorem interfaceInEnabled : forall (i : Interface) (v : list Base),
+Theorem interfaceInEnabled : forall (i : Interface) (v : list BaseType),
   actEnabledInter i (chanIOEnv {? v). destruct i. intros.
   addHyp (inListInEnabled li0 v). invertClear H. rename x into l'.
   exists ({| li := l'; lo := lo0; ln := ln0 |}). constructor.
@@ -354,15 +354,15 @@ Lemma delAddInter : forall (i i' i'' : Interface) (d d' : Delay),
   eapply delAddOutput. apply H9. assumption.
   eapply stepNlDelAdd. apply H10. assumption. Qed.
 
-Conjecture outList_received_in : forall (l l' : OutputList) (v : list Base),
+Conjecture outList_received_in : forall (l l' : OutputList) (v : list BaseType),
   l -ol- v ?? -ol> l' -> <(v, msgLatency)> _: outList l'.
 (**Proof: Obvious from outList semantics*)
 
-Conjecture inList_received_in : forall (l l' : InputList) (v : list Base),
+Conjecture inList_received_in : forall (l l' : InputList) (v : list BaseType),
   l -il- v ?? -il> l' -> <(v, msgLatency)> _: inList l'.
 (**Proof: Obvious from inList semantics*)
 
-Conjecture notifList_received_in : forall (l l' : NotifList) (v : list Base),
+Conjecture notifList_received_in : forall (l l' : NotifList) (v : list BaseType),
   l -nl- v ?? -nl> l' -> <(v, msgLatency)> _: notifList l'.
 (**Proof: Obvious from notifList semantics*)
 
@@ -434,7 +434,7 @@ Lemma notif_timeout_enabled v lix lox lnx :
 
 (*LOCAL TIDY*)
 
-Lemma interface_outProc_in (h : Interface) (v : list Base) :
+Lemma interface_outProc_in (h : Interface) (v : list BaseType) :
   discActEnabledInter (chanOutProc ;? v) h.
   (*Proof: Obvious from semantics*)
   destruct h. destruct lo0. repeat econstructor. Qed.
