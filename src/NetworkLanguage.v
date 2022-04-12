@@ -456,7 +456,7 @@ Lemma link_net_ent_disc_bkwd : forall (n n' : Network) (e' : Entity) (i : nat) (
   (e = e' \/ exists a', e -EA- a' ->> e'). intros.
   destruct a.
   (** Output case.*)
-  rename n0 into i'. swap i i'.
+  rename i into i'. rename n0 into i. 
   addHyp (outputLink n n' e' i i' m H H0). invertClear H1. invertClear H2.
   exists x. split. assumption. right. invertClear H3. exists (m#!).
   assumption. invertClear H2. exists (m#?). assumption.
