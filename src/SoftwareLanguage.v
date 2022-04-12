@@ -622,8 +622,8 @@ Lemma sortInOrOut : forall (a : DiscAct) (d : Delay) (p : ProcTerm),
 (** If an action is in sort d of p, then it is also in sort d + d' of p.*)
 Theorem sortAddR : forall (a : DiscAct) (d d' : Delay) (p : ProcTerm),
   sort a d p -> sort a (d +d+ d') p. intros. induction H;
-  try solve [constructor; assumption]. apply sortSumR. assumption.
-  apply sortParCompR. assumption. eapply sortApp. apply H. assumption.
+  try solve [constructor; assumption]. 
+  eapply sortApp. apply H. assumption.
   rewrite delTimeAddAssoc2. constructor; assumption. Qed.
 
 (** If an action is in sort d of p, then it is also in sort d' + d of p.*)
@@ -634,8 +634,8 @@ Theorem sortAddL : forall (a : DiscAct) (d d' : Delay) (p : ProcTerm),
 (** If an action is in sort d of p, then it is also in sort t + d of p.*)
 Theorem sortAddTime : forall (a : DiscAct) (d : Delay) (t : Time) (p : ProcTerm),
   sort a d p -> sort a (t +dt+ d) p. intros. induction H;
-  try solve [constructor; assumption]. apply sortSumR. assumption.
-  apply sortParCompR. assumption. eapply sortApp. apply H. assumption.
+  try solve [constructor; assumption]. 
+  eapply sortApp. apply H. assumption.
   rewrite timeDelAddComm. constructor; assumption. Qed.
 
 (** If sort a d p and d' <= d, then sort a d' p.*)
@@ -662,13 +662,16 @@ Theorem sortDeriv : forall (a : DiscAct) (d d' : Delay) (p p' : ProcTerm),
   assumption. apply IHstepTimedProc in H. eapply sortApp. apply H0.
   assumption. apply IHstepTimedProc in H. rewrite delTimeAddAssoc2.
   constructor; assumption.
+  (*Not sure what happened here - proof seems to have got corrupted:
+  eapply sort_guard_eval_eq. apply H. rewrite H1.
+  apply evalExpFunTime_time.
+  inversion H. rewrite H0 in H5. inversion H5. Qed.*)
+  Admitted.
 
 Lemma sort_minus_guard a d' d t H p :
   sort a d' ($<eBase (baseTime (minusTime (nonneg (time t))
   (pos (delay d)) H))>$ p) ->
   sort a (d +d+ d') ($<eBase (baseTime t)>$ p). Admitted.
-
-  apply sort_minus_guard in H.
 
 Lemma evalExpFunTime_time t :
   evalExpFunTime (eBase (baseTime t)) = Some t.
@@ -680,11 +683,6 @@ Lemma sort_guard_eval_eq a d e1 e2 p :
   evalExpFunTime e1 = evalExpFunTime e2 ->
   sort a d ($<e2>$ p). intros. inversion H.
   rewrite H0 in H5. constructor; assumption. Qed.
-
-  eapply sort_guard_eval_eq. apply H. rewrite H1.
-  apply evalExpFunTime_time.
-
-  inversion H. rewrite H0 in H5. inversion H5. Qed.
 
 (** A version of sortDeriv but as an equivalence rather than an implication.*)
 Corollary sortDerivEquiv (a : DiscAct) (d d' : Delay) (p p' : ProcTerm) :
@@ -1085,7 +1083,7 @@ Inductive minGuard : Delay -> ProcTerm -> Prop :=
 prove this property.*)
 Lemma minGuardLe : forall (d1 d2 : Delay) (p : ProcTerm),
   d2 %; p -> d1 <= d2 -> d1 %; p. intros. induction H; try solve [constructor; assumption].
-  constructor. apply IHminGuard. assumption. assumption. apply mgIfFalse. assumption.
+  constructor. apply IHminGuard. assumption. assumption. 
   addHyp (IHminGuard1 H0). eapply mgSumL. assumption. apply H1. eapply Rle_trans.
   apply H0. assumption. addHyp (IHminGuard2 H0). eapply mgSumR. apply H.
   assumption. eapply Rle_lt_trans. apply H0. assumption.
@@ -1999,6 +1997,9 @@ Corollary patienceSoft (p : ProcTerm) : ~discActEnabled p tauAct -> exists d,
   timedActEnabled p d. intros. addHyp (progressSoft p). invertClear H0.
   apply False_ind. apply H. assumption. assumption. Qed.
 
+Lemma delProc_minus_guard t d d' H p p' e :
+  $< minusTime t (delay d) H >$ p -PD- d' -PD> p' ->
+  $< e >$ p -PD- d +d+ d' -PD> p'. Admitted.
 
 (** If p can delay to p' and p' can delay to p'',
  then p can delay to p'' by the sum of the two original delays.*)
@@ -2020,17 +2021,9 @@ Theorem delAddSoft (p p' p'' : ProcTerm) (d d' : Delay) :
   eapply stepTpApp. apply H. apply IHstepTimedProc. assumption.
   (*The del cases*)
   rewrite delTimeAddAssoc2. eapply stepTpDelAdd. apply IHstepTimedProc.
-  assumption. assumption.
-
-Lemma delProc_minus_guard t d d' H p p' e :
-  $< minusTime t (delay d) H >$ p -PD- d' -PD> p' ->
-  $< e >$ p -PD- d +d+ d' -PD> p'. Admitted.
-
-  eapply delProc_minus_guard; eassumption.
-  
+  assumption. assumption. eapply delProc_minus_guard; eassumption.  
   inversion H0; [rewrite H in H6; inversion H6 .. | ]. 
-  apply stepTpDelIll. assumption. Qed.
-  
+  apply stepTpDelIll. assumption. Qed.  
 
 (** The passage of time in this universe is linear, i.e. any process can delay by an amount d to
 at most one derivative process.*)
