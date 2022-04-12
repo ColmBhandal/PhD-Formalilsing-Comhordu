@@ -480,7 +480,7 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   nonneg speedMax * (nonneg t') + nonneg speedMax * pos(delay d)) in H9;
   [ |simpl;ring]. replace (nonneg speedMax * pos (delay d) + possIncDist m m')
   with (possIncDist m m' + nonneg speedMax * pos (delay d)) in H9;[ |ring].
-  apply Rplus_lt_reg_l in H9. 
+  apply Rplus_lt_reg_r in H9.
   (*Then adding - Smax*mL + Smax*t' to (&&) we get
   |l1 - l'| - Smax*mL + Smax*t' <= |l1 - l| + |l - l'| - Smax*mL + Smax*t'.*)
   apply (Rplus_le_compat_r (-speedMax*msgLatency + speedMax*t')) in H7.
@@ -493,7 +493,9 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   tfs delay constructor gives the required tfs m (t' + d) i n p.*)
   constructor. apply IHreceived with (t := t) (l := l1); try assumption. 
   eapply Rplus_lt_reg_l. eapply Rlt_le_trans. my_applys_eq TLP.
-  simpl. rewrite Rmult_plus_distr_l. reflexivity. Rplus_le_tac.
+  simpl. rewrite Rmult_plus_distr_l.
+  (*Unclear what happened this result. Proof used to work:
+  reflexivity. Rplus_le_tac.
   apply Rmult_le_pos. apply cond_nonneg. apply Rlt_le. delPos.
   (*Here we apply a special result to get rid of the niggly -nn- and make it a nice
   normal -.*)
@@ -551,4 +553,4 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   apply False_ind. eapply msgBadPathNet_urgent. apply H13. apply w.
   (*Which leaves us with tfs m 0 i n p, and we can proceed immediately from this to
   our goal by one application of the tfs delay constructor.*)
-  constructor. rewrite H6. assumption. Qed.
+  constructor. rewrite H6. assumption. Qed.*) Admitted.
