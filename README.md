@@ -43,7 +43,7 @@ The software component of the language is the language in which the protocol its
 
 ### Other Modules
 
-There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves or the CoqDoc - see CoqDoc section for more.
+There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves or the CoqDoc - see CoqDoc section for more. The [PhD thesis](http://www.tara.tcd.ie/bitstream/handle/2262/77596/Bhandal%2c%20Colm_TCD-SCSS-PHD-2014-08.pdf?sequence=1&isAllowed=y) itself also contains a roadmap of the repo, although it may go out of date if the repo evolves. 
 
 ## CoqDoc
 
