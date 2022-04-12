@@ -10,6 +10,17 @@ The proof found in my thesis has been formalised in Coq. However, some of the re
 
 In its current state, this code is not recommended for inclusion in any downstream projects. The code contains many ``Admitted`` results which are effectively axioms, and thus there is no guarantee of consistency. If various modules of the code were refactored to separate repos e.g. ``StandardResults.v``, then those would be fine for reuse. But as of the time of writing, this is not planned.
 
+## Building the Project
+
+The project is built in two steps using a ``_CoqProject`` file and then a make file. The first step builds a make file, and then the second step makes the project using the make file. This is standard procedure for a Coq repository. In more detail, here is how to build:
+
+ 1. First step is to build the makefile itself from the ``_CoqProject`` file. In the top-level directory of this repo, run: ``coq_makefile -f _CoqProject -o Makefile.coq``
+ 1. Next step is to make the project by calling make on the make file. The main module in this project is ``Main.v`` so this is the file to build to ``Main.vo``, using the following command: ``make -f Makefile.coq src/Main.vo``
+
+### Note for Windows Users
+
+If you are a Windows user, then you will need to first install GNU ``make``, and possibly GNU CoreUtils. See [this SO post](https://stackoverflow.com/questions/47242800/coqide-make-on-windows) for more info.
+
 ## Repo Roadmap
 
 All source ``.v`` files can be found in the repo ``src``. The folder ``Extras`` contains content which I did not write but needed to include - this was not available through standard import.
