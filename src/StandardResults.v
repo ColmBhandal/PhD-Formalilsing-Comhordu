@@ -260,7 +260,7 @@ Lemma Rlt_zero_plus : forall r1 r2 : R,
 Lemma RltPlusExistsR : forall (r1 r2 : R),
   r1 < r2 -> exists r3, r2 = r1 + r3 /\ 0 < r3. intros.
   exists (r2 - r1). split. ring. apply (Rplus_lt_reg_r r1).
-  replace (r1 + (r2 - r1)) with r2; try ring. rewrite Rplus_0_r.
+  replace (r2 - r1 + r1) with r2; try ring. rewrite Rplus_0_l.
   assumption. Qed.
 
 Lemma RltPlusExistsL : forall (r1 r2 : R),
