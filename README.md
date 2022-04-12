@@ -43,7 +43,7 @@ The software component of the language is the language in which the protocol its
 
 ### Other Modules
 
-There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves. 
+There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves or the CoqDoc - see CoqDoc section for more.
 
 ## CoqDoc
 
