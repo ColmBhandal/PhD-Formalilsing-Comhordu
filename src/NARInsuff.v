@@ -220,7 +220,7 @@ Theorem notifAbort_not_nextSince (n n' : Network)
   assumption. eapply currEq_mode. eassumption. subst.
   reflexivity. eassumption. eassumption.
   (*---------------------Case 2: currOK-----------------*) 
-  inversion H4; subst. link_partripdiscex_tac_norm. swap H2 H1.
+  inversion H4; subst. link_partripdiscex_tac_norm. swapRename H2 H1.
   lets LPT : link_par_triple_discW_3 H2. elim_intro LPT EQP EXP.
   (*EQ case, LHS follows directly*)
   left. subst. econstructor;[ | apply U1].
@@ -271,7 +271,7 @@ Theorem notifAbort_not_nextSince (n n' : Network)
   incompatible actions in question are input on pos and input on stable*)
   lets CLT : currOK_listening_track H1 LIS AND; inversion CLT.
   (*---------------------Case 3: abortOvlp-----------------*) 
-  inversion H3; subst. link_partripdiscex_tac_norm. swap H1 H2.
+  inversion H3; subst. link_partripdiscex_tac_norm. swapRename H1 H2.
   lets LPT : link_par_triple_discW_3 H2. elim_intro LPT EQP EXP.
   (*EQ case, LHS follows directly*)
   left. subst. econstructor;[ | apply U1].

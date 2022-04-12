@@ -23,7 +23,7 @@ Ltac addHypAs H Q := generalize H; intro Q.
 (** Inverts and then clears a hypothesis.*)
 Ltac invertClear H := inversion H; clear H.
 
-Ltac swap A B := let H := fresh in rename A into H; rename B into A; rename H into B.
+Ltac swapRename A B := let H := fresh in rename A into H; rename B into A; rename H into B.
 
 Ltac introz U := repeat let H := fresh U in intro H.
 

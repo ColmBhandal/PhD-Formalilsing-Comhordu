@@ -223,7 +223,7 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   (**Proof: By induction on the proof of sent.*)
   intros. generalize dependent l. induction H; intros.
   rename H3 into QQ. rename H2 into H3. rename H1 into H2. rename H0 into H1.
-  rename QQ into H0. swap l l1.
+  rename QQ into H0. swapRename l l1.
   (*The base case would give us that the network n is reachable. From this we could
   deduce from an important general result (...reachableProt_triple...) that the software
   component of the entity i is P1 | P2 | P3.*)

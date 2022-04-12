@@ -200,7 +200,7 @@ Theorem safety (n : Network) : reachableNet n -> safe n.
   (m2)-----------------|-t2-|---------------e2
       (m1)-------------|-t1-|---------------e1*)
   apply lt_notEq in H. addHyp (Rle_or_le t1 t2).
-  remember (mkDistance x) as x'. swap x x'. rewrite Heqx in Heqx'.
+  remember (mkDistance x) as x'. swapRename x x'. rewrite Heqx in Heqx'.
   assert (x < mdc). rewrite Heqx'. rewrite <- Heqx. assumption.
   invertClear H11.
   eapply safety_aux;eassumption. apply notEq_symm in H.
