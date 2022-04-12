@@ -334,7 +334,7 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
   (*Discrete inductive case: Apply I.H. to previous state, yielding incomingNetNotif
   <r, m, l> 0 i n \/ notifAbortPath m r i n.*)
   dependent destruction H1. false. eapply Rlt_not_le. apply H4. simpl. timeNonneg.
-  lets IHdisc : IHdelivered H0 H1 H3.
+  lets IHdisc : IHdelivered H0 H1 H3. reflexivity.
   (*Now we do a case analysis on this disjunction. First off we have
   incomingNetNotif <r, m, l> 0 i n. We can show then by (insuff_incomingNet_abort) that our
   goal holds in the next state.*)
@@ -463,7 +463,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   lets PSN2 : paused_switch_net i p'. rewrite <- PSN2 in SSN2.
   lets PSN1 : paused_switch_net i p. rewrite <- PSN1 in SSN1.  
   (*OK, now we're back to the run of the mill, a few contradictions to come later.*)
-  elim_intro IIA IL IR.
+  rename H2 into SWIN. elim IIA; [intro IL | intro IR]; clear IIA.
   assert (nextModeNet m i n) as NM. eapply nextSince_next. eassumption.
   lets IIA : insuff_incomingNotif_abort NM w H0 IL. elim_intro IIA IIL IIR.
   left. assumption.
@@ -474,7 +474,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   (*OK, now we're at a case where the previous state is currSince,
   so we can apply I.H. to previous state, yielding
   incomingNetNotif <r, m, l> 0 i n \/ notifAbortPath m r i n \/ tfs 0.*)
-  lets IH : IHdelivered NFS H0 H1 H3.
+  lets IH : IHdelivered NFS H0 H1 H3. reflexivity.
   (*We then break the IH into its three cases and prove each separately.*)
   lets IHC : IH H1. clear IH. rename IHC into IH. elimOr3 IH IH.
   (*First, there's the semi-preservation of incomingNetNotif,zeroTime by a discrete
@@ -596,7 +596,8 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   exists x. split. assumption. constructor; assumption.
   (*In the delay inductive case, we first assert t' < t from t' + d < t + d*)
   dependent destruction H0. rename t0 into t'.
-  assert (t' < t). eapply Rplus_lt_reg_l. apply H1.
+  assert (t' < t). eapply Rplus_lt_reg_r. unfold addDelayTime in H1.
+  simpl in H1.  apply H1.
   (*Then we split this further depending on whether AN < t'*)
   addHyp (Rlt_or_le adaptNotif t'). invertClear H4.
   (*Make the IH a bit more useable.*)
@@ -636,7 +637,7 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   tfs m (AN + t + d - AN) i n p.*)
   invertClearAs2 H7 x TF. lets TFD : tfsDel w TF. exists (x +dt+ d).
   split. simpl. rewrite H4. apply Rminus_le_swap_lr. cut (0 <= x). intro LT0.
-  my_applys_eq LT0. ring. timeNonneg. assumption. Qed.
+  my_applys_eq LT0. ring. timeNonneg. apply TFD. Qed.
   (*
   >The following picture captures the intuition of this proof:
 
