@@ -5,7 +5,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 are defined here such as the notion of a network of entities.*)
 
 Require Import ComhCoq.Extras.LibTactics.
-Require Import Fourier_util.
+Require Import Coq.Reals.Reals.
 
 (*********Imports********)
 Require Export List.
@@ -796,5 +796,10 @@ Lemma possIncBool_possInc m m' r :
 Lemma possIncDist_positive m1 m2 : 0 < possIncDist m1 m2.
   (*Proof: follows from adaptNotif_positive and speedMax_pos.*)
   replace 0 with (0 + 0); [ | ring]. apply Rplus_le_lt_compat.
-  apply cond_nonneg. repeat apply Rmult_lt_0_compat.
-  Admitted. (**Old proof broken - needs to be reproved. Result is pretty obvious.*)
+  apply cond_nonneg. repeat(apply Rmult_lt_0_compat ||
+  apply Rlt_0_1 || apply Rlt_R0_R2). apply speedMax_pos.
+  apply Rlt_le_trans with (r2 := adaptNotif). apply adaptNotif_positive.
+  rewrite <- Rplus_0_r at 1. rewrite <- Rplus_0_r at 1.
+  repeat (apply Rplus_le_compat); try timeNonneg.
+  apply Rmax_l. Qed. 
+  
