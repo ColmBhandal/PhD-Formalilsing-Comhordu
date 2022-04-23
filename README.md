@@ -22,10 +22,11 @@ If you are a Windows user, then you will need to first install GNU ``make``, and
 
 ### Local Build
 
-The project is built in two steps using a ``_CoqProject`` file and then a make file. The first step builds a make file, and then the second step makes the project using the make file. This is standard procedure for a Coq repository. In more detail, here is how to build:
+There is a top-level ``Makefile`` in the root directory of this repository. To build the Coq project just open a terminal in that directory and run:
 
- 1. First step is to build the makefile itself from the ``_CoqProject`` file. In the top-level directory of this repo, run: ``coq_makefile -f _CoqProject -o Makefile.coq``
- 1. Next step is to make the project by calling make on the make file. The main module in this project is ``Main.v`` so this is the file to build to ``Main.vo``, using the following command: ``make -f Makefile.coq src/Main.vo``
+``make``
+
+This ultimately ends up calling Coq's ``coq_makefile`` command, if necessary, to make an intermediary make file called ``Makefile.coq`` and then the top-level target of _that_ make file does all the heavy lifting, converting source ``.v`` files into output ``.vo`` files.
 
 ## Repo Roadmap
 
