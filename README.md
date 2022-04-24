@@ -79,6 +79,12 @@ The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is re
 
 Note: the ``Index.html`` file renders with a bunch of broken links so I ignore it with ``--no-index`` and instead use a table of contents file as the entry point, using ``--toc``. This could probably be improved in future.
 
+You can also build the CoqDoc via ``make`` with:
+
+``make coqdoc``
+
+This will build both a light and verbose version of the CoqDoc as specified above.
+
 ## Potential Improvements
 
 I originally started to entitle this section "Future Work" but that would be misleading: I do not at the moment plan to carry out any future updates to this repository. That could change though, or others may want to contribute, so for that reason I am documenting a number of potential improvements to this project. More or less, they are in order of priority, by my estimation.
