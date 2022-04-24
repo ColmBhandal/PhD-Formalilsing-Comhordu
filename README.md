@@ -14,11 +14,11 @@ In its current state, this code is not recommended for inclusion in any downstre
 
 ### Prerequisites
 
-[Install Coq](https://coq.inria.fr/download).
+[Install Coq with OPAM](https://coq.inria.fr/opam-using.html). Unfortunately this is not supported on Windows but there is a workaround.
 
-#### Windows Users
+### Windows Workaround
 
-If you are a Windows user, then you will need to first install GNU ``make``, and possibly GNU CoreUtils. See [this SO post](https://stackoverflow.com/questions/47242800/coqide-make-on-windows) for more info.
+The idea is to run install and use Coq through WSL and then expose any graphical applications through VcXsrv (since WSL doesn't have a UI). An excellent outline of how to do this is found at [CoqWSL](https://lemonidas.github.io/CoqWSL.html).
 
 ### Local Build
 
@@ -27,6 +27,20 @@ There is a top-level ``Makefile`` in the root directory of this repository. To b
 ``make``
 
 This ultimately ends up calling Coq's ``coq_makefile`` command, if necessary, to make an intermediary make file called ``Makefile.coq`` and then the top-level target of _that_ make file does all the heavy lifting, converting source ``.v`` files into output ``.vo`` files.
+
+### Cleaning
+
+You may want to clean the project. All files cleaned are not checked into this repo - they are produced by various make/build commands. You can either clean the compiled files, the "Coq makefiles", or both. To clean the compiled files:
+
+``make clean-compiled``
+
+To clean the auto-generated make files, run:
+
+``make clean-make``
+
+To clean everything, just do:
+
+``make clean``
 
 ## Repo Roadmap
 
