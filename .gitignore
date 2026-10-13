@@ -7,6 +7,9 @@ CoqDoc/
 *.vos
 *.vok
 *Makefile.coq*
+.lia.cache
+.nia.cache
+.Makefile.coq.d
 
 # Windows image file caches
 Thumbs.db

@@ -1,0 +1,20 @@
+opam-version: "2.0"
+name: "rocq-comhordu"
+synopsis: "Formalisation of the Comhordú real-time coordination protocol and its safety proof"
+description: """
+A multi-tiered process algebra for hybrid systems communicating over wireless
+networks, the Comhordú protocol written in it, and a proof of the protocol's
+safety condition. Based on the PhD thesis "Formalising a real-time coordination
+model" (Trinity College Dublin, 2014).
+"""
+maintainer: "Colm Bhandal"
+authors: ["Colm Bhandal"]
+homepage: "https://github.com/bhandalflip/PhD-Formalilsing-Comhordu"
+bug-reports: "https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/issues"
+dev-repo: "git+https://github.com/bhandalflip/PhD-Formalilsing-Comhordu.git"
+depends: [
+  "rocq-core" {>= "9.2" & < "9.3~"}
+  "rocq-stdlib" {>= "9.0"}
+]
+build: [make "-j%{jobs}%"]
+install: [make "install"]

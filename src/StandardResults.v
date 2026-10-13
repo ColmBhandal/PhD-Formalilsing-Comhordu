@@ -5,8 +5,8 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 Require Import ComhCoq.Extras.LibTactics.
-Require Export Reals.
-Require Export Logic.ProofIrrelevance.
+From Stdlib Require Export Reals Arith.
+From Stdlib Require Export Logic.ProofIrrelevance.
 Require Import ComhCoq.GenTacs.
 Require Export ComhCoq.RInequalities.
 

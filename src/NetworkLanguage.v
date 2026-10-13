@@ -4,7 +4,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 
-Require Import Coq.Program.Equality.
+From Stdlib Require Import Program.Equality.
 Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)

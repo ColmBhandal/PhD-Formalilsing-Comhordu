@@ -5,7 +5,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (*Require Import Reals.
 Require Import List.*)
-Require Import Equality.
+From Stdlib Require Import Program.Equality.
 
 Require Import ComhCoq.Extras.LibTactics.
 

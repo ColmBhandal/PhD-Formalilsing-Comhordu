@@ -7,11 +7,11 @@ Require Import ComhCoq.Extras.LibTactics.
 
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.StandardResults.
-Require Export Relations.
-Require Export Lists.ListSet.
-Require Export Reals.
-Require Export List.
-Require Export Logic.FunctionalExtensionality.
+From Stdlib Require Export Relations.
+From Stdlib Require Export Lists.ListSet.
+From Stdlib Require Export Reals Arith.
+From Stdlib Require Export List.
+From Stdlib Require Export Logic.FunctionalExtensionality.
 Require Import ComhCoq.ComhBasics.
 
 Open Scope nat_scope.
@@ -123,7 +123,7 @@ Lemma lt_neq_nat : forall n m : nat,
   n < m -> n <> m.
   induction n. destruct m. intros. inversion H.
   intros. unfold not. intros. inversion H0.
-  intros. apply lt_pred in H. destruct m. inversion H.
+  intros. apply Nat.lt_succ_lt_pred in H. destruct m. inversion H.
   simpl in H. apply IHn in H. unfold not. intros. apply H.
   inversion H0. reflexivity. Qed.
 
@@ -549,7 +549,7 @@ Theorem evalBoolExpRelFun : forall (e : BoolExp) (b : bool),
   apply evalExpRelFun in H. apply evalExpRelFun in H0. simpl.
   rewrite H, H0, H1. reflexivity. Qed.
 
-Require Import Bool.
+From Stdlib Require Import Bool.
 
 (**The boolean expression function is sound with respect to the relation.*)
 Theorem evalBoolExpFunRel : forall (e : BoolExp) (b : bool),
@@ -757,7 +757,7 @@ Coercion liftTimeExp (t : Time) : Exp := eBase (baseTime t).
 Definition liftListVarExp (l : list Var) : list Exp :=
   map eVar l.
 
-Require Import FunctionalExtensionality.
+From Stdlib Require Import Logic.FunctionalExtensionality.
 
 (** The substitution of l -> liftListVarExp l is equal to the identity substitution.*)
 Lemma listSubRefl : forall (l : list Var),

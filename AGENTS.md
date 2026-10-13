@@ -1,0 +1,33 @@
+# AGENTS.md: project-wide rules
+
+## Meta-rule: where rules live
+
+- Rules live in `AGENTS.md` files, each in the directory whose scope it governs.
+- Before touching a file, read the `AGENTS.md` in its directory and in every ancestor directory up to the root.
+- When two rules conflict, the one in the nearest directory wins.
+- Put a new rule in the narrowest directory that covers its whole scope. This file holds only rules that apply everywhere.
+- Don't duplicate a rule across `AGENTS.md` files or into other docs. Link to it instead.
+
+## Project
+
+- This is a Rocq formalisation of the Comhordú real-time coordination protocol and its safety proof, based on a 2014 PhD thesis.
+- The top-level theorem is `safety` in `src/Main.v`.
+- Layout:
+  - `src/`: the Rocq development. Logical path `ComhCoq`. See `src/AGENTS.md`.
+  - `doc/`: workstreams, reports, ADRs and archive. See `doc/AGENTS.md`.
+  - `scripts/`: helper scripts.
+  - `.github/workflows/`: CI.
+
+## Toolchain and build
+
+- Use Rocq **9.2.0** with `rocq-stdlib`. Dependencies are declared in `rocq-comhordu.opam`. The reference environment is the Docker image `rocq/rocq-prover:9.2.0`, the same one CI uses.
+- `make` builds everything (`_CoqProject` → `rocq makefile` → `Makefile.coq`).
+- `make assumptions` prints what `safety` still rests on.
+- `make clean` removes build products.
+- CI (`.github/workflows/build.yml`) builds every push and pull request and reports remaining assumptions. Keep it green: never merge a red build.
+
+## Working rules
+
+- Work is planned and tracked in `doc/workstreams/`, decisions are recorded in `doc/adr/`, and results go in `doc/reports/`.
+- Changing what the project *claims* needs explicit human approval: theorem or lemma statements, definitions, model axioms, and deleting results. Agents propose such changes in a report; they don't make them.
+- Never weaken the trust base silently. If a change adds an entry to `make assumptions` output, call it out in the PR and in the relevant report.

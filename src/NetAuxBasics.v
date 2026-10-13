@@ -3,8 +3,8 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 
-Require Import Reals.
-Require Import List.
+From Stdlib Require Import Reals Arith.
+From Stdlib Require Import List.
 Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)

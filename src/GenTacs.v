@@ -9,7 +9,7 @@ development.*)
 (*TO DO: TIDY & ORGANISE THIS FILE A BIT MORE. E.G. THE AND, OR, EX TACTICS
 COULD ALL BE BROUGHT TO GETHER.*)
 
-Require Import Arith.
+From Stdlib Require Import Arith.
 
 (** Turn a < into a <=.*)
 Ltac ltToLe H := apply le_S in H; apply le_S_n in H.

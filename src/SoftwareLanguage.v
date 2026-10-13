@@ -5,8 +5,8 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.StandardResults.
-Require Import Decidable.
-Require Import ListSet.
+From Stdlib Require Import Logic.Decidable.
+From Stdlib Require Import Lists.ListSet.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.ComhBasics.
 

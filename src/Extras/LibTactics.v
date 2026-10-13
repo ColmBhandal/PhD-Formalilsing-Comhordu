@@ -208,7 +208,7 @@ Ltac intro_until_mark :=
     Coq values in ltac. Notation is [>> v1 v2 ... vN] for building
     a list containing the values [v1] through [vN]. *)
 
-Require Import Coq.Lists.List.
+From Stdlib Require Import List.
 
 Notation "'>>'" :=
   (@nil Boxer)
@@ -402,7 +402,7 @@ Ltac fast_rm_inside E :=
     In order for tactics to convert their arguments into natural numbers, 
     we provide a conversion tactic. *)
  
-Require Coq.PArith.BinPos Coq.ZArith.BinInt.
+From Stdlib Require PArith.BinPos ZArith.BinInt.
 
 Definition ltac_nat_from_int (x:BinInt.Z) : nat :=
   match x with
@@ -713,7 +713,7 @@ Tactic Notation "constructors" :=
     anything else *)
 
 Tactic Notation "false_goal" :=
-  elimtype False.
+  exfalso.
 
 (** [false_post] is the underlying tactic used to prove goals
     of the form [False]. In the default implementation, it proves
@@ -743,17 +743,17 @@ Tactic Notation "tryfalse" :=
     Example: [tryfalse by congruence/] *)
 
 Tactic Notation "tryfalse" "by" tactic(tac) "/" :=
-  try solve [ false; instantiate; tac ].
+  try solve [ false; tac ].
 
 (** [false T] tries [false; apply T], or otherwise adds [T] as
     an assumption and calls [false]. *)
 
 Tactic Notation "false" constr(T) "by" tactic(tac) "/" :=
   false_goal; first  
-    [ first [ apply T | eapply T | rapply T]; instantiate; tac  (* todo: sapply?*)
+    [ first [ apply T | eapply T | rapply T]; tac  (* todo: sapply?*)
     | let H := fresh in lets_base H T; 
       first [ discriminate H  (* optimization *)
-            | false; instantiate; tac ] ].
+            | false; tac ] ].
    (* todo: false (>> H X1 X2)... *)
 
 Tactic Notation "false" constr(T) :=
@@ -1395,7 +1395,7 @@ Ltac equates_several E cont :=
   let rec go pos :=
      match pos with
      | nil => cont tt
-     | (boxer ?n)::?pos' => equates_one n; [ instantiate; go pos' | ]
+     | (boxer ?n)::?pos' => equates_one n; [ go pos' | ]
      end in
   go all_pos.
 Tactic Notation "equates" constr(E) :=
@@ -2076,7 +2076,7 @@ Tactic Notation "subst_eq" constr(E) :=
 (* ---------------------------------------------------------------------- *)
 (** ** Tactics to work with proof irrelevance *)
 
-Require Import ProofIrrelevance.
+From Stdlib Require Import Logic.ProofIrrelevance.
 
 (** [pi_rewrite E] replaces [E] of type [Prop] with a fresh 
     unification variable, and is thus a practical way to
@@ -2609,7 +2609,7 @@ Tactic Notation "cases_if'" :=
     [inductions E gen X1 .. XN] is a shorthand for
     [dependent induction E generalizing X1 .. XN]. *)
 
-Require Import Coq.Program.Equality.
+From Stdlib Require Import Program.Equality.
 
 Ltac inductions_post :=
   unfold eq' in *.
@@ -3962,10 +3962,10 @@ Ltac skip_with_existential :=
   match goal with |- ?G => 
     let H := fresh in evar(H:G); eexact H end.
 
-Variable skip_axiom : False. 
+#[local] Axiom skip_axiom : False.
   (* To obtain a safe development, change to [skip_axiom : True] *)
 Ltac skip_with_axiom :=
-  elimtype False; apply skip_axiom.
+  exfalso; apply skip_axiom.
 
 Tactic Notation "skip" := 
    skip_with_axiom. 

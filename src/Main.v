@@ -6,7 +6,7 @@ if time allowed it.*)
 
 (***************************** Standard Imports *****************************)
 
-Require Import Reals.
+From Stdlib Require Import Reals Arith.
 Require Import ComhCoq.Extras.LibTactics.
 Require Import ComhCoq.GenTacs.
 

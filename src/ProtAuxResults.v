@@ -13,7 +13,7 @@ Require Import ComhCoq.ComhBasics.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.SoftwareLanguage.
 Require Import ComhCoq.ProtAuxDefs.
-Require Import Bool.
+From Stdlib Require Import Bool.
 Require Import ComhCoq.EntityLanguage.
 Require Import ComhCoq.ProcEquiv.
 

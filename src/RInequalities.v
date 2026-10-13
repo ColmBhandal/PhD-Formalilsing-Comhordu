@@ -1,4 +1,4 @@
-Require Export Reals.
+From Stdlib Require Export Reals Arith.
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
