@@ -2,6 +2,7 @@
 
 src/Extras/LibTactics.v
 src/ComhBasics.v
+src/ModelConsistency.v
 src/EntAuxDefs.v
 src/EntAuxResults.v
 src/EntityLanguage.v
