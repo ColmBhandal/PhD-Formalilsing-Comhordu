@@ -28,7 +28,7 @@ Project documentation lives under [`doc/`](doc):
  - **opam:** `opam install rocq-prover.9.2.0`, or `opam install . --deps-only` from the repository root. On Windows, use WSL.
  - **Docker:** use the official image `rocq/rocq-prover:9.2.0`, the same one CI uses. For example:
 
-   ``docker run --rm -it -v "$PWD:/work" -w /work --user root -e PATH=/home/rocq/.opam/4.14.2+flambda/bin:/usr/bin:/bin rocq/rocq-prover:9.2.0 make``
+   ``docker run --rm -it -v "$PWD:/work" -w /work --user root -e OPAMROOT=/home/rocq/.opam -e PATH=/home/rocq/.opam/4.14.2+flambda/bin:/usr/local/bin:/usr/bin:/bin rocq/rocq-prover:9.2.0 make``
 
 ### Local Build
 
