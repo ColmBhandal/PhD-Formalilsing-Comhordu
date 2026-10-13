@@ -1,0 +1,133 @@
+# Workstream: Rocq upgrade & proof completion
+
+| | |
+|---|---|
+| **Started** | 2026-10-13 |
+| **Status** | 🟡 In progress (Phase 1) |
+| **Branch** | `claude/awesome-faraday-8n07pj` |
+| **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
+| **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
+
+**Legend:** 🤖 Agent · 🧑 Human-in-the-loop · ✅ / `[x]` done · `[ ]` to do
+
+## Starting point (2026-10-13)
+
+| Item | Count | Where |
+|---|---|---|
+| Lines of Rocq | ~15.6k | 25 files in `src/`, plus 4.1k vendored `src/Extras/LibTactics.v` |
+| `Admitted` | 228 | 17 files; most in `ProtAuxResults.v` (56), `NetAuxBasics.v` (53), `EntAuxResults.v` (33), `NARMisc.v` (31) |
+| `Conjecture` | 28 | `NetAuxBasics.v` 23, `InterfaceLanguage.v` 3, `EntityLanguage.v` 2 |
+| `Axiom` | 28 | `ComhBasics.v`: the abstract model parameters, unprovable by design |
+| `Parameter` (stubs) | 5 | `EntAuxDefs.v` 3 (`reachableEnt`, `nextModeEnt`, `inPosEnt`), `NetAuxBasics.v` 2 (`currModeNet`, `nextModeNet`) |
+| Top-level result | `safety` | `src/Main.v`: `Theorem safety (n : Network) : reachableNet n -> safe n.` |
+
+## Conventions
+
+The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](../AGENTS.md), [`workstreams/`](AGENTS.md), [`reports/`](../reports/AGENTS.md), [`adr/`](../adr/AGENTS.md), [`archive/`](../archive/AGENTS.md); the top-level and `src/` ones cover the code.
+
+---
+
+## Phase 0: Docs scaffolding
+
+- [x] 🤖 **0.1 Archive and scaffolding.** ✅ 2026-10-13. Moved `coq_proj.pdf` to `doc/archive/2015-05-08-coq-project-plan.pdf` and checked it against the code and current tooling ([Appendix](#appendix-carried-over-from-the-2015-plan)). Created `doc/{workstreams,reports,adr,archive}` with an `AGENTS.md` in `doc/` and in each subfolder, this tracker and the [reals ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md). Added a "Project docs" section to README.
+
+## Phase 1: Upgrade (🤖 agent only)
+
+- [x] 🤖 **1. Baseline.** ✅ The unchanged code builds on **Coq 8.15** (the last known toolchain, ~2022): all 26 files compile cleanly. The same code on **Rocq 9.2.0** fails immediately in `src/Extras/LibTactics.v`, because `elimtype` was removed.
+- [x] 🤖 **2. Upgrade to Rocq 9.2.0 + `rocq-stdlib`.** ✅ 2026-10-13. 9.2.0 is the latest stable release (9.3 is only at rc1). Changes:
+  - LibTactics: removed tactic forms replaced (`elimtype`, bare `instantiate`, and a `Variable` declared outside a section).
+  - All stdlib imports now use explicit `From Stdlib …`, plus `Arith` wherever `Reals` is exported (8.15's `Reals` re-exported it).
+  - A handful of removed Arith lemma names mapped to their `Nat.*` equivalents; trivial nat helper proofs replaced by `lia`.
+  - Tooling moved to the standard layout: `rocq makefile` Makefile, `rocq-comhordu.opam`, `rocq doc`.
+  - **No proof broke**, so there are no `UPGRADE-BROKEN` admits. `Print Assumptions safety` is **identical** before and after the upgrade (134 entries on both 8.15 and 9.2).
+- [ ] 🤖 **3. Modernise real-number reasoning on the stdlib.** Use `lra`/`nra`/`Psatz` instead of the hand-rolled inequality lemmas wherever that simplifies a proof. mathcomp-analysis's `Rstruct` bridge is the escape hatch for any missing real-analysis lemma. See the [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md).
+- [x] 🤖 **4. CI.** ✅ 2026-10-13. `.github/workflows/build.yml` runs on `rocq/rocq-prover:9.2.0`: it builds everything and writes `make assumptions` (`scripts/assumptions.py`) to the job summary.
+- [x] 🤖 **5. Gate.** ✅ 2026-10-13. Clean `make` is green on Rocq 9.2.0 (26 files, about 40s on 4 cores). Baseline for the fan-out: `safety` rests on 134 assumptions = **100 unproved project lemmas** + 4 `Parameter` stubs + 25 model axioms + 5 stdlib axioms.
+
+## Phase 2: Model axioms (🤖)
+
+- [ ] 🤖 **6. Show the axioms are consistent.** The 28 `Axiom`s in `src/ComhBasics.v` are the deliberately abstract model parameters (`Mode`, `msgLatency`, `period`, `minDistComp`, …) and the constraints on them. They can't be proved, by design.
+  - Build a **concrete instance** that satisfies all 28. This proves they are mutually consistent, so `safety` is not vacuous. (It is also the 2015 plan's "axiom soundness check".)
+  - **In the report, not the PR:** propose packaging the axioms as a `Module Type`, so that `safety` reads "for any valid instantiation".
+
+## Phase 3: Proof fan-out (🤖, ~24 parallel provers)
+
+- [ ] 🤖 **7. Prove everything as stated.** Targets: all 228 `Admitted`, the 28 `Conjecture`s, and any `UPGRADE-BROKEN` proofs.
+  - Provers work out whole proof chunks before checking them.
+  - Checks are fast: each prover restates the lemma in a scratch file that imports the already-compiled module.
+  - A shared queue caps concurrent compiles at the 4 CPUs.
+  - Chunk size adapts to the error rate.
+  - **Provers never edit `src/`.** The lead splices proofs in one at a time and rebuilds.
+  - **Wave 1** is split by file or dependency cluster. **Wave 2** takes the leftovers, some of which wave 1 will have unblocked.
+  - Triage hints: the 2015 labels and in-file `(*Proof: …*)` sketches. Tag groups go to one prover, which proves one lemma and factors a tactic for the rest. Do the lemmas that appear in `Print Assumptions safety` first. See [A.1](#a1-admitted-labels-still-in-use) and [A.2](#a2-other-guidance-carried-over).
+- [ ] 🤖 **8. Write up each lemma that won't go through as written.** Leave it admitted and record:
+  - what it was meant to say;
+  - why it fails: it's false, it's missing a hypothesis, or it depends on a stub;
+  - how the failure ripples up towards `safety`;
+  - a concrete suggested fix.
+- [ ] 🤖 **9. `Parameter` stubs (5).** Suggested completions go in the **report only**, not the PR. Known blocked lemmas: the 7 `(*D- reachableEnt*)` lemmas in `EntAuxResults.v` depend on the `reachableEnt` stub.
+
+## Phase 4: Review (🤖 then 🧑)
+
+- [ ] 🤖 **10. Report and PR.** Write `doc/reports/YYYY-MM-DD-proof-completion-pass-1.md`, push branch `claude/awesome-faraday-8n07pj`, and open the PR.
+- [ ] 🧑 **11. Review** the PR and the report.
+
+## Phase 5: Open / later (🧑 decisions, then 🤖 follow-up)
+
+- [ ] 🧑 Decide on statement changes for lemmas found false or mis-stated (from step 8).
+- [ ] 🧑 Decide on completions for the `Parameter` stubs (from step 9).
+- [ ] 🧑 Decide on the `Module Type` refactor of the model axioms (from step 6).
+- [ ] 🧑 Decide whether to delete admitted lemmas that are **outside** the `Print Assumptions safety` cone rather than prove them. This is the 2015 plan's "garbage collection".
+- [ ] 🧑 Decide whether to prove a **non-triviality** result: without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
+- [ ] 🤖 Run a follow-up proving wave once the decisions above are made.
+- [ ] 🧑 _Placeholder: anything else the first pass couldn't decide._
+
+## Log
+
+- **2026-10-13:** Upgrade to Rocq 9.2.0 done with no broken proofs; assumption set unchanged. Standard tooling and CI added. Rules moved into `AGENTS.md` files.
+- **2026-10-13:** Workstream started. Coq 8.15 baseline is green; Rocq 9.2.0 breaks on `elimtype`. Reals [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md) accepted: option (c), stdlib reals with the `Rstruct` bridge. 2015 plan archived.
+
+---
+
+## Appendix: Carried over from the 2015 plan
+
+Source: [`doc/archive/2015-05-08-coq-project-plan.pdf`](../archive/2015-05-08-coq-project-plan.pdf), *"Comhordú in Coq: Documentation and Project Plan"*, 8 May 2015. Each item was checked against `src/` and current Rocq tooling on 2026-10-13, and only what still holds is kept.
+
+### A.1 Admitted labels (still in use)
+
+The convention is still live in the code: **173 of the 228** live `Admitted` carry a trailing `(*label*)` comment. They are useful hints, but the 2015 counts are stale.
+
+| Label | Meaning (2015) | 2015 | Now | How to use it now |
+|---|---|---|---|---|
+| `C` | The statement must change first, usually by adding a hypothesis. | 3 | 4 | Expect a step-8 write-up rather than a proof. The comment next to it often names the fix. |
+| `D- X` | Depends on `X` being proved or defined first. | 4 | 13 | 7 × `D- reachableEnt` are blocked on a `Parameter` stub (step 9). `D- rangeBad_next_ent` and `D- badOvlp_next_ent` name entity-level lemmas that **don't exist**, so the prover must create them; the process-level `rangeBad_next`/`badOvlp_next` in `ProtAuxResults.v` exist. The other 4 are bare `D`. |
+| `R` | The proof predates the switch to bisimulation-based state predicates. The old proof is **commented out just above** the `Admitted`. | 13 | 13 | Start from the commented-out proof and adapt it. `state_pred_elim` still exists (`GenTacs.v`). |
+| `#tag` | A category of similar proofs that one shared tactic could solve. | 45 | 45 | Give a whole tag group to one prover chunk (see A.2). Main tags: `#fwd-track` (8), `#complexNetLift` (8), `#lift-track-net` (6), `#tfsNetLift`, `#fwd-track-lift-ent` (5 each), `#state-pred-elim`, `#delay-pres` (4 each), `#timeSplit-timedList` (3). |
+| `1`–`10` | Estimated difficulty. **1 = hardest, 10 = easiest.** | 162 | 98 | For sizing chunks. Today's spread: 1:8, 2:7, 3:15, 4:20, 5:16, 6:22, 7:9, 9:1. Rough 2015 sizing: levels 1–3 take about 100–200 lines and 5–10 auxiliary lemmas; 4–6 take about 5 auxiliary lemmas; 7–10 are routine. |
+| *(none)* | | | 55 | Triage from scratch. |
+
+> **Counting gotcha:** `grep -c 'Admitted\.'` happens to give the right total (228), but only because two errors cancel. It **misses** `Admitted (*9*).` at `NARNonFS_currSince.v:27`, and it **counts** an `Admitted.` inside a commented-out block at `NARNonFS_currSince.v:76`. Count outside comments.
+
+### A.2 Other guidance carried over
+
+| 2015 item | Status now |
+|---|---|
+| §3.1 Tactic development per `#tag` | **Kept**, folded into step 7. Prove one lemma interactively, factor its proof into a tactic that doesn't depend on hypothesis names or order, then apply it to the rest of the group. Reuse what exists: `state_pred_elim` (`GenTacs.v`), `state_pred_elim_net`, `fwd_track_net_tac`, `backtrack_net_pre`, `initNet_contra` (`NetAuxBasics.v`), `backtrack_pre`/`_post`/`_weed`, `fwd_track_pre`, `link_partripout_tac` (`ProtAuxResults.v`). A new shared tactic goes to the lead to splice in, because provers don't edit `src/`. |
+| In-file proof sketches | **Kept.** There are ~170 `(*Proof: …*)` comments next to lemmas. Read them before proving. |
+| §3.2 "Garbage collection" of unneeded admits | **Kept** as a Phase 5 🧑 decision. It is now mechanical: `Print Assumptions safety` shows which admits are actually used. |
+| §4 "General survey": recount what's left, revise the plan | **Kept**, now automated: the CI assumption report (step 4) plus this tracker's Log. |
+| §4 "Tidying": recompile after moving code | **Kept.** The lead rebuilds after every splice (step 7). |
+| §5 Axiom soundness check | **Kept** as Phase 2 step 6. It is a relative-consistency proof by building a model inside Rocq, so the 2015 doc's Gödel worry doesn't apply: we are not proving Rocq's own consistency. |
+| §5 Show that an unsafe state is reachable without the protocol | **Kept** as a Phase 5 🧑 decision. |
+| §1 Category definitions (Parameter = stub, Axiom = deliberately uninterpreted, Conjecture = assumed as "obvious") | **Kept** in [Starting point](#starting-point-2026-10-13). |
+
+### A.3 Dropped, and why
+
+| 2015 item | Why it was dropped |
+|---|---|
+| Table 1 (statistics) and Table 2 (label counts) | **Stale.** Replaced by [Starting point](#starting-point-2026-10-13) and A.1. Then vs now: lines 13,459 → ~15.6k; `Admitted` 226 → 228; Conjecture, Axiom and Parameter unchanged at 28/28/5; proved (`Qed`/`Defined`) 693 → 679; Definitions 259 → 259; Inductives 92 → 89; `Ltac` 225 → 221. |
+| "Conjectures are not a priority", "`R` proofs are not a priority" | **Superseded.** Both are in scope in step 7. |
+| §3.2 Lemma/Theorem demotion and promotion, renaming, statement standardisation, explicit typing, re-documenting | **Out of scope.** These are cosmetic. They would churn the diff and conflict with serial splicing. They could be revisited later as a 🧑 call. |
+| §4 Find and replace with Notepad++; "Coq search can't match part of a name" | **Obsolete.** Use `grep`/`rg`. Rocq's `Search "fragment"` matches name substrings. |
+| §4 Researching via the Coq website and the Coq-Club mailing list | **Obsolete pointers.** Use the Rocq reference manual and the Rocq Zulip and Discourse. |
+| §4 "Use tactics" (generic) | **Replaced.** The 2015 doc names no specific tactics, and the code never used `omega`/`fourier` (0 hits). Real-number reasoning was done with hand-rolled lemmas (`RInequalities.v`, `StandardResults.v`). The modern answer is `lra`/`nra`/`Psatz` on `rocq-stdlib`, per the [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md). `elimtype`, used in the vendored LibTactics, is gone in Rocq 9. |
