@@ -9,6 +9,7 @@ CoqDoc/
 *Makefile.coq*
 .lia.cache
 .nia.cache
+.nra.cache
 .Makefile.coq.d
 
 # Windows image file caches
