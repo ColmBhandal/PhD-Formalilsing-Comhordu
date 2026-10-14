@@ -15,7 +15,7 @@
 - Layout:
   - `src/`: the Rocq development. Logical path `ComhCoq`. See `src/AGENTS.md`.
   - `doc/`: workstreams, reports, ADRs and archive. See `doc/AGENTS.md`.
-  - `scripts/`: helper scripts.
+  - `scripts/`: helper scripts that aren't part of the proof. See `scripts/AGENTS.md`.
   - `.github/workflows/`: CI.
 
 ## Toolchain and build
