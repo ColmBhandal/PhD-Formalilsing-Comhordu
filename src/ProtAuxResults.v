@@ -540,10 +540,149 @@ Theorem ovWait_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t x y : Time) :
   /\ y = period m /\ a = (chanOutProc ;! [baseMode m, basePosition l]).
   backtrack_weed p. Qed.
 
+(* begin helpers for ovReady_prev *)
+(** Output-prefix congruence for bisimilarity. *)
+Lemma ovReady_prev_out_ctx c es W1 W2 :
+  W1 ~p~ W2 -> outPrefix c es W1 ~p~ outPrefix c es W2.
+Proof.
+  revert c es W1 W2. cofix CIH. intros c es W1 W2 B. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. exists W2. split; [ | exact B].
+      apply stepPDisc. constructor. assumption.
+    + inversion S0; subst. exists (outPrefix c es W2). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. exists W1. split; [ | exact B].
+      apply stepPDisc. constructor. assumption.
+    + inversion S0; subst. exists (outPrefix c es W1). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+Qed.
+
+(** Input-prefix congruence for bisimilarity. *)
+Lemma ovReady_prev_in_ctx c vs P Q :
+  (forall l1, length l1 = length vs ->
+    subProcTerm (listsToSub vs (listBaselistExp l1)) P ~p~
+    subProcTerm (listsToSub vs (listBaselistExp l1)) Q) ->
+  inPrefix c vs P ~p~ inPrefix c vs Q.
+Proof.
+  revert c vs P Q. cofix CIH. intros c vs P Q B. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. eexists. split.
+      * apply stepPDisc. constructor. eassumption.
+      * apply B. assumption.
+    + inversion S0; subst. exists (inPrefix c vs Q). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. eexists. split.
+      * apply stepPDisc. constructor. eassumption.
+      * apply B. assumption.
+    + inversion S0; subst. exists (inPrefix c vs P). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+Qed.
+(** Delay-prefix congruence for bisimilarity. *)
+Lemma ovReady_prev_del_ctx e P Q :
+  P ~p~ Q -> del e P ~p~ del e Q.
+Proof.
+  revert e P Q. cofix CIH. intros e P Q B.
+  destruct B as [B1 B2]. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst.
+      match goal with H : P -PA- _ -PA> _ |- _ =>
+        apply stepPDisc in H; apply B1 in H; destruct H as [q' [Sq Bq]] end. inversion Sq; subst.
+      exists q'. split; [ | exact Bq].
+      apply stepPDisc. apply stepDpTimeOut; assumption.
+    + inversion S0; subst.
+      * match goal with H : P -PD- _ -PD> _ |- _ =>
+          apply stepPTimed in H; apply B1 in H; destruct H as [q' [Sq Bq]] end. inversion Sq; subst.
+        exists q'. split; [ | exact Bq].
+        apply stepPTimed. apply stepTpDelAdd; assumption.
+      * eexists. split.
+        -- apply stepPTimed. eapply stepTpDelSub. eassumption.
+        -- apply CIH. constructor; assumption.
+      * exists (del e Q). split.
+        -- apply stepPTimed. apply stepTpDelIll. assumption.
+        -- apply CIH. constructor; assumption.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst.
+      match goal with H : Q -PA- _ -PA> _ |- _ =>
+        apply stepPDisc in H; apply B2 in H; destruct H as [p' [Sp Bp]] end. inversion Sp; subst.
+      exists p'. split; [ | exact Bp].
+      apply stepPDisc. apply stepDpTimeOut; assumption.
+    + inversion S0; subst.
+      * match goal with H : Q -PD- _ -PD> _ |- _ =>
+          apply stepPTimed in H; apply B2 in H; destruct H as [p' [Sp Bp]] end. inversion Sp; subst.
+        exists p'. split; [ | exact Bp].
+        apply stepPTimed. apply stepTpDelAdd; assumption.
+      * eexists. split.
+        -- apply stepPTimed. eapply stepTpDelSub. eassumption.
+        -- apply CIH. constructor; assumption.
+      * exists (del e P). split.
+        -- apply stepPTimed. apply stepTpDelIll. assumption.
+        -- apply CIH. constructor; assumption.
+Qed.
+
+(** A named process is bisimilar to its unfolding. *)
+Lemma ovReady_prev_app_unf n vs body es :
+  def n = (vs, body) -> app n es ~p~ subProcTerm (listsToSub vs es) body.
+Proof.
+  intro D. constructor.
+  - intros a p1 S. exists p1. split; [ | apply ComhCoq.ProcEquiv.bisim_refl].
+    inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. rewrite D in *.
+      match goal with H : (vs, body) = _ |- _ => inversion H; subst end.
+      apply stepPDisc. assumption.
+    + inversion S0; subst. rewrite D in *.
+      match goal with H : (vs, body) = _ |- _ => inversion H; subst end.
+      apply stepPTimed. assumption.
+  - intros a q1 S. exists q1. split; [ | apply ComhCoq.ProcEquiv.bisim_refl].
+    inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + apply stepPDisc. eapply stepDpApp; eassumption.
+    + apply stepPTimed. eapply stepTpApp; eassumption.
+Qed.
+(* end helpers *)
+
 Theorem ovReady_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t : Time) (l : Position) :
   p -PA- a -PA> p' -> overlapState p -> ovReadyState m t l p' ->
-  exists x, ovWaitState m t x zeroTime p. backtrack_weed p.
-  Admitted.
+  exists x, ovWaitState m t x zeroTime p.
+Proof.
+  backtrack_weed p.
+  match goal with [H : evalExpFunTime _ = Some zeroTime |- _] =>
+    unfold liftTimeExp, evalExpFunTime in H end.
+  match goal with [H : context [evalExpFun (eBase (baseTime ?x))] |- _] =>
+    destruct x as [xr]; simpl in H; inversion H; subst end.
+  match goal with [B : chanOutProc $< ?es >$ ! ?W ~p~ ?R |- _] =>
+    let T0 := fresh "T" in
+    assert (chanOutProc $< es >$ ! W -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> W) as T0
+      by (repeat constructor);
+    apply stepPDisc in T0; let F1 := fresh "F" in let F2 := fresh "F" in
+    destruct B as [F1 F2]; apply F1 in T0; destruct T0 as [q [TQ BQ]]
+  end.
+  inversion TQ; subst. clear TQ.
+  match goal with [H : subProcTerm _ _ -PA- _ -PA> _ |- _] => clean_proc_hyp H end.
+  invert_app_trans. repeat invert_trans.
+  match goal with [H : evalExpLists _ _ |- _] =>
+    let E1 := fresh in let E2 := fresh in
+    inversion H as [ | ? ? ? ? E1 E2]; subst; inversion E1; subst end.
+  exists x. unfold ovWaitState in *.
+  eapply ComhCoq.ProcEquiv.bisim_trans; [exact H0 | ].
+  unfold ovWait.
+  repeat apply ComhCoq.ProcEquiv.choice_bisim_context;
+    try apply ComhCoq.ProcEquiv.bisim_refl.
+  apply ovReady_prev_del_ctx. apply ovReady_prev_in_ctx.
+  intros l2 Len. destruct l2 as [ | b [ | b' l2]]; simpl in Len; try discriminate.
+  clean_proc.
+  eapply ComhCoq.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
+  apply ComhCoq.ProcEquiv.bisim_symm.
+  eapply ComhCoq.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
+  apply ComhCoq.ProcEquiv.bisim_symm.
+  clean_proc.
+  apply ovReady_prev_out_ctx.
+  apply ComhCoq.ProcEquiv.bisim_symm. exact BQ.
+Qed.
 
 Theorem switchBc_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) :
   p -PA- a -PA> p' -> overlapState p -> switchBcState m p' ->

@@ -749,79 +749,65 @@ for the current mode that can be consulted for inspiration*)
   
 (*-LOCAL TIDY*)
 
-(* begin helpers for ovWait_ovReady_nextMode_net *)
-(* Given D : discActEnabled q a with q a concrete overlap state term that cannot
-   perform a, unfold q and invert every transition to close the goal. *)
-Ltac ovWait_ovReady_nextMode_net_dae_contra D :=
-  let q := fresh "q" in let TR := fresh "TR" in
-  destruct D as [q TR];
-  unfold dormant, init, ovWait, ovReady, switchCurr, tfsCurr, ovAbort in TR;
-  repeat (match goal with [T : stepDiscProc _ _ _ |- _] =>
-    inversion T; clear T; subst end).
-
-(* Given P : liftEntNet X i n with X one of ovWait/ovReady/init (entity level),
-   and B : liftEntNet Y i n with Y one of switchCurr/ovAbort/tfsCurr, derive False. *)
-Ltac ovWait_ovReady_nextMode_net_netdisj P B :=
-  let e := fresh "e" in let P1 := fresh "P1" in let P2 := fresh "P2" in
-  let e' := fresh "e'" in let B1 := fresh "B1" in let B2 := fresh "B2" in
-  let PP := fresh "PP" in let PS := fresh "PS" in
-  let BB := fresh "BB" in let QS := fresh "QS" in
-  let D := fresh "D" in let D' := fresh "D'" in
-  inversion P as [e P1 P2]; clear P; inversion B as [e' B1 B2]; clear B;
-  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption); subst e';
-  inversion P1 as [? ? ? ? PP]; subst; clear P1;
-  inversion PP as [? ? ? PS]; subst; clear PP;
-  inversion B1 as [? ? ? ? BB]; subst; clear B1;
-  inversion BB as [? ? ? QS]; subst; clear BB;
-  first [ lets D : switchCurr_mCurr_out QS
-        | lets D : ovAbort_stable_out QS
-        | lets D : tfsCurr_mCurr_out QS ];
-  lets D' : bisim_dae PS D;
-  ovWait_ovReady_nextMode_net_dae_contra D'.
-(* end helpers *)
-
 Lemma ovWait_ovReady_nextMode_net m t x y l i n :
   reachableNet n -> ovWaitStateNet m t x y i n \/ ovReadyStateNet m t l i n ->
   nextModeNet m i n.
-Proof.
-  intros U. revert m t x y l.
-  induction U as [n0 INIT | n0 n1 a U IH ST | n0 n1 d U IH ST];
-    intros m t x y l V.
-  - exfalso. destruct V as [V|V]; inversion V as [e V1 V2]; subst;
-    lets IE : initialNet_ent INIT V2;
-    inversion V1 as [? ? ? ? PP]; subst;
-    inversion PP as [? ? ? PS]; subst;
-    inversion IE as [? ? ? ? IP FS]; subst;
-    inversion IP; subst;
-    lets D : (dormant_mNext_in dormant m (ComhCoq.ProcEquiv.bisim_refl dormant));
-    lets D' : bisim_dae PS D;
-    ovWait_ovReady_nextMode_net_dae_contra D'.
-  - assert (PREV : (exists t0 x0 y0, ovWaitStateNet m t0 x0 y0 i n0) \/
-      (exists t0 l0, ovReadyStateNet m t0 l0 i n0) \/ initStateNet m i n0).
-    { destruct V as [V|V].
-      - lets P : ovWait_prev_net_strong V ST. destruct P as [P|[[t0 [l0 P]]|P]].
-        + left. exists t x y. exact P.
-        + right. left. exists t0 l0. exact P.
-        + right. right. exact P.
-      - lets P : ovReady_prev_net_strong V ST. destruct P as [P|[x0 [y0 P]]].
-        + right. left. exists t l. exact P.
-        + left. exists t x0 y0. exact P. }
-    assert (NM : nextModeNet m i n0).
-    { destruct PREV as [[t0 [x0 [y0 P]]]|[[t0 [l0 P]]|P]].
-      - apply (IH m t0 x0 y0 l). left. exact P.
-      - apply (IH m t0 x y l0). right. exact P.
-      - eapply init_nextMode_net; eassumption. }
-    eapply nextMode_pres_fwd_net; [exact U | exact NM | | exact ST].
-    intro B. destruct PREV as [[t0 [x0 [y0 P]]]|[[t0 [l0 P]]|P]];
-    destruct B as [B|[B|B]]; ovWait_ovReady_nextMode_net_netdisj P B.
-  - destruct V as [V|V].
-    + lets P : ovWait_del_pres_bkwd_net_strong ST V.
-      eapply nextModeNet_del_pres; [exact ST | ].
-      eapply (IH m t _ _ l). left. exact P.
-    + lets P : ovReady_del_pres_bkwd_net ST V.
-      eapply nextModeNet_del_pres; [exact ST | ].
-      apply (IH m t x y l). right. exact P.
-Qed.
+  (*Proof: Induction on reachable using the auxialiary result init_nextMode_net.*)
+  introz U. genDep5 m t x y l. induction U; intros l y x t m; introz V.
+  (*
+  (*Base case fails because neither ovWait nor ovReady is initial*)
+  elim_intro V CON CON; initNet_contra CON.   
+  Focus 2.  
+  (*In the discrete inductive case, we show first that the previous state
+  was either ovWait, ovReady, or init.*)
+  assert ((exists t0 x0 y0, ovWaitStateNet m t0 x0 y0 i n) \/
+  (exists t0 l0, ovReadyStateNet m t0 l0 i n) \/
+  initStateNet m i n) as PREV.
+  elim_intro V OVW OVR.
+  lets OWP : ovWait_prev_net_strong OVW s. elim_intro OWP OWL OWR.
+  left. do 3 eexists. eassumption. right. or_flat; ex_flat.
+  left. do 2 eexists. eassumption. right. eassumption.
+  lets ORP : ovReady_prev_net_strong OVR s. or_flat.
+  right. left. do 2 eexists. eassumption.
+  left. ex_flat. do 3 eexists. eassumption.
+  (*Now we have that the previous state was either ovWait, ovReady or init,
+  and so I.H. or the result init_nextMode_net will do*)
+  clear V.
+  (*First lets convert our goal to showing that the previous state had a next
+  mode of m. We do this via a preservation tactic.*)
+  cut (nextModeNet m i n). intro NM.
+  (*The main thing to show here is that the previous state was not one
+  that could have allowed a mode change.*)
+  assert (~(switchCurrStateNet i n \/ ovAbortStateNet i n \/
+  tfsCurrStateNet i n)) as NMC. unfold not. intro. or_flat; ex_flat;
+  try rename H0 into H; try rename OR1 into OR; try rename OR2 into H;
+  solve [state_pred_elim H OR; entnetuniq2 EN n; state_pred_elim H2 H0;
+  subst; state_pred_elim H4 H6; state_pred_elim H5 H8].
+  (*And from here we can show our (sub)goal.*)
+  eapply nextMode_pres_fwd_net; eassumption.
+  (*So now the proof burden that remains is to show the the next mode
+  holds for the previous state.*)
+  or_flat; ex_flat.
+  (*In the ovWait and ovReady cases this follwos from the IH.*)
+  lets IH : IHU l x2 x1 x0 m. apply IH. left. assumption.
+  lets IH : IHU x1 y x x0 m. apply IH. right. assumption.
+  (*Otherwise the auxialiary result init_nextMode_net works.*)
+  eapply init_nextMode_net; eassumption.
+  (*Now onto the delay case. For this we first use backward preservation of the state predicates
+  to show that one holds in the previous case.*)
+  assert (ovWaitStateNet m t x y i n \/ ovReadyStateNet m t l i n) as PREV.
+  or_flat. left.
+  (*Then we show by the inductive hypothesis that nextMode holds for 
+  the previous case.*)
+  (*Finally, forward preservation of the nextModeNet predicate by the
+  delay relation gives us our goal.*)
+  (*Going to have to fix this- apply new strong version of del_pres?*)
+  eapply ovWait_del_pres_bkwd_net; eassumption.
+  right. eapply ovReady_del_pres_bkwd_net; eassumption.
+  eapply nextModeNet_del_pres; try eassumption.
+  lets IH : IHU l y x t m. apply IH; assumption.
+  Qed.*)
+  Admitted. (*#bism-redo*)
 
 Lemma ovWaitState_nextMode_net (n : Network) (m : Mode) (t x y : Time) (i : nat):
   reachableNet n -> ovWaitStateNet m t x y i n -> nextModeNet m i n.
@@ -1335,10 +1321,7 @@ Qed.
 
 (**Delay preserves the current mode*)
 Lemma currMode_del_pres_bkwd (n n' : Network) (d : Delay) (m : Mode) (i : nat) :
-  n -ND- d -ND> n' -> currModeNet m i n' -> currModeNet m i n.
-Proof.
-  intros D C. apply (proj2 (currModeNet_del_pres n n' d m i D)). exact C.
-Qed.
+  n -ND- d -ND> n' -> currModeNet m i n' -> currModeNet m i n. Admitted. (*6*)
 (**Proof: Follows directly from mode state semantics, and linking of delay from network to entity to modestate*)
 
 Conjecture inPos_ent_net : forall (l : Position) (e : Entity) (i : nat) (n : Network),
@@ -1553,10 +1536,7 @@ Lemma tfsStart_prev_net i n n' a : tfsStartStateNet i n' ->
 Lemma ovReady_prev_net m t l i n n' a :
   ovReadyStateNet m t l i n' -> n -NA- a -NA> n' ->
   ovReadyStateNet m t l i n \/
-  exists x y, ovWaitStateNet m t x y i n.
-Proof.
-  intros U V. eapply ovReady_prev_net_strong; eassumption.
-Qed.
+  exists x y, ovWaitStateNet m t x y i n. Admitted. (*#lift-track-net*)
 
 (*Organise these, write tactics for them, pull in results from elsewhere in
 the file that belong here.*)
