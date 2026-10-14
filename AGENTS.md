@@ -40,4 +40,5 @@
 
 - Work is planned and tracked in `doc/workstreams/`, decisions are recorded in `doc/adr/`, and results go in `doc/reports/`.
 - Changing what the project *claims* needs explicit human approval: theorem or lemma statements, definitions, model axioms, and deleting results. Agents propose such changes in a report; they don't make them.
+- Whenever a change makes the formalisation depart from the thesis, record the correction in [`doc/thesis/thesis-corrections.md`](doc/thesis/thesis-corrections.md) in the same PR.
 - Never weaken the trust base silently. If a change adds an entry to `make assumptions` output, call it out in the PR and in the relevant report.
