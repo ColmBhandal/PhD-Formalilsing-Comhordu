@@ -31,6 +31,10 @@
 
 - Don't tell readers what a document is or how to read it: no "this page is the short version", "the rest is detail" or "this section goes through…". Write it so it flows, and let them experience that for themselves. This applies to all prose: docs, READMEs and PR descriptions.
 
+## Scripts
+
+- Name a script for what it does. A script does something, so the verb matters most; usually a noun follows: `summarise_assumptions.py`, not `assumptions.py`.
+
 ## Working rules
 
 - Work is planned and tracked in `doc/workstreams/`, decisions are recorded in `doc/adr/`, and results go in `doc/reports/`.

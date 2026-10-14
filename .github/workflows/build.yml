@@ -23,4 +23,4 @@ jobs:
       - name: Build
         run: make -j"$(nproc)"
       - name: Report remaining assumptions under safety
-        run: python3 helper-scripts/assumptions.py | tee -a "$GITHUB_STEP_SUMMARY"
+        run: python3 helper-scripts/summarise_assumptions.py | tee -a "$GITHUB_STEP_SUMMARY"
