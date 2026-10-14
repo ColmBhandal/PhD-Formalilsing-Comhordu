@@ -28,7 +28,7 @@ Each write-up was checked by an independent auditor. The auditor recompiled ever
 | BLOCKED-ON-DEFINITION | Needs a definition change, or rests on an inconsistent lemma. A conditional proof exists. | 4 (2 in cone) |
 | Not audited | Write-ups from the last two cloud provers (`NARNonFS_currSince`, NAR-small), which arrived after the audit started. Prover verdict only. | 15 (2 in cone) |
 
-**INCONSISTENT is the dangerous class**, because admitting such a lemma lets you prove `False`. The harness rejected any proof whose assumptions included one, so no **new** proof in this pass rests on them. Results that were already `Qed` before this pass still can, though. `safety` itself is one ([why that matters](why-safety-is-vacuous.md)). Another is `SoftwareLanguage.delAddSoft`, which goes through `delProc_minus_guard`.
+**INCONSISTENT is the dangerous class**, because admitting such a lemma makes `False` provable. The harness rejected any proof whose assumptions included one, so no **new** proof in this pass rests on them. Results that were already `Qed` before this pass still can, though. `safety` itself is one ([why that matters](why-safety-is-vacuous.md)). Another is `SoftwareLanguage.delAddSoft`, which goes through `delProc_minus_guard`.
 
 The full list of inconsistent and jointly-inconsistent lemmas is [`evidence/inconsistent-or-contradicting.txt`](evidence/inconsistent-or-contradicting.txt). Each lemma's verdict and write-up is in the [lemma index](lemmas/README.md).
 

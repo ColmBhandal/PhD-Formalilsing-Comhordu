@@ -4,7 +4,7 @@
 
 Almost all of the 108 targets that can't be proved as written fail for one of twelve reasons. The ones that matter most to `safety` come first.
 
-**Every fix here changes a statement, a definition or the axioms, so each one needs your approval.** None of them has been applied.
+**Every fix here changes a statement, a definition or the axioms, so each one needs human approval.** None of them has been applied.
 
 The "Affected lemmas" lists come from the 93 audited write-ups. The 15 unaudited ones are marked in the [lemma index](lemmas/README.md). A lemma can appear under more than one cause, and "(cone)" marks lemmas that `safety` depends on.
 
@@ -198,4 +198,4 @@ Several lemmas can't be proved simply because the predicate they mention is an o
   - and so on.
 
   About 30 more are now one-line `lra` facts. Separately, the project's own `Rplus_lt_reg_l`/`_r` shadow the stdlib lemmas of the same names, with the sides swapped, which is a trap for anyone reading the code.
-- **Fix or delete unused false lemmas.** Several of the false lemmas have no users at all. Deleting them is simpler than fixing them, but deleting results is your call.
+- **Fix or delete unused false lemmas.** Several of the false lemmas have no users at all. Deleting them is simpler than fixing them, but deleting results is a human decision.

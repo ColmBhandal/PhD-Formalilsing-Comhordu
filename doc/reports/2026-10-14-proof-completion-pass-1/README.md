@@ -12,9 +12,9 @@ This was the first agent pass over every unproved result in the development: all
 - **The big one: `safety` currently proves nothing.** It rests on admitted lemmas that can be refuted from the model axioms alone, so `False` follows from its assumptions. This has been machine-checked.
   - This doesn't mean the protocol is unsafe. It means the formal argument has holes, and they need fixing before the proof counts.
 
-## What I need from you
+## Decisions needed from a human
 
-No statement, definition, model axiom or `Parameter` stub has been changed. These calls are yours:
+No statement, definition, model axiom or `Parameter` stub has been changed, so all of these are still open:
 
 1. **Complete the component-state predicates** (`overlapState`, `listenerState`). This is the most structural problem, and the proposed fix has already been proved to work. [Details](root-causes-and-fixes.md#1-incomplete-component-state-predicates)
 2. **Fix the listener's notification arity.** The listener takes 2 fields on `chanAN`, but notifications carry 3. The thesis has the same mismatch on p.134. [Details](root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)
@@ -26,7 +26,7 @@ Once these are decided, pass 2 applies them and re-runs the provers. Much of tha
 
 ## Where to go next
 
-| If you want to… | Read |
+| To… | Read |
 |---|---|
 | understand why `safety` is vacuous today | [Why `safety` proves nothing yet](why-safety-is-vacuous.md) |
 | weigh each root cause and its proposed fix | [Root causes and proposed fixes](root-causes-and-fixes.md) |

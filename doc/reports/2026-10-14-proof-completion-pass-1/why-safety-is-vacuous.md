@@ -6,7 +6,7 @@
 
 ## 1. Inconsistent admitted lemmas in the cone
 
-Every lemma below is used by `safety`, directly or indirectly. For each one, an auditor compiled a Rocq refutation that uses only the `ComhBasics` model axioms and the stdlib. Most of the refutations also need an inhabitant of `Mode`, which any real model has. So admitting any one of these lemmas lets you prove `False`.
+Every lemma below is used by `safety`, directly or indirectly. For each one, an auditor compiled a Rocq refutation that uses only the `ComhBasics` model axioms and the stdlib. Most of the refutations also need an inhabitant of `Mode`, which any real model has. So admitting any one of these lemmas makes `False` provable.
 
 | Lemma | What goes wrong | Proposed fix |
 |---|---|---|
@@ -30,9 +30,9 @@ Neither statement can be refuted from the axioms alone, because nothing in the a
 - **It doesn't mean the protocol is unsafe.** The defects are in the formalisation: statements, definitions and stubs. The one exception is the listener arity, which is in the thesis as well.
 - **It does mean the formal proof establishes nothing until these are fixed.**
 - **None of the 123 new proofs rest on the section 1 lemmas.** The harness rejected any proof whose assumptions included one of them, and that is why [25 proofs are held back](results.md#held-back-proofs). Proofs that were already `Qed` before this pass can still rest on them, `safety` included.
-- **The fixes are mostly mechanical once you approve them.** Many of the dependent proofs already exist in conditional form, so pass 2 should be quick.
+- **The fixes are mostly mechanical once approved.** Many of the dependent proofs already exist in conditional form, so pass 2 should be quick.
 
-## Checking it yourself
+## Reproducing the refutations
 
 Each refutation is a standalone file under [`evidence/audit/`](evidence/README.md). From the repository root, after `make`, compile one, for example:
 

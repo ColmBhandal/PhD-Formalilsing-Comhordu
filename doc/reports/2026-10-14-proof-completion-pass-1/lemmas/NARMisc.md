@@ -335,7 +335,7 @@ The **Audit** line is the independently checked verdict. The text below it is th
   ```
   `incomp_tfs` then gets `~ failSafe m` too (Main passes `H4`).
   I proved this fixed version in Rocq (`--explore`, helper `tfsState_not_currSince_fixed`, ends in `Qed`). The proof is `currSince_curr` plus the existing proved `NetAuxBasics.tfs_currMode_disc_pres`, which in turn uses the admitted `tfsListen_failSafe_net` and the fwd-tracking lemmas.
-  An alternative is a model axiom `failSafeSucc m <> m`. It is weaker than it looks: you would also need a new invariant that the next mode in `tfsCurr` is exactly `failSafeSucc` of the current mode, and `tfsCurr_failSafe` only says it is fail-safe. So the hypothesis route is preferable.
+  An alternative is a model axiom `failSafeSucc m <> m`. It is weaker than it looks: it would also need a new invariant that the next mode in `tfsCurr` is exactly `failSafeSucc` of the current mode, and `tfsCurr_failSafe` only says it is fail-safe. So the hypothesis route is preferable.
 - **Partial proof:** `NARMisc.tfsState_not_currSince.v` in this directory:
   ```coq
   Lemma tfsState_not_currSince_fixed (m : Mode) (t : Time) (i : nat) (n n' : Network)

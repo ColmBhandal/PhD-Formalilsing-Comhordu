@@ -497,7 +497,7 @@ None of the target. The counterexample script is the HELPERS section of
     reachableNet n -> n -ND- d -ND> n' ->
     (tfsCurrStateNet i n <-> tfsCurrStateNet i n').
   ```
-  Callers change to `addHyp (tfsCurrState_del_pres_net n n' d i p w)`. Alternatively, split it into an unconditional forward lemma and a reachable-only backward lemma. With reachability, the backward direction follows from `EntAuxResults.del_ovlp`: a reachable entity that can delay is dormant, tfsCurr or ovWait. You then rule out dormant/ovWait delaying to something bisimilar to `tfsCurr`. That depends on `reachable_net_ent`/`reachableEnt` (stub), so the fixed version is BLOCKED-ON-STUB (`reachableEnt`) until the stub is defined.
+  Callers change to `addHyp (tfsCurrState_del_pres_net n n' d i p w)`. Alternatively, split it into an unconditional forward lemma and a reachable-only backward lemma. With reachability, the backward direction follows from `EntAuxResults.del_ovlp`: a reachable entity that can delay is dormant, tfsCurr or ovWait. It then remains to rule out dormant/ovWait delaying to something bisimilar to `tfsCurr`. That depends on `reachable_net_ent`/`reachableEnt` (stub), so the fixed version is BLOCKED-ON-STUB (`reachableEnt`) until the stub is defined.
 - **Partial proof:** The file contains the full counterexample and reusable helpers:
   - `_acts`: `tfsCurr`'s discrete actions.
   - `_tdel`: `tfsCurr` delays only to itself.
@@ -777,7 +777,7 @@ None. The counterexample settles the target as stated.
   Why provable: link back to the entity and its overlap component `p`, which delays `p -d-> p'` with `p' ~ ovWait m t x y`. Reachability makes `p` an `overlapState`. Every non-`ovWait` overlap state either delays to itself and cannot be bisimilar to an `ovWait` (it lacks a timed `chanPos`), or is urgent. For `p ~ ovWait m0 t0 x0 y0`:
   - If `d <= x0, y0`, then `ProtAuxResults.ovWait_del_pres_strong` (proved by me in `ProtAuxResults.ovWait_del_pres.v` HELPERS) gives `p' ~ ovWait m0 t0 (x0-d) (y0-d)`.
   - If `d > y0`, then `p'` offers `chanPos?` now, which contradicts `0 < y`.
-  - In the remaining cases you need a "timer shift" lemma, `ovWait m0 t0 a b ~ ovWait m t a' b' -> ovWait m0 t0 (a+d) (b+d) ~ ovWait m t (a'+d) (b'+d)`. Use bisimulation up to the delay prefix. Note that `t` is *not* recoverable from bisimilarity in general: `eSubtract t (period m)` is ill-defined below 0 and idles. So stick to shift-invariance rather than injectivity.
+  - The remaining cases need a "timer shift" lemma, `ovWait m0 t0 a b ~ ovWait m t a' b' -> ovWait m0 t0 (a+d) (b+d) ~ ovWait m t (a'+d) (b'+d)`. Use bisimulation up to the delay prefix. Note that `t` is *not* recoverable from bisimilarity in general: `eSubtract t (period m)` is ill-defined below 0 and idles. So stick to shift-invariance rather than injectivity.
 - **Partial proof:** none for the target. The verified counterexample and its reusable helpers (`del e Y ~ Y` for a zero guard, and no discrete action under a positive guard in the middle component) are in `NetAuxBasics.ovWait_del_pres_bkwd_net_strong.v`.
 
 ## `ovReady_del_pres_bkwd_net`

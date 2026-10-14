@@ -4,7 +4,7 @@
 
 - Each report is a folder named `YYYY-MM-DD-{kebab-title}/`, where the date is the creation date.
 - The folder's `README.md` is the entry point: a human-readable summary of the whole report.
-  - Write it with empathy for the reader, and treat their time as valuable. Lead with what they most need to know and what you need from them. It should take minutes, not an hour, to read.
+  - Write it with empathy for the reader, and treat their time as valuable. Lead with what the reader most needs to know and any decisions needed from a human. It should take minutes, not an hour, to read.
   - Link to the detailed documents instead of repeating them. A "where to go next" table that says when each one is worth reading works well.
 - Put the detail in further documents inside the folder, linked from the README or from each other.
   - These must be human-readable too. The deeper a document sits in the detail, the more verbose it can be: the README is the shortest, and per-item write-ups are the longest.
@@ -13,6 +13,7 @@
 
 ## Content
 
+- Don't address the reader as "you". Name who is meant instead: "needs human approval", "decisions needed from a human".
 - Treat each report as a point-in-time snapshot. Don't rewrite an old report; write a new dated report and link back to the old one. Only typo fixes are allowed in old reports.
 - For every lemma left unproved, include the items below. They can live in a detail document instead of the README.
   1. **Intent:** what it was meant to say.
