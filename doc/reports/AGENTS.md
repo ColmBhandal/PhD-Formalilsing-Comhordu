@@ -1,8 +1,20 @@
 # doc/reports/: rules for reports
 
-- Name files `YYYY-MM-DD-{kebab-title}.md`, where the date is the creation date.
+## One folder per report
+
+- Each report is a folder named `YYYY-MM-DD-{kebab-title}/`, where the date is the creation date.
+- The folder's `README.md` is the entry point: a human-readable summary of the whole report.
+  - Write it with empathy for the reader, and treat their time as valuable. Lead with what they most need to know and what you need from them. It should take minutes, not an hour, to read.
+  - Link to the detailed documents instead of repeating them. A "where to go next" table that says when each one is worth reading works well.
+- Put the detail in further documents inside the folder, linked from the README or from each other.
+  - These must be human-readable too. The deeper a document sits in the detail, the more verbose it can be: the README is the shortest, and per-item write-ups are the longest.
+  - Start each one with a link back to the README.
+- Put machine-checkable material (Rocq files, logs, JSON) in an `evidence/` subfolder. Give it its own `README.md` that says what each part is and how to re-run it.
+
+## Content
+
 - Treat each report as a point-in-time snapshot. Don't rewrite an old report; write a new dated report and link back to the old one. Only typo fixes are allowed in old reports.
-- For every lemma left unproved, include:
+- For every lemma left unproved, include the items below. They can live in a detail document instead of the README.
   1. **Intent:** what it was meant to say.
   2. **Failure:** why it fails (false, missing hypothesis, depends on a stub, …).
   3. **Ripple-up:** its impact up the dependency chain towards `safety`.

@@ -40,13 +40,13 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
   - A handful of removed Arith lemma names mapped to their `Nat.*` equivalents; trivial nat helper proofs replaced by `lia`.
   - Tooling moved to the standard layout: `rocq makefile` Makefile, `rocq-comhordu.opam`, `rocq doc`.
   - **No proof broke**, so there are no `UPGRADE-BROKEN` admits. `Print Assumptions safety` is **identical** before and after the upgrade (134 entries on both 8.15 and 9.2).
-- [x] 🤖 **3. Modernise real-number reasoning on the stdlib.** ✅ 2026-10-14. 58 hand-rolled inequality proofs replaced by `lra`/`nra`; statements unchanged; trust base byte-identical. Removal candidates are in the [report §8](../reports/2026-10-14-proof-completion-pass-1.md). Nothing needed the `Rstruct` bridge.
+- [x] 🤖 **3. Modernise real-number reasoning on the stdlib.** ✅ 2026-10-14. 58 hand-rolled inequality proofs replaced by `lra`/`nra`; statements unchanged; trust base byte-identical. Removal candidates are in the [report](../reports/2026-10-14-proof-completion-pass-1/what-changed.md#reals-clean-up-notes). Nothing needed the `Rstruct` bridge.
 - [x] 🤖 **4. CI.** ✅ 2026-10-13. `.github/workflows/build.yml` runs on `rocq/rocq-prover:9.2.0`: it builds everything and writes `make assumptions` (`scripts/assumptions.py`) to the job summary.
 - [x] 🤖 **5. Gate.** ✅ 2026-10-13. Clean `make` is green on Rocq 9.2.0 (26 files, about 40s on 4 cores). Baseline for the fan-out: `safety` rests on 134 assumptions = **100 unproved project lemmas** + 4 `Parameter` stubs + 25 model axioms + 5 stdlib axioms.
 
 ## Phase 2: Model axioms (🤖)
 
-- [x] 🤖 **6. Show the axioms are consistent.** ✅ 2026-10-13. `src/ModelConsistency.v` gives an axiom-free, non-degenerate model: a fail-safe and a moving mode, with positive separation. The `Module Type` proposal is in the [report §7](../reports/2026-10-14-proof-completion-pass-1.md).
+- [x] 🤖 **6. Show the axioms are consistent.** ✅ 2026-10-13. `src/ModelConsistency.v` gives an axiom-free, non-degenerate model: a fail-safe and a moving mode, with positive separation. The `Module Type` proposal is in the [report](../reports/2026-10-14-proof-completion-pass-1/what-changed.md#model-axioms-are-consistent).
 
 ## Phase 3: Proof fan-out (🤖, ~24 parallel provers)
 
@@ -54,19 +54,19 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
   - All 256 targets were attempted: 123 proved and merged, 25 proved but held back, 108 written up.
   - About 20 local provers plus 5 cloud sessions, with work-stealing and an hourly watchdog for usage limits.
   - Three auditors recompiled every claimed counterexample.
-  - See the [report](../reports/2026-10-14-proof-completion-pass-1.md).
-- [x] 🤖 **8. Write up each lemma that won't go through as written.** ✅ All 108 are in the [appendix](../reports/2026-10-14-proof-completion-pass-1-appendix.md), audited where marked. **Finding: `safety` is currently vacuous.** Admitted lemmas inconsistent with the model axioms sit in its cone (report §3).
-- [x] 🤖 **9. `Parameter` stubs.** ✅ Suggested completions are in the report §6 and are not applied.
+  - See the [report](../reports/2026-10-14-proof-completion-pass-1/README.md).
+- [x] 🤖 **8. Write up each lemma that won't go through as written.** ✅ All 108 are in the report's [lemma index](../reports/2026-10-14-proof-completion-pass-1/lemmas/README.md), audited where marked. **Finding: `safety` is currently vacuous.** Admitted lemmas inconsistent with the model axioms sit in its cone ([why](../reports/2026-10-14-proof-completion-pass-1/why-safety-is-vacuous.md)).
+- [x] 🤖 **9. `Parameter` stubs.** ✅ Suggested completions are in the [report](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#parameter-stubs) and are not applied.
 
 ## Phase 4: Review (🤖 then 🧑)
 
-- [x] 🤖 **10. Report and PR.** ✅ 2026-10-14. [Report](../reports/2026-10-14-proof-completion-pass-1.md) and appendix written; branch pushed; PR opened.
+- [x] 🤖 **10. Report and PR.** ✅ 2026-10-14. [Report](../reports/2026-10-14-proof-completion-pass-1/README.md) written; branch pushed; PR opened.
 - [ ] 🧑 **11. Review** the PR and the report.
 
 ## Phase 5: Open / later (🧑 decisions, then 🤖 follow-up)
 
-- [ ] 🧑 Decide the definition fixes in report §5. #1 (component-state predicates) and #4 (listener arity, which is also in the thesis) matter most; without them `safety` stays vacuous.
-- [ ] 🧑 Decide on statement changes for lemmas found false or mis-stated (from step 8), mostly added reachability hypotheses. Corrected statements are in the appendix.
+- [ ] 🧑 Decide the definition fixes in the [report](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md). #1 (component-state predicates) and #4 (listener arity, which is also in the thesis) matter most; without them `safety` stays vacuous.
+- [ ] 🧑 Decide on statement changes for lemmas found false or mis-stated (from step 8), mostly added reachability hypotheses. Corrected statements are in the [lemma write-ups](../reports/2026-10-14-proof-completion-pass-1/lemmas/README.md).
 - [ ] 🧑 Decide on completions for the `Parameter` stubs (from step 9).
 - [ ] 🧑 Decide on the `Module Type` refactor of the model axioms (from step 6).
 - [ ] 🧑 Decide whether to delete admitted lemmas that are **outside** the `Print Assumptions safety` cone rather than prove them. This is the 2015 plan's "garbage collection".

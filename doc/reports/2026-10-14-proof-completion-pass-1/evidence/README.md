@@ -1,6 +1,8 @@
-# Evidence for the pass-1 proof-completion report
+# Evidence
 
-Supporting material for [2026-10-14-proof-completion-pass-1.md](../2026-10-14-proof-completion-pass-1.md). None of it is part of the build.
+[← Report summary](../README.md)
+
+The machine-checkable material behind the [pass-1 proof-completion report](../README.md): refutations, held-back proofs and validated fixes. None of it is part of the build.
 
 | Path | What it is |
 |---|---|
@@ -16,7 +18,7 @@ Supporting material for [2026-10-14-proof-completion-pass-1.md](../2026-10-14-pr
 The audit files were compiled against the **pre-PR** sources, with all targets still admitted, at commit `fc8271f`. Against later sources they may need small adjustments: a lemma that is now proved still has the same statement, so most files work unchanged. From the repository root, after `make`:
 
 ```
-rocq compile -R src ComhCoq doc/reports/2026-10-14-proof-completion-pass-1-evidence/audit/net/a_bcWaitNet_del_bkwd.v
+rocq compile -R src ComhCoq doc/reports/2026-10-14-proof-completion-pass-1/evidence/audit/net/a_bcWaitNet_del_bkwd.v
 ```
 
 The `Print Assumptions` output should list only `ComhBasics` model axioms and stdlib axioms, plus, for a refutation, the refuted admitted lemma itself.
