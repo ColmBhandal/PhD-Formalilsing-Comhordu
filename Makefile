@@ -14,7 +14,7 @@ Makefile.coq: _CoqProject
 
 # Remaining assumptions under the top-level `safety` theorem, as a Markdown summary.
 assumptions: all
-	python3 scripts/assumptions.py
+	python3 helper-scripts/assumptions.py
 
 # Pretty-printed docs: CoqDoc/verbose (with proofs) and CoqDoc/light (proofs hidden).
 coqdoc:

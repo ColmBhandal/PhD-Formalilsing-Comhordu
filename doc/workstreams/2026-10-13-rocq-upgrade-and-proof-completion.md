@@ -41,7 +41,7 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
   - Tooling moved to the standard layout: `rocq makefile` Makefile, `rocq-comhordu.opam`, `rocq doc`.
   - **No proof broke**, so there are no `UPGRADE-BROKEN` admits. `Print Assumptions safety` is **identical** before and after the upgrade (134 entries on both 8.15 and 9.2).
 - [x] 🤖 **3. Modernise real-number reasoning on the stdlib.** ✅ 2026-10-14. 58 hand-rolled inequality proofs replaced by `lra`/`nra`; statements unchanged; trust base byte-identical. Removal candidates are in the [report](../reports/2026-10-14-proof-completion-pass-1/what-changed.md#reals-clean-up-notes). Nothing needed the `Rstruct` bridge.
-- [x] 🤖 **4. CI.** ✅ 2026-10-13. `.github/workflows/build.yml` runs on `rocq/rocq-prover:9.2.0`: it builds everything and writes `make assumptions` (`scripts/assumptions.py`) to the job summary.
+- [x] 🤖 **4. CI.** ✅ 2026-10-13. `.github/workflows/build.yml` runs on `rocq/rocq-prover:9.2.0`: it builds everything and writes `make assumptions` (`helper-scripts/assumptions.py`) to the job summary.
 - [x] 🤖 **5. Gate.** ✅ 2026-10-13. Clean `make` is green on Rocq 9.2.0 (26 files, about 40s on 4 cores). Baseline for the fan-out: `safety` rests on 134 assumptions = **100 unproved project lemmas** + 4 `Parameter` stubs + 25 model axioms + 5 stdlib axioms.
 
 ## Phase 2: Model axioms (🤖)

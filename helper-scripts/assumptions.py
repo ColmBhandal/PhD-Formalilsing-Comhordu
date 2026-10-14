@@ -6,7 +6,7 @@ groups the result into: model axioms (ComhBasics, deliberate), Parameter stubs,
 unproved project lemmas (Admitted / Conjecture), and standard-library axioms.
 Also counts every `Admitted` / `Conjecture` in src/, whether or not `safety` uses it.
 
-Usage: python3 scripts/assumptions.py   (from the repository root)
+Usage: python3 helper-scripts/assumptions.py   (from the repository root)
 """
 import collections
 import os
