@@ -166,7 +166,10 @@ Definition ovAbort := chanMStable!dormantN.
 
 (******************Listener Process*******************)
 
-Definition listening := chanAN$<[vR, vM'']>$? checkRangeN $([eVar vM'', eVar vR])$ $+$ chanInProc$<[vM'', vL']>$? gotMsgN $([eVar vM'', eVar vL'])$ $+$ chanPause? pausedN $+$ chanUnpause? listeningN.
+(** Notifications arrive as [r, m'', l'], so the listener inputs all three fields and
+ignores the position. The thesis inputs only [r, m''] here (p.122), which can never
+match a notification: see doc/thesis/thesis-corrections.md.*)
+Definition listening := chanAN$<[vR, vM'', vL']>$? checkRangeN $([eVar vM'', eVar vR])$ $+$ chanInProc$<[vM'', vL']>$? gotMsgN $([eVar vM'', eVar vL'])$ $+$ chanPause? pausedN $+$ chanUnpause? listeningN.
 
 (** States for handling notification *)
 

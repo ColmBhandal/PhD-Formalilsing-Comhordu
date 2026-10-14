@@ -926,10 +926,12 @@ Theorem outgoing_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType)
 
 (*If v is incomingNetNotif with timestamp t, and the network can delay, then in
 the derivative network v is incomingNetNotif with timestamp t - d.
-Corollary is that whenever t = 0 delay is impossible.*)
+Corollary is that whenever t = 0 delay is impossible.
+This needs v to have the shape of a notification, [r, m, l], since the listener
+can only input a notification of that length.*)
 Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
   (t : Time) (i : nat) : 
-  reachableNet n -> n -ND- d -ND> n' -> incomingNetNotif v t i n ->
+  reachableNet n -> n -ND- d -ND> n' -> incomingNetNotif v t i n -> length v = 3%nat ->
   {p : d <= t | incomingNetNotif v (minusTime t d p) i n'}.
   (*invert/destruct incomingNotif to [p, l, {li, lo, ln}, k] @ i.: n & v, t : ln*)
   intro RN. introz U. destruct U0.
@@ -981,7 +983,7 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
   lets NSF : NSD DD HY HY2 HY1.
   (*Then ahead we go to show the synchronisation on chanAN of v does exist.*)
   unfold noSyncNow in NSF. assert (discActEnabled p1 (chanAN;? v)) as DAE.
-  apply listening_AN_prot. assert (listeningStateNet i n1) as LSN. eapply del_listening_net.
+  apply listening_AN_prot; [exact U1 | ]. assert (listeningStateNet i n1) as LSN. eapply del_listening_net.
   eapply reachNetDel. apply RN. apply ND1. apply ND2. apply ED0. inversion LSN as [e IV1 IV2].
   inversion IV1 as [p4 l4 h4 k4 IV3 IV4]. my_applys_eq IV3. rewrite <- IV4 in IV2.
   entnetuniq2 EU n1. inversion EU. reflexivity. apply NSF in DAE. decompAnd2 DAE DI DM.
@@ -989,7 +991,7 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
   (*If t = 0, then we have our contradiction with noSyncNow, just like the last step
   of the previous case.*)
   clear NSD. unfold noSyncNow in NSN. assert (discActEnabled p (chanAN;? v)) as DAE.
-  apply listening_AN_prot. assert (listeningStateNet i n) as LSN. eapply del_listening_net.
+  apply listening_AN_prot; [exact U1 | ]. assert (listeningStateNet i n) as LSN. eapply del_listening_net.
   apply RN. apply U. apply H. inversion LSN. inversion H4. my_applys_eq H6.
   cut (e = e0). intros. rewrite H8 in H7. rewrite Heqe0 in H7. inversion H7.
   reflexivity. entnetuniq U e e0. assumption. apply NSN in DAE. decompAnd2 DAE DI DM.
