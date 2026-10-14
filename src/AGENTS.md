@@ -1,6 +1,6 @@
 # src/: rules for the Rocq development
 
-## Statements are fixed; proofs are not
+## Statements are frozen; proofs are not
 
 - **Never change the statement** of an existing `Lemma`, `Theorem`, `Conjecture`, `Definition`, `Inductive`, `Record` or `Fixpoint`, and never delete one, without human approval. If one is false or mis-stated, leave it `Admitted` and write it up in a report (see `doc/reports/AGENTS.md`).
 - **Prove as stated.** Replace `Admitted.` with a complete proof ending in `Qed.`. Turn a `Conjecture` into a `Lemma` with the same name and statement.
