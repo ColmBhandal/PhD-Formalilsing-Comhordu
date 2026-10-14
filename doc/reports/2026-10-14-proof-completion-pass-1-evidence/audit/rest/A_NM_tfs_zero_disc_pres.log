@@ -1,0 +1,37 @@
+Axioms:
+waitSurplus : Delay
+transMax : Time
+trans : Mode -> Time
+tfs_rel_state :
+  forall (n : Network) (m : Mode) (t : Time) (i : nat) (p : reachableNet n),
+  tfs m t i n p -> tfsStateNet i n
+tfsState_not_currSince :
+  forall (m : Mode) (t : Time) (i : nat) (n n' : Network)
+    (p : reachableNet n) (a : ActDiscNet),
+  n -NA- a -NA> n' ->
+  tfsStateNet i n -> ~ tfsStateNet i n' -> ~ currSince m t i n p
+tfsStateNet_dec : forall (i : nat) (n : Network), decidable (tfsStateNet i n)
+speedMax : nonnegreal
+ClassicalDedekindReals.sig_not_dec : forall P : Prop, {~ ~ P} + {~ P}
+ClassicalDedekindReals.sig_forall_dec :
+  forall P : nat -> Prop,
+  (forall n : nat, {P n} + {~ P n}) ->
+  {n : nat | ~ P n} + {forall n : nat, P n}
+proof_irrelevance : forall (P : Prop) (p1 p2 : P), p1 = p2
+period : Mode -> Time
+msgLatency : Time
+modeTransTime : forall m1 m2 : Mode, m1 -mtr-> m2 -> Time
+modeTransRelDec : forall m1 m2 : Mode, {m1 -mtr-> m2} + {~ m1 -mtr-> m2}
+modeTransRel : Mode -> Mode -> Prop
+minDistComp : Mode -> Mode -> Distance
+maxMinDistComp : Mode -> Distance
+functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+failSafeSucc : Mode -> Mode
+failSafe : Mode -> Prop
+eqDecMode : eqDec Mode
+currModeNet : Mode -> nat -> Network -> Prop
+adaptNotif : Time
+Mode : Type
+RC=0

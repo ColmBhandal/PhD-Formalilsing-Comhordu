@@ -1,0 +1,127 @@
+Axioms:
+waitSurplus : Delay
+transMax : Time
+trans : Mode -> Time
+tfsStart_tfs_net :
+  forall (i : nat) (n : Network), tfsStartStateNet i n -> tfsStateNet i n
+tfsStart_next_ent :
+  forall (e e' : Entity) (a : ActDiscEnt),
+  e -EA- a ->> e' ->
+  tfsStartStateEnt e ->
+  tfsStartStateEnt e' \/ (exists m, tfsNextStateEnt m e')
+tfsNext_tfs_net :
+  forall (m : Mode) (i : nat) (n : Network),
+  tfsNextStateNet m i n -> tfsStateNet i n
+tfsNext_next_ent :
+  forall (e e' : Entity) (a : ActDiscEnt) (m : Mode),
+  e -EA- a ->> e' ->
+  tfsNextStateEnt m e -> tfsNextStateEnt m e' \/ tfsCurrStateEnt e'
+tfsListen_tfs_net :
+  forall (i : nat) (n : Network), tfsListenStateNet i n -> tfsStateNet i n
+tfsListen_failSafe_net :
+  forall (m : Mode) (i : nat) (n : Network),
+  tfsListenStateNet i n -> currModeNet m i n -> failSafe m
+tfsCurr_tfs_net :
+  forall (i : nat) (n : Network), tfsCurrStateNet i n -> tfsStateNet i n
+tfsCurr_next_ent :
+  forall (e e' : Entity) (a : ActDiscEnt),
+  e -EA- a ->> e' ->
+  tfsCurrStateEnt e -> tfsCurrStateEnt e' \/ tfsBcStateEnt e'
+tfsBc_tfs_net :
+  forall (i : nat) (n : Network), tfsBcStateNet i n -> tfsStateNet i n
+tfsBc_next_ent :
+  forall (e e' : Entity) (a : ActDiscEnt),
+  e -EA- a ->> e' ->
+  tfsBcStateEnt e -> tfsBcStateEnt e' \/ tfsListenStateEnt e'
+switch_states_mState :
+  forall (n n' : Network) (i : nat) (a : ActDiscNet) (m : Mode),
+  n -NA- a -NA> n' ->
+  switchCurrStateNet i n ->
+  switchListenStateNet i n' -> nextModeNet m i n -> currModeNet m i n'
+switchCurr_nextSince_nextMode_net :
+  forall (m : Mode) (t : Time) (i : nat) (n : Network) (p : reachableNet n),
+  nextSince m t i n p -> switchCurrStateNet i n -> nextModeNet m i n
+switchCurr_del_pres :
+  forall (p p' : ProcTerm) (d : Delay),
+  switchCurrState p -> p -PD- d -PD> p' -> switchCurrState p'
+switchBc_nextMode_net :
+  forall (m : Mode) (i : nat) (n : Network),
+  switchBcStateNet m i n -> nextModeNet m i n
+switchBc_del_pres :
+  forall (m : Mode) (p p' : ProcTerm) (d : Delay),
+  switchBcState m p -> p -PD- d -PD> p' -> switchBcState m p'
+speedMax : nonnegreal
+ClassicalDedekindReals.sig_not_dec : forall P : Prop, {~ ~ P} + {~ P}
+ClassicalDedekindReals.sig_forall_dec :
+  forall P : nat -> Prop,
+  (forall n : nat, {P n} + {~ P n}) ->
+  {n : nat | ~ P n} + {forall n : nat, P n}
+proof_irrelevance : forall (P : Prop) (p1 p2 : P), p1 = p2
+period : Mode -> Time
+ovWait_ovReady_nextMode_net :
+  forall (i : nat) (n : Network),
+  reachableNet n ->
+  (forall (m : Mode) (t x y : Time),
+   ovWaitStateNet m t x y i n -> nextModeNet m i n) /\
+  (forall (m : Mode) (t : Time) (l : Position),
+   ovReadyStateNet m t l i n -> nextModeNet m i n)
+ovWait_del_pres :
+  forall (m : Mode) (t x y : Time) (p p' : ProcTerm) (d : Delay),
+  ovWaitState m t x y p -> p -PD- d -PD> p' -> ovWaitState m t x y p'
+ovReady_del_pres :
+  forall (m : Mode) (t : Time) (l : Position) (p p' : ProcTerm) (d : Delay),
+  ovReadyState m t l p -> p -PD- d -PD> p' -> ovReadyState m t l p'
+nextSince_switchBc_modeEq :
+  forall (m m' : Mode) (t : Time) (i : nat) (n : Network)
+    (p : reachableNet n),
+  nextSince m t i n p -> switchBcStateNet m' i n -> m = m'
+nextSince_ovWait_modeEq :
+  forall (m m' : Mode) (t t' x y : Time) (i : nat) 
+    (n : Network) (p : reachableNet n),
+  nextSince m t i n p -> ovWaitStateNet m' t' x y i n -> m = m'
+nextSince_ovReaddy_modeEq :
+  forall (m m' : Mode) (t t' : Time) (l : Position) 
+    (i : nat) (n : Network) (p : reachableNet n),
+  nextSince m t i n p -> ovReadyStateNet m' t' l i n -> m = m'
+nextModeNet : Mode -> nat -> Network -> Prop
+nexSinceStateNet_cases :
+  forall (i : nat) (n : Network),
+  nextSinceStateNet i n ->
+  (exists m t x y, ovWaitStateNet m t x y i n) \/
+  (exists m t l, ovReadyStateNet m t l i n) \/
+  (exists m, switchBcStateNet m i n) \/ switchCurrStateNet i n
+net_del_elim :
+  forall (q q0 q1 : ProcTerm) (l : Position) (h : Interface) 
+    (k : ModeState) (i : nat) (n n' : Network) (d : Delay),
+  [|q $||$ q0 $||$ q1, l, h, k|] @ i .: n ->
+  n -ND- d -ND> n' ->
+  exists q' q0' q1' l' h' k',
+  [|q' $||$ q0' $||$ q1', l', h', k'|] @ i .: n' /\
+  q -PD- d -PD> q' /\
+  q0 -PD- d -PD> q0' /\
+  q1 -PD- d -PD> q1' /\
+  h -i- d -i> h' /\ k -ms- d -ms> k' /\ dist2d l l' <= speedMax * d
+msgLatency : Time
+modeTransTime : forall m1 m2 : Mode, m1 -mtr-> m2 -> Time
+modeTransRelDec : forall m1 m2 : Mode, {m1 -mtr-> m2} + {~ m1 -mtr-> m2}
+modeTransRel : Mode -> Mode -> Prop
+minDistComp : Mode -> Mode -> Distance
+maxMinDistComp : Mode -> Distance
+link_net_ent_disc_fwd :
+  forall (n n' : Network) (e : Entity) (i : nat) (a : ActDiscNet),
+  n -NA- a -NA> n' ->
+  e @ i .: n ->
+  exists e', e' @ i .: n' /\ (e = e' \/ (exists a', e -EA- a' ->> e'))
+functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+failSafeSucc : Mode -> Mode
+failSafe : Mode -> Prop
+eqDecMode : eqDec Mode
+currModeNet_del_pres :
+  forall (n n' : Network) (d : Delay) (m : Mode) (i : nat),
+  n -ND- d -ND> n' -> currModeNet m i n <-> currModeNet m i n'
+currModeNet : Mode -> nat -> Network -> Prop
+adaptNotif : Time
+Mode : Type
+RC=0

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Started** | 2026-10-13 |
-| **Status** | 🟡 In progress (Phase 1) |
+| **Status** | 🧑 Awaiting human review (Phase 4, step 11) |
 | **Branch** | `claude/awesome-faraday-8n07pj` |
 | **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
 | **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
@@ -40,50 +40,43 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
   - A handful of removed Arith lemma names mapped to their `Nat.*` equivalents; trivial nat helper proofs replaced by `lia`.
   - Tooling moved to the standard layout: `rocq makefile` Makefile, `rocq-comhordu.opam`, `rocq doc`.
   - **No proof broke**, so there are no `UPGRADE-BROKEN` admits. `Print Assumptions safety` is **identical** before and after the upgrade (134 entries on both 8.15 and 9.2).
-- [ ] 🤖 **3. Modernise real-number reasoning on the stdlib.** Use `lra`/`nra`/`Psatz` instead of the hand-rolled inequality lemmas wherever that simplifies a proof. mathcomp-analysis's `Rstruct` bridge is the escape hatch for any missing real-analysis lemma. See the [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md).
+- [x] 🤖 **3. Modernise real-number reasoning on the stdlib.** ✅ 2026-10-14. 58 hand-rolled inequality proofs replaced by `lra`/`nra`; statements unchanged; trust base byte-identical. Removal candidates are in the [report §8](../reports/2026-10-14-proof-completion-pass-1.md). Nothing needed the `Rstruct` bridge.
 - [x] 🤖 **4. CI.** ✅ 2026-10-13. `.github/workflows/build.yml` runs on `rocq/rocq-prover:9.2.0`: it builds everything and writes `make assumptions` (`scripts/assumptions.py`) to the job summary.
 - [x] 🤖 **5. Gate.** ✅ 2026-10-13. Clean `make` is green on Rocq 9.2.0 (26 files, about 40s on 4 cores). Baseline for the fan-out: `safety` rests on 134 assumptions = **100 unproved project lemmas** + 4 `Parameter` stubs + 25 model axioms + 5 stdlib axioms.
 
 ## Phase 2: Model axioms (🤖)
 
-- [ ] 🤖 **6. Show the axioms are consistent.** The 28 `Axiom`s in `src/ComhBasics.v` are the deliberately abstract model parameters (`Mode`, `msgLatency`, `period`, `minDistComp`, …) and the constraints on them. They can't be proved, by design.
-  - Build a **concrete instance** that satisfies all 28. This proves they are mutually consistent, so `safety` is not vacuous. (It is also the 2015 plan's "axiom soundness check".)
-  - **In the report, not the PR:** propose packaging the axioms as a `Module Type`, so that `safety` reads "for any valid instantiation".
+- [x] 🤖 **6. Show the axioms are consistent.** ✅ 2026-10-13. `src/ModelConsistency.v` gives an axiom-free, non-degenerate model: a fail-safe and a moving mode, with positive separation. The `Module Type` proposal is in the [report §7](../reports/2026-10-14-proof-completion-pass-1.md).
 
 ## Phase 3: Proof fan-out (🤖, ~24 parallel provers)
 
-- [ ] 🤖 **7. Prove everything as stated.** Targets: all 228 `Admitted`, the 28 `Conjecture`s, and any `UPGRADE-BROKEN` proofs.
-  - Provers work out whole proof chunks before checking them.
-  - Checks are fast: each prover restates the lemma in a scratch file that imports the already-compiled module.
-  - A shared queue caps concurrent compiles at the 4 CPUs.
-  - Chunk size adapts to the error rate.
-  - **Provers never edit `src/`.** The lead splices proofs in one at a time and rebuilds.
-  - **Wave 1** is split by file or dependency cluster. **Wave 2** takes the leftovers, some of which wave 1 will have unblocked.
-  - Triage hints: the 2015 labels and in-file `(*Proof: …*)` sketches. Tag groups go to one prover, which proves one lemma and factors a tactic for the rest. Do the lemmas that appear in `Print Assumptions safety` first. See [A.1](#a1-admitted-labels-still-in-use) and [A.2](#a2-other-guidance-carried-over).
-- [ ] 🤖 **8. Write up each lemma that won't go through as written.** Leave it admitted and record:
-  - what it was meant to say;
-  - why it fails: it's false, it's missing a hypothesis, or it depends on a stub;
-  - how the failure ripples up towards `safety`;
-  - a concrete suggested fix.
-- [ ] 🤖 **9. `Parameter` stubs (5).** Suggested completions go in the **report only**, not the PR. Known blocked lemmas: the 7 `(*D- reachableEnt*)` lemmas in `EntAuxResults.v` depend on the `reachableEnt` stub.
+- [x] 🤖 **7. Prove everything as stated.** ✅ 2026-10-14.
+  - All 256 targets were attempted: 123 proved and merged, 25 proved but held back, 108 written up.
+  - About 20 local provers plus 5 cloud sessions, with work-stealing and an hourly watchdog for usage limits.
+  - Three auditors recompiled every claimed counterexample.
+  - See the [report](../reports/2026-10-14-proof-completion-pass-1.md).
+- [x] 🤖 **8. Write up each lemma that won't go through as written.** ✅ All 108 are in the [appendix](../reports/2026-10-14-proof-completion-pass-1-appendix.md), audited where marked. **Finding: `safety` is currently vacuous.** Admitted lemmas inconsistent with the model axioms sit in its cone (report §3).
+- [x] 🤖 **9. `Parameter` stubs.** ✅ Suggested completions are in the report §6 and are not applied.
 
 ## Phase 4: Review (🤖 then 🧑)
 
-- [ ] 🤖 **10. Report and PR.** Write `doc/reports/YYYY-MM-DD-proof-completion-pass-1.md`, push branch `claude/awesome-faraday-8n07pj`, and open the PR.
+- [x] 🤖 **10. Report and PR.** ✅ 2026-10-14. [Report](../reports/2026-10-14-proof-completion-pass-1.md) and appendix written; branch pushed; PR opened.
 - [ ] 🧑 **11. Review** the PR and the report.
 
 ## Phase 5: Open / later (🧑 decisions, then 🤖 follow-up)
 
-- [ ] 🧑 Decide on statement changes for lemmas found false or mis-stated (from step 8).
+- [ ] 🧑 Decide the definition fixes in report §5. #1 (component-state predicates) and #4 (listener arity, which is also in the thesis) matter most; without them `safety` stays vacuous.
+- [ ] 🧑 Decide on statement changes for lemmas found false or mis-stated (from step 8), mostly added reachability hypotheses. Corrected statements are in the appendix.
 - [ ] 🧑 Decide on completions for the `Parameter` stubs (from step 9).
 - [ ] 🧑 Decide on the `Module Type` refactor of the model axioms (from step 6).
 - [ ] 🧑 Decide whether to delete admitted lemmas that are **outside** the `Print Assumptions safety` cone rather than prove them. This is the 2015 plan's "garbage collection".
 - [ ] 🧑 Decide whether to prove a **non-triviality** result: without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
-- [ ] 🤖 Run a follow-up proving wave once the decisions above are made.
+- [ ] 🤖 **Pass 2:** apply the approved fixes, re-check the 25 held-back proofs and the cloud provers' conditional proofs, and re-run the fan-out on what's still affected.
 - [ ] 🧑 _Placeholder: anything else the first pass couldn't decide._
 
 ## Log
 
+- **2026-10-14:** Pass 1 complete. 123 targets proved, 25 held back, 108 written up and audited. `Print Assumptions safety` went from 134 to 85, but `safety` is vacuous until the inconsistent admits are fixed. Reals modernised. PR opened for review.
 - **2026-10-13:** Upgrade to Rocq 9.2.0 done with no broken proofs; assumption set unchanged. Standard tooling and CI added. Rules moved into `AGENTS.md` files.
 - **2026-10-13:** Workstream started. Coq 8.15 baseline is green; Rocq 9.2.0 breaks on `elimtype`. Reals [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md) accepted: option (c), stdlib reals with the `Rstruct` bridge. 2015 plan archived.
 
