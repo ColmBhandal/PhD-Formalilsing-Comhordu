@@ -1,4 +1,4 @@
-# Scripts
+# Helper scripts
 
 Helper scripts for working on the project. None of them is part of the proof: the Rocq development in [`src/`](../src) builds and checks without them, and nothing they print changes what is proved.
 
