@@ -24,7 +24,7 @@
 - `make` builds everything (`_CoqProject` → `rocq makefile` → `Makefile.coq`).
 - `make assumptions` prints what `safety` still rests on.
 - `make clean` removes build products.
-- CI (`.github/workflows/build.yml`) builds every push and pull request and reports remaining assumptions. Keep it green: never merge a red build.
+- CI (`.github/workflows/build.yml`) builds every pull request (when it's opened, and on each new commit) and reports remaining assumptions. Keep it green: never merge a red build.
 
 ## Writing
 

@@ -1,7 +1,8 @@
 name: build
 
 on:
-  push:
+  # Once per PR update: when it's opened or reopened, and on each push to it.
+  # No separate `push` trigger, which would build every PR commit twice.
   pull_request:
   workflow_dispatch:
 

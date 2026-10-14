@@ -42,7 +42,7 @@ To see what the top-level ``safety`` theorem still rests on (admitted lemmas, st
 
 ``make assumptions``
 
-CI runs both on every push and pull request.
+CI runs both on every pull request: when it's opened, and again whenever new commits are pushed to it.
 
 ### Cleaning
 

@@ -9,7 +9,7 @@
   - `Admitted`, `admit`, new axioms and similar escapes;
   - any change to the target's statement;
   - any proof whose `Print Assumptions` included a known-inconsistent lemma.
-- **Integration.** All accepted proofs were then spliced into the real sources together, and the whole project was rebuilt from clean. CI does the same build on every push.
+- **Integration.** All accepted proofs were then spliced into the real sources together, and the whole project was rebuilt from clean. CI does the same build on every pull request.
 
 ## How the failures were checked
 
