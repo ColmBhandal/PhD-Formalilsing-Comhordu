@@ -103,9 +103,25 @@ Lemma timedList_timeout_enabled v l :
   exists l. constructor. apply IHl in H.
   ex_flat. eexists. eapply stepTlFwd. eassumption. Qed.
 
+(* begin helpers for timedList_del_le *)
+From Stdlib Require Import Lra.
+(* end helpers *)
+
 Lemma timedList_del_le l l' d v t q :
    l -tl- atlDel d -tl> l' -> <( v, t )> _: l ->
-  <( v, minusTime t d q )> _: l'. Admitted.
+  <( v, minusTime t d q )> _: l'.
+Proof.
+  intros H. remember (atlDel d) as a eqn:Ea. revert Ea.
+  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
+    intros Ea Hin; try discriminate.
+  - destruct Hin.
+  - injection Ea as Ed. subst d1.
+    destruct Hin as [Heq | Hin].
+    + left. injection Heq as Hv Ht1. subst v1. rewrite Ht1 in Ht. f_equal.
+      apply timeEqR. simpl.
+      apply (f_equal (fun x : Time => nonneg (time x))) in Ht. simpl in Ht. lra.
+    + right. apply IH; [reflexivity | assumption].
+Qed.
 
 
 (***************** Input, Output & Notification lists *****************)
@@ -237,20 +253,90 @@ Lemma notifList_del_le ln ln' d v t q :
   (analogous) result for timed lists.*)
   eapply timedList_del_le; eassumption. Qed.
 
+(* begin helpers for timeSplit_inputList *)
+From Stdlib Require Import Lra.
+(** Time splitting for plain timed lists: a delay by d +d+ d' can be split
+into a delay by d followed by a delay by d'.*)
+Lemma timeSplit_inputList_tl : forall l a l'', l -tl- a -tl> l'' ->
+  forall d d' : Delay, a = atlDel (d +d+ d') ->
+  exists l', l -tl- d -tl> l' /\ l' -tl- d' -tl> l''.
+Proof.
+  intros l a l'' H.
+  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
+    intros d d' Ea; try discriminate.
+  - exists (@nil TimedEl). split; apply stepTlDelEmp.
+  - injection Ea as Ed. subst d1.
+    destruct (IH d d' eq_refl) as [lm [Hm1 Hm2]].
+    exists (<(v1, delToTime (t1' +dt+ d'))> :: lm). split.
+    + apply stepTlDel; [assumption |].
+      rewrite Ht. apply timeEqR. simpl. ring.
+    + apply stepTlDel; [assumption | reflexivity].
+Qed.
+(* end helpers *)
+
 Lemma timeSplit_inputList l l'' (d d' d'' : Delay) :
   l -il- d'' -il> l'' -> d'' = d +d+ d' ->
   exists l', l -il- d -il> l' /\ l' -il- d' -il> l''.
-  Admitted. (*#timeSplit-timedList*)
+Proof.
+  intros H E. subst d''. inversion H; subst.
+  - exists (mkInputList []). split; apply stepIlDel.
+  - match goal with [Htl : stepTimedList _ _ _ |- _] =>
+      destruct (timeSplit_inputList_tl _ _ _ Htl d d' eq_refl) as [lm [Hm1 Hm2]] end.
+    exists (mkInputList lm). split; apply stepIlLift; assumption.
+Qed.
 
 Lemma timeSplit_outputList l l'' (d d' d''  : Delay) :
   l -ol- d'' -ol> l'' -> d'' = d +d+ d' ->
   exists l', l -ol- d -ol> l' /\ l' -ol- d' -ol> l''.
-  Admitted. (*#timeSplit-timedList*)
+Proof.
+  intros H E. subst d''. inversion H; subst.
+  match goal with [Htl : stepTimedList _ _ _ |- _] =>
+    destruct (timeSplit_inputList_tl _ _ _ Htl d d' eq_refl) as [lm [Hm1 Hm2]] end.
+  exists (mkOutputList lm). split; apply stepOlLift; assumption.
+Qed.
+
+(* begin helpers for timeSplit_notifList *)
+From Stdlib Require Import Lra.
+Lemma timeSplit_notifList_aux : forall l a l'', l -nl- a -nl> l'' ->
+  forall d d' : Delay, a = atlDel (d +d+ d') ->
+  exists l', l -nl- d -nl> l' /\ l' -nl- d' -nl> l''.
+Proof.
+  intros l a l'' H.
+  induction H as [l0 v0 | l0 l0' d0 v0 Hs IH | l1 l2 l3 d1 d2 H12 IH12 H23 IH23
+    | l0 l0' a0 Htl]; intros dA dB Ea; try discriminate.
+  - (* drop *)
+    destruct (IH dA dB Ea) as [lm [Hm1 Hm2]].
+    exists lm. split; [apply stepNlDrop; assumption | assumption].
+  - (* additivity *)
+    assert (Hr : pos (delay d1) + pos (delay d2) = pos (delay dA) + pos (delay dB)).
+    { apply (f_equal (fun a => match a with atlDel x => pos (delay x) | _ => 0%R end))
+        in Ea. simpl in Ea. exact Ea. }
+    destruct (Rtotal_order (pos (delay dA)) (pos (delay d1))) as [Hlt | [Heq | Hgt]].
+    + destruct (IH12 dA (minusDelay d1 dA Hlt)) as [lm [Hm1 Hm2]].
+      { f_equal. apply delayEqR. simpl. ring. }
+      exists lm. split; [assumption |].
+      assert (EB : dB = minusDelay d1 dA Hlt +d+ d2) by (apply delayEqR; simpl; lra).
+      rewrite EB. eapply stepNlDelAdd; eassumption.
+    + assert (EA : dA = d1) by (apply delayEqR; exact Heq).
+      assert (EB : dB = d2) by (apply delayEqR; lra).
+      subst dA dB. exists l2. split; assumption.
+    + destruct (IH23 (minusDelay dA d1 Hgt) dB) as [lm [Hm1 Hm2]].
+      { f_equal. apply delayEqR. simpl. lra. }
+      exists lm. split; [| assumption].
+      assert (EA : dA = d1 +d+ minusDelay dA d1 Hgt) by (apply delayEqR; simpl; ring).
+      rewrite EA. eapply stepNlDelAdd; eassumption.
+  - (* lift *)
+    destruct (timeSplit_inputList_tl _ _ _ Htl dA dB Ea) as [lm [Hm1 Hm2]].
+    exists (mkNotifList lm). split; apply stepNlLift; assumption.
+Qed.
+(* end helpers *)
 
 Lemma timeSplit_notifList l l'' (d d' d''  : Delay) :
   l -nl- d'' -nl> l'' -> d'' = d +d+ d' ->
   exists l', l -nl- d -nl> l' /\ l' -nl- d' -nl> l''.
-  Admitted. (*#timeSplit-timedList*)
+Proof.
+  intros H E. subst d''. eapply timeSplit_notifList_aux; [eassumption | reflexivity].
+Qed.
 
 (***************** Interface Syntax & Semantics *****************)
 
@@ -354,8 +440,13 @@ Lemma delAddInter : forall (i i' i'' : Interface) (d d' : Delay),
   eapply delAddOutput. apply H9. assumption.
   eapply stepNlDelAdd. apply H10. assumption. Qed.
 
-Conjecture outList_received_in : forall (l l' : OutputList) (v : list BaseType),
+Lemma outList_received_in : forall (l l' : OutputList) (v : list BaseType),
   l -ol- v ?? -ol> l' -> <(v, msgLatency)> _: outList l'.
+Proof.
+  intros l l' v H. inversion H; subst.
+  - simpl. left. reflexivity.
+  - match goal with [Htl : stepTimedList _ _ _ |- _] => inversion Htl end.
+Qed.
 (**Proof: Obvious from outList semantics*)
 
 Conjecture inList_received_in : forall (l l' : InputList) (v : list BaseType),
@@ -448,12 +539,40 @@ Lemma inter_abort_in_not h h' :
 
 Lemma outList_in_input_pres v u t lo lo' :
   <( v, t )> _: outList lo -> outList lo -tl- u ?? -tl> outList lo' ->
-  <( v, t )> _: outList lo'. Admitted. (*6*)
+  <( v, t )> _: outList lo'.
+Proof.
+  intros H1 H2. inversion H2.
+Qed.
 (*Prove in bulk: #interface-linking*)
+
+(* begin helpers for outList_in_output_pres *)
+From Stdlib Require Import Lra.
+Lemma outList_in_output_pres_aux : forall l a l', l -tl- a -tl> l' ->
+  forall u x, a = atlOut u -> x _: l -> x _: l' \/ x = <(u, zeroTime)>.
+Proof.
+  intros l a l' H.
+  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
+    intros u x Ea Hin; try discriminate.
+  - injection Ea as Eu. subst. destruct Hin as [Hx | Hx].
+    + right. subst. reflexivity.
+    + left. assumption.
+  - destruct Hin as [Hx | Hx].
+    + left. left. assumption.
+    + destruct (IH u x Ea Hx) as [Hy | Hy].
+      * left. right. assumption.
+      * right. assumption.
+Qed.
+(* end helpers *)
 
 Lemma outList_in_output_pres v u t lo lo' :
   <( v, t )> _: outList lo -> outList lo -tl- u !! -tl> outList lo' ->
-  0 < t -> <( v, t )> _: outList lo'. Admitted. (*6*)
+  0 < t -> <( v, t )> _: outList lo'.
+Proof.
+  intros H1 H2 H3.
+  destruct (outList_in_output_pres_aux _ _ _ H2 u _ eq_refl H1) as [Hy | Hy].
+  - assumption.
+  - injection Hy as Hv Ht. subst t. simpl in H3. lra.
+Qed.
 (*Prove in bulk: #interface-linking*)
 
 (*-LOCAL TIDY*)

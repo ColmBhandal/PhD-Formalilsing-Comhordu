@@ -1,4 +1,5 @@
-Require Export Reals.
+From Stdlib Require Export Reals Arith.
+From Stdlib Require Import Lra.
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
@@ -15,17 +16,12 @@ Ltac Rleltcases d t U :=  let H := fresh in lets H : Rle_or_lt d t;
                                             let U1 := fresh U in elim_intro H U1 U1.
 
 Lemma not_Rle_lt : forall (r1 r2 : R),
-  ~r1 <= r2 -> r2 < r1. intros. addHyp (Rlt_or_le r1 r2). invertClear H0.
-  apply False_ind. apply H. apply Rlt_le. assumption.
-  apply Rle_lt_or_eq_dec in H1. invertClear H1. assumption.
-  rewrite H0 in H. apply False_ind. apply H. apply Rle_refl. Qed.
+  ~r1 <= r2 -> r2 < r1.
+  intros. lra. Qed.
 
 Lemma RltMinusBothSides : forall (r1 r2 : R),
   r2 < r1 -> 0 < (r1 - r2).
-  intros. apply Rnot_le_lt. unfold not. intros.
-  apply Rplus_le_compat_l with (r := r2) in H0. rewrite Rplus_minus in H0.
-  rewrite Rplus_0_r in H0. eapply Rle_not_lt. apply H0. apply H.
-  Qed.
+  intros. lra. Qed.
 
 (**** Rle ****)
 
@@ -65,89 +61,78 @@ Ltac Rle_ring_solve := apply Req_le; simpl; ring.
 Ltac Rle_refl_solve := apply Rle_refl.
 
 Lemma Rle_plus_r : forall (x y : R),
-  0 <= y -> x <= x + y. intros. apply Rle_trans with (r2 := x + 0).
-  replace (x + 0) with x. apply Rle_refl. ring.
-  apply Rplus_le_compat. apply Rle_refl. assumption. Qed.
+  0 <= y -> x <= x + y.
+  intros. lra. Qed.
 
 Lemma Rle_plus_l : forall (x y : R),
-  0 <= y -> x <= y + x. intros. rewrite Rplus_comm.
-  apply Rle_plus_r. assumption. Qed.
+  0 <= y -> x <= y + x.
+  intros. lra. Qed.
 
 Lemma RleMinusBothSides : forall (r1 r2 : R),
-  r2 <= r1 -> 0 <= (r1 - r2). intros. apply Rle_lt_or_eq_dec in H.
-  inversion H. apply RltMinusBothSides in H0. apply Rlt_le. assumption.
-  rewrite H0. rewrite Rminus_diag_eq. apply Rle_refl. reflexivity. Qed.
+  r2 <= r1 -> 0 <= (r1 - r2).
+  intros. lra. Qed.
 
 Lemma Rmult_le_0_compat : forall r1 r2 : R,
   0 <= r1 -> 0 <= r2 -> 0 <= r1 * r2.
-  intros. simpl. rewrite <- (Rmult_0_r 0). apply Rmult_le_compat;
-  try assumption; try apply Rle_refl. Qed.
+  intros. nra. Qed.
 
 Lemma Rle_zero_plus : forall r1 r2 : R,
   0 <= r1 -> 0 <= r2 -> 0 <= r1 + r2.
-  intros. rewrite <- Rplus_0_r at 1. apply Rplus_le_compat; assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rle_zero_mult : forall r1 r2 : R,
-  0 <= r1 -> 0 <= r2 -> 0 <= r1 * r2. intros. rewrite <- (Rmult_0_l r2)at 1.
-  apply Rmult_le_compat_r; assumption. Qed.
+  0 <= r1 -> 0 <= r2 -> 0 <= r1 * r2.
+  intros. nra. Qed.
 
 Lemma RlePlusExistsR : forall (r1 r2 : R),
-  r1 <= r2 -> exists r3, r2 = r1 + r3 /\ 0 <= r3. intros.
-  exists (r2 - r1). split. ring. apply (Rplus_le_reg_r r1).
-  replace (r2 - r1 + r1) with r2; try ring. rewrite Rplus_0_l.
-  assumption. Qed.
+  r1 <= r2 -> exists r3, r2 = r1 + r3 /\ 0 <= r3.
+  intros. exists (r2 - r1). split; lra. Qed.
 
 Lemma RlePlusExistsL : forall (r1 r2 : R),
-  r1 <= r2 -> exists r3, r2 = r3 + r1 /\ 0 <= r3. intros.
-  apply RlePlusExistsR in H. invertClear H.
-  exists x. rewrite Rplus_comm. assumption. Qed.
+  r1 <= r2 -> exists r3, r2 = r3 + r1 /\ 0 <= r3.
+  intros. exists (r2 - r1). split; lra. Qed.
 
 Lemma Rle_or_le : forall (r1 r2 : R), r1 <= r2 \/ r2 <= r1.
-  intros. addHyp (Rlt_or_le r1 r2). invertClear H. left.
-  apply Rlt_le. assumption. right. assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_le_swap_rr : forall (x y z : R),
-  x <= y + z -> x - z <= y. intros. eapply Rplus_le_reg_r.
-  eapply Rle_trans;[ | apply H ].
-  apply Req_le. ring. Qed.
+  x <= y + z -> x - z <= y.
+  intros. lra. Qed.
 
 Lemma Rplus_le_swap_rl : forall (x y z : R),
-  x <= y + z -> x - y <= z. intros. rewrite Rplus_comm in H.
-  apply Rplus_le_swap_rr. assumption. Qed.
+  x <= y + z -> x - y <= z.
+  intros. lra. Qed.
 
 Lemma Rplus_le_swap_lr : forall (x y z : R),
-  x + y <= z -> x <= z - y. intros. eapply Rplus_le_reg_r.
-  eapply Rle_trans. apply H. apply Req_le. ring. Qed.
+  x + y <= z -> x <= z - y.
+  intros. lra. Qed.
 
 Lemma Rplus_le_swap_ll : forall (x y z : R),
-  x + y <= z -> y <= z - x. intros. rewrite Rplus_comm in H.
-  apply Rplus_le_swap_lr. assumption. Qed.
+  x + y <= z -> y <= z - x.
+  intros. lra. Qed.
 
 Lemma Rminus_le_swap_rr : forall (x y z : R),
-  x <= y - z -> x + z <= y. intros. eapply Rplus_le_reg_r.
-  eapply Rle_trans;[ | apply H]. apply Req_le. ring. Qed.
+  x <= y - z -> x + z <= y.
+  intros. lra. Qed.
 
 Lemma Rminus_le_swap_lr : forall (x y z : R),
-  x - y <= z -> x <= z + y. intros. eapply Rplus_le_reg_r.
-  eapply Rle_trans. apply H. apply Req_le. ring. Qed.
+  x - y <= z -> x <= z + y.
+  intros. lra. Qed.
 
 Lemma Rplus_le_weaken_lr : forall (x y z : R), x + y <= z -> 0 <= y -> x <= z.
-  intros. eapply Rle_trans;[ |apply H]. apply Rle_plus_r. assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_le_weaken_ll : forall (x y z : R), x + y <= z -> 0 <= x -> y <= z.
-  intros. rewrite Rplus_comm in H. eapply Rplus_le_weaken_lr. apply H. assumption.
-  Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_le_weaken_rr : forall (x y z : R), 0 <= z -> x <= y -> x <= y + z.
-  intros. replace x with (x + 0). eapply Rplus_le_compat; assumption.
-  ring. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_le_weaken_rl : forall (x y z : R), 0 <= y -> x <= z -> x <= y + z.
-  intros. rewrite Rplus_comm. apply Rplus_le_weaken_rr;assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rminus_le_weaken_lr : forall (x y z : R), 0 <= y -> x <= z -> x - y <= z.
-  intros. replace z with (z - 0);[ | ring]. eapply Rplus_le_compat.
-  assumption. apply Ropp_le_contravar. assumption. Qed.
+  intros. lra. Qed.
 
 (** Tries to solve an inequality on real numbers.*)
 Ltac Rplus_le_tac := 
@@ -219,91 +204,73 @@ Ltac Rplus_lt_cancel_middle :=
   end.
 
 Lemma Rlt_plus_r : forall (x y : R),
-  0 < y -> x < x + y. intros. apply Rle_lt_trans with (r2 := x + 0).
-  replace (x + 0) with x. apply Rle_refl. ring.
-  apply Rplus_le_lt_compat. apply Rle_refl. assumption. Qed.
+  0 < y -> x < x + y.
+  intros. lra. Qed.
 
 Lemma Rlt_plus_l : forall (x y : R),
-  0 < y -> x < y + x. intros. rewrite Rplus_comm.
-  apply Rlt_plus_r. assumption. Qed.
+  0 < y -> x < y + x.
+  intros. lra. Qed.
 
 Lemma Rlt_zero_plus : forall r1 r2 : R,
   0 < r1 -> 0 < r2 -> 0 < r1 + r2.
-  intros. rewrite <- Rplus_0_r at 1. apply Rplus_lt_compat; assumption. Qed.
+  intros. lra. Qed.
 
 Lemma RltPlusExistsR : forall (r1 r2 : R),
-  r1 < r2 -> exists r3, r2 = r1 + r3 /\ 0 < r3. intros.
-  exists (r2 - r1). split. ring. apply (Rplus_lt_reg_r r1).
-  replace (r2 - r1 + r1) with r2; try ring. rewrite Rplus_0_l.
-  assumption. Qed.
+  r1 < r2 -> exists r3, r2 = r1 + r3 /\ 0 < r3.
+  intros. exists (r2 - r1). split; lra. Qed.
 
 Lemma RltPlusExistsL : forall (r1 r2 : R),
-  r1 < r2 -> exists r3, r2 = r3 + r1 /\ 0 < r3. intros.
-  apply RltPlusExistsR in H. invertClear H.
-  exists x. rewrite Rplus_comm. assumption. Qed.
+  r1 < r2 -> exists r3, r2 = r3 + r1 /\ 0 < r3.
+  intros. exists (r2 - r1). split; lra. Qed.
 
 Lemma RltExistsBetween (r1 r2 : R) : r1 < r2 -> exists r3,
-  r1 < r3 < r2. intros. addHyp (RltPlusExistsL r1 r2 H). invertClear H0.
-  invertClear H1. exists (r1 + x/2). assert (0 < x/2). rewrite double_var in H2.
-  addHyp (Rlt_or_le 0 (x/2)). invertClear H1. assumption.
-  assert (x / 2 + x / 2 <= 0 + 0). apply Rplus_le_compat;
-  assumption. replace (0 + 0) with 0 in H1; [|ring].
-  apply False_ind. eapply Rlt_not_le. apply H2. assumption.
-  assert (x / 2 < x). rewrite double_var. apply Rlt_plus_l.
-  assumption. split. apply Rlt_plus_r. assumption. rewrite H0.
-  rewrite Rplus_comm. apply Rplus_lt_le_compat. assumption.
-  apply Rle_refl. Qed. 
+  r1 < r3 < r2.
+  intros. exists ((r1 + r2) / 2). lra. Qed. 
 
 Lemma Rplus_lt_swap_rl : forall (x y z : R),
-  x < y + z -> x - y < z. intros. eapply Rplus_lt_compat_r in H.
-  eapply Rlt_le_trans. unfold Rminus. apply H. apply Req_le.
-  ring. Qed.
+  x < y + z -> x - y < z.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_swap_rr : forall (x y z : R),
-  x < y + z -> x - z < y. intros. rewrite Rplus_comm in H.
-  apply Rplus_lt_swap_rl. assumption. Qed.
+  x < y + z -> x - z < y.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_swap_ll : forall (x y z : R),
-  x + y < z -> y < z - x. intros. eapply Rplus_lt_compat_r in H.
-  unfold Rminus. eapply Rle_lt_trans;[| apply H]. apply Req_le.
-  ring. Qed.  
+  x + y < z -> y < z - x.
+  intros. lra. Qed.  
 
 Lemma Rplus_lt_swap_lr : forall (x y z : R),
-  x + y < z -> x < z - y. intros. rewrite Rplus_comm in H.
-  apply Rplus_lt_swap_ll. assumption. Qed.
+  x + y < z -> x < z - y.
+  intros. lra. Qed.
 
 Lemma Rminus_lt_swap_rr : forall (x y z : R),
-  x < y - z -> x + z < y. intros. rewrite <- (Ropp_involutive z).
-  apply Rplus_lt_swap_rr. apply H. Qed.
+  x < y - z -> x + z < y.
+  intros. lra. Qed.
 
 Lemma Rminus_lt_swap_lr : forall (x y z : R),
-  x - y < z -> x < z + y. intros. rewrite <- (Ropp_involutive y).
-  apply Rplus_lt_swap_lr. apply H. Qed.
+  x - y < z -> x < z + y.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_reg_l: forall r r1 r2 : R, r1 + r < r2 + r -> r1 < r2.
-  intros. replace r2 with (r2 + r - r);[ | ring]. apply Rplus_lt_swap_lr.
-  assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_reg_r: forall r r1 r2 : R, r + r1 < r + r2 -> r1 < r2.
-  intros. apply (Rplus_lt_reg_l r). my_applys_eq H;ring. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_weaken_lr : forall (x y z : R), x + y < z -> 0 <= y -> x < z.
-  intros. eapply Rle_lt_trans;[ |apply H]. apply Rle_plus_r. assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_weaken_ll : forall (x y z : R), x + y < z -> 0 <= x -> y < z.
-  intros. rewrite Rplus_comm in H. eapply Rplus_lt_weaken_lr. apply H. assumption.
-  Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_weaken_rr : forall (x y z : R), 0 <= z -> x < y -> x < y + z.
-  intros. replace x with (x + 0). eapply Rplus_lt_le_compat; assumption.
-  ring. Qed.
+  intros. lra. Qed.
 
 Lemma Rplus_lt_weaken_rl : forall (x y z : R), 0 <= y -> x < z -> x < y + z.
-  intros. rewrite Rplus_comm. apply Rplus_lt_weaken_rr;assumption. Qed.
+  intros. lra. Qed.
 
 Lemma Rminus_lt_weaken_lr : forall (x y z : R), 0 <= y -> x < z -> x - y < z.
-  intros. replace z with (z - 0);[ | ring]. eapply Rplus_lt_le_compat.
-  assumption. apply Ropp_le_contravar. assumption. Qed.
+  intros. lra. Qed.
 
 (** Tries to solve an inequality on real numbers.*) 
 Ltac Rplus_lt_tac := 

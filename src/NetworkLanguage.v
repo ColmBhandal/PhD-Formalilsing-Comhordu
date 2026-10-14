@@ -4,7 +4,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 
-Require Import Coq.Program.Equality.
+From Stdlib Require Import Program.Equality.
 Require Import ComhCoq.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
@@ -425,7 +425,44 @@ Lemma link_net_ent_disc_fwd :
   forall (n n' : Network) (e : Entity) (i : nat) (a : ActDiscNet),
   n -NA- a -NA> n' ->
   e @ i .: n ->
-  exists e', e' @ i .: n' /\ (e = e' \/ (exists a', e -EA- a' ->> e')). Admitted. (*6*)
+  exists e', e' @ i .: n' /\ (e = e' \/ (exists a', e -EA- a' ->> e')).
+Proof.
+  intros n n' e i a H. revert e i. induction H; intros e0 i0 Hin.
+  - inversion Hin.
+  - eauto.
+  - eauto.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. right. eauto.
+    + exists e0. split. constructor. assumption. left. reflexivity.
+  - inversion Hin; subst.
+    + eexists. split. constructor. left. reflexivity.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
+      exists e1. split. constructor. assumption. assumption.
+  Qed.
 (**Proof: Case analyse the network transition and this follows from the semantics*)
 
 Ltac link_netentdiscfwd_tac0 e' U :=
@@ -541,7 +578,14 @@ e' in the derivative network, there is an entity e in the original at the same p
 as e', and e can perform the same timed step to e'.*)
 Lemma link_net_ent_del_fwd : forall (n n' : Network) (e : Entity) (i : nat) (d : Delay),
   n -ND- d -ND> n' -> e @ i .: n -> exists e', e' @ i .: n' /\ e -ED- d ->> e'.
-  Admitted. (*7*)
+Proof.
+  intros n n' e i d H. revert e i. induction H; intros e0 i0 Hin.
+  - inversion Hin.
+  - inversion Hin; subst.
+    + exists e'. split. constructor. assumption.
+    + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepTimedNet _ _ Hx) as [e1 [He1 Hd]] end.
+      exists e1. split. constructor. assumption. assumption.
+  Qed.
 (**Proof: Straightforward from the semantics. Could do induction on the structure of n for the actual proof. Similar to
 link_net_ent_disc_fwd but probably simpler.*)
 
@@ -615,5 +659,12 @@ Lemma stepNet_tau_pres_pos (n n' : Network) (e e' : Entity) (i : nat) :
 
 Lemma timeSplit_net n n'' d d' d'' :
   n -ND- d'' -ND> n'' -> d'' = d +d+ d' ->
-  exists n', n -ND- d -ND> n' /\ n' -ND- d' -ND> n''. Admitted. (*6*)
+  exists n', n -ND- d -ND> n' /\ n' -ND- d' -ND> n''.
+Proof.
+  intros H Hd. induction H.
+  - exists ([] : Network). split; constructor.
+  - destruct (IHstepTimedNet Hd) as [n1 [H1 H2]].
+    destruct (timeSplit_ent e e' d d' d0 H Hd) as [e1 [He1 He2]].
+    exists (e1 :: n1). split; constructor; assumption.
+  Qed.
 (**Proof: Straightforward. Lift time split property for entities. Maybe induction on struct of n.*)

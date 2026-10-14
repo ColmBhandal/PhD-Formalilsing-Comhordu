@@ -247,10 +247,14 @@ Lemma mState_stable_next_enabled k m' : currModeMState k -mtr-> m' ->
 
 Lemma next_modeState_stable_not k k' m' :
   nextModeMState k = Some m' -> k -ms- chanMStable @! -ms> k' -> False.
-  Admitted.
+Proof.
+  intros H Hs. destruct k; simpl in H; inversion Hs; subst; try discriminate.
+Qed.
 
 Lemma modeState_abort_in_not k k' :
-  k -ms- chanAbort @? -ms> k' -> False. Admitted.
+  k -ms- chanAbort @? -ms> k' -> False.
+Proof.
+  intros H. inversion H. Qed.
 
 Lemma unstable_stable_out_not k : unstable k ->
   ~ discActEnabledMState (chanMStable *!) k. unfold not. intros.

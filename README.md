@@ -10,37 +10,43 @@ The proof found in my thesis has been formalised in Coq. However, some of the re
 
 In its current state, this code is not recommended for inclusion in any downstream projects. The code contains many ``Admitted`` results which are effectively axioms, and thus there is no guarantee of consistency. If various modules of the code were refactored to separate repos e.g. ``StandardResults.v``, then those would be fine for reuse. But as of the time of writing, this is not planned.
 
+## Project docs
+
+Project documentation lives under [`doc/`](doc):
+
+ - [`doc/workstreams/`](doc/workstreams): living trackers for ongoing work, e.g. the [Rocq upgrade & proof completion](doc/workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md) workstream.
+ - [`doc/reports/`](doc/reports): point-in-time reports, e.g. the results of a proving pass.
+ - [`doc/adr/`](doc/adr): architecture decision records.
+ - [`doc/archive/`](doc/archive): superseded historical documents, e.g. the original 2015 project plan.
+
 ## Building the Project
 
 ### Prerequisites
 
-[Install Coq with OPAM](https://coq.inria.fr/opam-using.html). Unfortunately this is not supported on Windows but there is a workaround.
+[Rocq](https://rocq-prover.org) **9.2.0** with its standard library (`rocq-stdlib`). The dependencies are declared in [`rocq-comhordu.opam`](rocq-comhordu.opam). Either:
 
-### Windows Workaround
+ - **opam:** `opam install rocq-prover.9.2.0`, or `opam install . --deps-only` from the repository root. On Windows, use WSL.
+ - **Docker:** use the official image `rocq/rocq-prover:9.2.0`, the same one CI uses. For example:
 
-The idea is to run install and use Coq through WSL and then expose any graphical applications through VcXsrv (since WSL doesn't have a UI). An excellent outline of how to do this is found at [CoqWSL](https://lemonidas.github.io/CoqWSL.html).
+   ``docker run --rm -it -v "$PWD:/work" -w /work --user root -e OPAMROOT=/home/rocq/.opam -e PATH=/home/rocq/.opam/4.14.2+flambda/bin:/usr/local/bin:/usr/bin:/bin rocq/rocq-prover:9.2.0 make``
 
 ### Local Build
 
-There is a top-level ``Makefile`` in the root directory of this repository. To build the Coq project just open a terminal in that directory and run:
+From the repository root, run:
 
 ``make``
 
-This ultimately ends up calling Coq's ``coq_makefile`` command, if necessary, to make an intermediary make file called ``Makefile.coq`` and then the top-level target of _that_ make file does all the heavy lifting, converting source ``.v`` files into output ``.vo`` files.
+This uses Rocq's ``rocq makefile`` to generate ``Makefile.coq`` from ``_CoqProject`` and then compiles every ``.v`` file in dependency order. Editors such as VsCoq and coq-lsp read ``_CoqProject`` for load paths.
+
+To see what the top-level ``safety`` theorem still rests on (admitted lemmas, stubs, model axioms and stdlib axioms), run:
+
+``make assumptions``
+
+CI runs both on every pull request: when it's opened, and again whenever new commits are pushed to it.
 
 ### Cleaning
 
-You may want to clean the project. All files cleaned are not checked into this repo - they are produced by various make/build commands. You can either clean the compiled files, the "Coq makefiles", or both. To clean the compiled files:
-
-``make clean-compiled``
-
-To clean the auto-generated make files, run:
-
-``make clean-make``
-
-To clean everything, just do:
-
-``make clean``
+``make clean`` removes compiled files, the generated ``Makefile.coq`` and any locally built CoqDoc.
 
 ## Repo Roadmap
 
@@ -72,14 +78,14 @@ The code is pretty-printed online. There are two versions - one with proofs, one
 
 CoqDoc is pretty-printed documentation of Coq code. For more info, see [Documenting Files...](https://coq.inria.fr/refman/using/tools/coqdoc.html)
 
-The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is recommended to build any CoqDoc locally here. There are many arguments you can pass to CoqDoc e.g. you can choose to omit proofs; for a full explanation of those arguments just run ``coqdoc --help``. Here are just two options that I think are useful:
+The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is recommended to build any CoqDoc locally here. There are many arguments you can pass to CoqDoc e.g. you can choose to omit proofs; for a full explanation of those arguments just run ``rocq doc --help``. Here are just two options that I think are useful:
 
- 1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``coqdoc --html -d "CoqDoc/verbose" src/*.v --no-index --toc``
- 1. To build light HTML, without proofs, use: ``coqdoc --html -g -d "CoqDoc/light" src/*.v --no-index --toc``
+ 1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``rocq doc --html -R src ComhCoq -d "CoqDoc/verbose" src/*.v --no-index --toc``
+ 1. To build light HTML, without proofs, use: ``rocq doc --html -g -R src ComhCoq -d "CoqDoc/light" src/*.v --no-index --toc``
 
 Note: the ``Index.html`` file renders with a bunch of broken links so I ignore it with ``--no-index`` and instead use a table of contents file as the entry point, using ``--toc``. This could probably be improved in future.
 
-You can also build the CoqDoc via ``make`` with:
+You can also build the CoqDoc via ``make`` (which uses ``rocq doc``) with:
 
 ``make coqdoc``
 
@@ -92,7 +98,7 @@ I originally started to entitle this section "Future Work" but that would be mis
  - All general-purpose results in ``StandardResults.v`` should be extracted from this repo and shared as a standalone library. However, when doing so, any results which already exist in other libraries should be removed, and their usage should be replaced with usage of the more standard results. Similar reasoning applies to ``GenTacs.v``, which contains mostly general-purose tactics.
  - Ideally, this project should be decomposed into a number of repos, to make it clear what the various components do and to better expose and document them for reuse. As an MVP, the language components should be separated to their own repo, with results proved about the language independent of the protocol. This would allow for reuse of the language. It may also yield some research papers e.g. a paper defining the language, proving some general properties e.g. non-Zenoness, showing some examples and example applications. Such a paper would be a modular extraction of the content of my PhD thesis in much the same manner as the extraction of repos from this one would modularise the code.
  - Once this project is decomposed into various repos, they should be published and made available for others to use.
- - Not all results in this project were proved in Coq. About 30% of the results were ``Admitted``. The file [coq_proj.pdf](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/coq_proj.pdf) gives more detail on this. In particular, it outlines what needs to be done and how. It would be nice to prove everything completely, but strategically I think a better move would be to first decompose and better modularise the repo. It's unclear whether there is high demand for the proof of safety for this protocol itself, and unless/until there is I don't see much merit in completing a lengthy proof just for the sake of it.
+ - Not all results in this project were proved in Coq. About 30% of the results were ``Admitted``. The file [coq_proj.pdf](doc/archive/2015-05-08-coq-project-plan.pdf) gives more detail on this. In particular, it outlines what needs to be done and how. It would be nice to prove everything completely, but strategically I think a better move would be to first decompose and better modularise the repo. It's unclear whether there is high demand for the proof of safety for this protocol itself, and unless/until there is I don't see much merit in completing a lengthy proof just for the sake of it.
 
 More improvements are outlined in [Issues](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/issues).
 

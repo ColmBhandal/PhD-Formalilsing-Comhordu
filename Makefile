@@ -1,33 +1,30 @@
-build: Makefile.coq
-	$(MAKE) -f Makefile.coq
+# Standard Rocq project Makefile: generates Makefile.coq from _CoqProject via `rocq makefile`
+# and delegates every other target to it (e.g. `make html`, `make install`, `make validate`).
 
-install: Makefile.coq
-	$(MAKE) -f Makefile.coq install
+all: Makefile.coq
+	@+$(MAKE) -f Makefile.coq all
+
+clean: Makefile.coq
+	@+$(MAKE) -f Makefile.coq cleanall
+	@rm -f Makefile.coq Makefile.coq.conf .Makefile.coq.d
+	@rm -rf CoqDoc
 
 Makefile.coq: _CoqProject
-	coq_makefile -f _CoqProject -o $@
+	rocq makefile -f _CoqProject -o Makefile.coq
 
-clean: clean-make clean-compiled clean-coqdoc
-	@echo "Clean complete"
+# Remaining assumptions under the top-level `safety` theorem, as a Markdown summary.
+assumptions: all
+	python3 helper-scripts/summarise_assumptions.py
 
-clean-make:
-	@echo "Cleaning Coq makefiles"
-	rm *Makefile.coq*
+# Pretty-printed docs: CoqDoc/verbose (with proofs) and CoqDoc/light (proofs hidden).
+coqdoc:
+	mkdir -p CoqDoc/light CoqDoc/verbose
+	rocq doc --html -R src ComhCoq -d CoqDoc/verbose src/*.v --no-index --toc
+	rocq doc --html -g -R src ComhCoq -d CoqDoc/light src/*.v --no-index --toc
 
-clean-compiled:
-	@echo "Removing compiled files..."
-	find . * | grep "\(\.vo\|\.aux\|\.glob\)" | xargs rm -f
-	@echo "...Files removed"
+force _CoqProject Makefile: ;
 
-clean-coqdoc:
-	rm -r CoqDoc
+%: Makefile.coq force
+	@+$(MAKE) -f Makefile.coq $@
 
-coqdoc: coqdoc-lite coqdoc-verbose
-
-coqdoc-lite:
-	mkdir -p CoqDoc/light
-	coqdoc --html -g -d "CoqDoc/light" src/*.v --no-index --toc
-
-coqdoc-verbose:
-	mkdir -p CoqDoc/verbose
-	coqdoc --html -d "CoqDoc/verbose" src/*.v --no-index --toc
+.PHONY: all clean assumptions coqdoc force

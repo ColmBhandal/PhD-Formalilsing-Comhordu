@@ -1,0 +1,26 @@
+name: build
+
+on:
+  # Once per PR update: when it's opened or reopened, and on each push to it.
+  # No separate `push` trigger, which would build every PR commit twice.
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: rocq/rocq-prover:9.2.0
+      # The image's opam switch belongs to the `rocq` user; run as root so the
+      # checkout is writable, with the switch's binaries on PATH.
+      options: --user root
+    env:
+      PATH: /home/rocq/.opam/4.14.2+flambda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rocq version
+        run: rocq --version
+      - name: Build
+        run: make -j"$(nproc)"
+      - name: Report remaining assumptions under safety
+        run: python3 helper-scripts/summarise_assumptions.py | tee -a "$GITHUB_STEP_SUMMARY"

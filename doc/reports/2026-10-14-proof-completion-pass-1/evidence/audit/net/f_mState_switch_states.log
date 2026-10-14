@@ -1,0 +1,45 @@
+Axioms:
+waitSurplus : Delay
+transMax : Time
+trans : Mode -> Time
+speedMax : nonnegreal
+ClassicalDedekindReals.sig_not_dec : forall P : Prop, {~ ~ P} + {~ P}
+ClassicalDedekindReals.sig_forall_dec :
+  forall P : nat -> Prop,
+  (forall n : nat, {P n} + {~ P n}) ->
+  {n : nat | ~ P n} + {forall n : nat, P n}
+reachableProt_triple :
+  forall p : ProcTerm, reachableProt p -> protocolState p
+proof_irrelevance : forall (P : Prop) (p1 p2 : P), p1 = p2
+period : Mode -> Time
+ovlp_mCurr_out :
+  forall p p' : ProcTerm,
+  p -PA- chanMCurr *! -PA> p' ->
+  overlapState p ->
+  switchCurrState p /\ switchListenState p' \/
+  tfsCurrState p /\ tfsBcState p'
+msgLatency : Time
+modeTransTime : forall m1 m2 : Mode, m1 -mtr-> m2 -> Time
+modeTransRelDec : forall m1 m2 : Mode, {m1 -mtr-> m2} + {~ m1 -mtr-> m2}
+modeTransRel : Mode -> Mode -> Prop
+minDistComp : Mode -> Mode -> Distance
+maxMinDistComp : Mode -> Distance
+listen_mCurr_out_not :
+  forall p p' : ProcTerm,
+  p -PA- chanMCurr *! -PA> p' -> listenerState p -> False
+link_net_prot_reach :
+  forall (n : Network) (p : ProcTerm) (l : Position) 
+    (h : Interface) (k : ModeState) (i : nat),
+  reachableNet n -> [|p, l, h, k|] @ i .: n -> reachableProt p
+functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+failSafeSucc : Mode -> Mode
+failSafe : Mode -> Prop
+eqDecMode : eqDec Mode
+bc_mCurr_out_not :
+  forall p p' : ProcTerm,
+  p -PA- chanMCurr *! -PA> p' -> broadcastState p -> False
+adaptNotif : Time
+Mode : Type
+rc=0

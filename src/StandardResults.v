@@ -5,10 +5,11 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 Require Import ComhCoq.Extras.LibTactics.
-Require Export Reals.
-Require Export Logic.ProofIrrelevance.
+From Stdlib Require Export Reals Arith.
+From Stdlib Require Export Logic.ProofIrrelevance.
 Require Import ComhCoq.GenTacs.
 Require Export ComhCoq.RInequalities.
+From Stdlib Require Import Lra.
 
 Open Scope R_scope.
 
@@ -21,8 +22,8 @@ Definition eqDec (X : Type) := forall x1 x2 : X,
 Lemma notEq_symm : forall (X : Type) (x1 x2 : X), ~x1 = x2 -> ~x2 = x1.
   unfold not. intros. apply H. symmetry. assumption. Qed.
 
-Lemma two_nonneg : 0 <= 2. replace 0 with (0 + 0).
-  apply Rplus_le_compat;apply Rle_0_1. ring. Qed.
+Lemma two_nonneg : 0 <= 2.
+  lra. Qed.
   
 Ltac Rplus3_swap_2_3 a b c := replace (a + b + c) with (a + c + b); [ | ring].
 Ltac Rminus_plus_zero a b := replace (a - b) with (a + (0 - b));[ | ring].
@@ -165,11 +166,11 @@ Lemma addNonnegComm : forall (r1 r2 : nonnegreal),
   simpl. apply nonnegEqSimpl. simpl. ring. Qed.
 
 Lemma addNonnegCancel : forall (r1 r2 r3 : nonnegreal),
-  r1 +nn+ r2 = r1 +nn+ r3 -> r2 = r3. intros.
+  r1 +nn+ r2 = r1 +nn+ r3 -> r2 = r3.
+  intros.
   destruct r1 as [r1 c1]. destruct r2 as [r2 c2].
   destruct r3 as [r3 c3]. apply nonnegRealEqR.
-  simpl. simpl in H. inversion H. eapply Rplus_eq_reg_l.
-  apply H1. Qed.
+  simpl. simpl in H. inversion H. lra. Qed.
 
 (**Equality is decidable for reals.*)
 Lemma eqDecReal : eqDec R. unfold eqDec. intros.
@@ -206,11 +207,8 @@ existential witnesses for this are both half the original number i.e. every numb
 to half itself plus half itself.*)
 Theorem addPosRealExists : forall (r : posreal),
   exists r1 r2, pos r = pos r1 + pos r2.
-  intros. assert (0 < r/2). addHyp (Rlt_or_le 0 (r/2)). invertClear H.
-  assumption. apply False_ind. apply (Rlt_not_le r 0). apply cond_pos.
-  replace 0 with (0 + 0); [|ring]. rewrite (double_var r).
-  apply Rplus_le_compat; assumption. remember (mkposreal (r/2) H) as r'.
-  exists r'. exists r'. rewrite Heqr'. simpl. apply double_var. Qed.
+  intros. assert (H : 0 < r/2) by (pose proof (cond_pos r); lra).
+  exists (mkposreal _ H) (mkposreal _ H). simpl. lra. Qed.
 
 
 
@@ -333,9 +331,9 @@ Theorem distAddLe : forall (p1 p2 p3 : Position),
 (** Adding p3 to p1 changes the distance between p1 and p2 by
 at most r if |p3| <= r.*)
 Theorem distAddLeLe : forall (p1 p2 p3 : Position) (r : R),
-  displacement p3 <= r -> dist2d (p1 +p+ p3) (p2) <= dist2d p1 p2 + r. intros.
-  Open Scope R_scope. apply Rle_trans with (r2 := (dist2d p1 p2 + displacement p3)).
-  apply distAddLe. apply Rplus_le_compat_l. assumption. Qed.
+  displacement p3 <= r -> dist2d (p1 +p+ p3) (p2) <= dist2d p1 p2 + r.
+  intros.
+  pose proof (distAddLe p1 p2 p3). lra. Qed.
 
 (** If the distance between p1 and p1' is bounded above by r, and the
 same holds for p2 and p2', then the distance between p1 and p2 is
@@ -532,33 +530,9 @@ Theorem minusOppInterval : forall (i : Interval) (r : R),
   i [+] -r = i [-] r. intros. destruct i. simpl. f_equal; ring. Qed.
 
 Theorem inIntervalPlusCancel : forall (i : Interval) (x r : R),
-  x + r [:] i [+] r -> x [:] i. intros. destruct i.
-  destruct lowerClosed0, upperClosed0. inversion H. clear H;
-  simpl in H0, H1; unfold inInterval; simpl; split;
-  replace lower0 with (lower0 + r - r);
-  replace upper0 with (upper0 + r - r);
-  replace x with (x + r - r); try ring; (apply Rplus_le_compat;
-  [assumption | apply Rle_refl]).
-  inversion H. clear H;
-  simpl in H0, H1; unfold inInterval; simpl; split;
-  replace lower0 with (lower0 + r - r);
-  replace upper0 with (upper0 + r - r);
-  replace x with (x + r - r); try ring. apply Rplus_le_compat;
-  [assumption | apply Rle_refl].
-  apply Rplus_lt_le_compat;[assumption | apply Rle_refl].
-  inversion H. clear H;
-  simpl in H0, H1; unfold inInterval; simpl; split;
-  replace lower0 with (lower0 + r - r);
-  replace upper0 with (upper0 + r - r);
-  replace x with (x + r - r); try ring.
-  apply Rplus_lt_le_compat;[assumption | apply Rle_refl].
-  apply Rplus_le_compat; [assumption | apply Rle_refl].
-  inversion H. clear H;
-  simpl in H0, H1; unfold inInterval; simpl; split;
-  replace lower0 with (lower0 + r - r);
-  replace upper0 with (upper0 + r - r);
-  replace x with (x + r - r); try ring; (apply Rplus_lt_le_compat;
-  [assumption | apply Rle_refl]). Qed.
+  x + r [:] i [+] r -> x [:] i.
+  intros [l u [|] [|]] x r H;
+  unfold inInterval in *; simpl in *; lra. Qed.
 
 Theorem subIntervalPlusCancel : forall (i i' : Interval) (r : R),
   i [+] r <[ i' [+] r -> i <[ i'. unfold subInterval. intros.
@@ -582,16 +556,16 @@ Lemma subIntervalRefl : forall (i : Interval), i <[ i. unfold subInterval.
 (** If a number is less than the lower bound of an interval then it is
 not in that interval.*)
 Lemma outIntervalLtLower : forall (r : R) (i : Interval),
-  r < lower i -> ~ r [:] i. unfold not; intros.
-  apply inIntervalLeLower in H0. eapply Rlt_not_le.
-  apply H. assumption. Qed.
+  r < lower i -> ~ r [:] i.
+  unfold not; intros.
+  apply inIntervalLeLower in H0. lra. Qed.
 
 (** If a number is greater than the upper bound of an interval then it is
 not in that interval.*)
 Lemma outIntervalLtUpper : forall (r : R) (i : Interval),
-  upper i < r-> ~ r [:] i. unfold not; intros.
-  apply inIntervalLeUpper in H0. eapply Rlt_not_le.
-  apply H. assumption. Qed.
+  upper i < r-> ~ r [:] i.
+  unfold not; intros.
+  apply inIntervalLeUpper in H0. lra. Qed.
 
 (** If a number is less than or equal the lower bound of an interval
 that is lower closed then it is not in the interval.*)
@@ -609,23 +583,12 @@ Lemma outIntervalLeUpper : forall (r : R) (i : Interval),
 
 (** Membership of an interval is decidable.*)
 Lemma inIntervalDec : forall (r : R) (i : Interval),
-  r [:] i \/ ~ r [:] i. intros.
+  r [:] i \/ ~ r [:] i.
+  intros.
   destruct i as [l u cl cu].
-  addHyp (Rle_dec l r). addHyp (Rlt_dec l r).
-  addHyp (Rle_dec r u). addHyp (Rlt_dec r u).
-  destruct cl, cu; unfold inInterval; simpl.
-  invertClear H. invertClear H1. left; split; assumption.
-  right. unfold not. intro. apply H. inversion H1. assumption.
-  right. unfold not. intro. apply H3. inversion H. assumption.
-  invertClear H. invertClear H2. left; split; assumption.
-  right. unfold not. intro. apply H. inversion H2. assumption.
-  right. unfold not. intro. apply H3. inversion H. assumption.
-  invertClear H0. invertClear H1. left; split; assumption.
-  right. unfold not. intro. apply H0. inversion H1. assumption.
-  right. unfold not. intro. apply H3. inversion H0. assumption.
-  invertClear H0. invertClear H2. left; split; assumption.
-  right. unfold not. intro. apply H0. inversion H2. assumption.
-  right. unfold not. intro. apply H3. inversion H0. assumption.
+  destruct (total_order_T l r) as [[?|?]|?], (total_order_T r u) as [[?|?]|?];
+  destruct cl, cu; unfold inInterval; simpl;
+  first [left; lra | right; lra].
   Qed.
 
 (**If a number exists in the point interval [x, x]
@@ -645,32 +608,27 @@ Lemma Rminus_lt_subNonnegTot (a b : nonnegreal) c :
   assumption. Qed.
 
 Lemma Rminus_plus_lt_subNonnegTot (a b : nonnegreal) c z :
-  z < c -> a - b + z < c -> a -nn- b + z < c. intros.
-  apply Rplus_lt_swap_lr in H0. assert (0 < c - z).
-  apply Rplus_lt_swap_ll. my_applys_eq H. ring.
-  apply Rminus_lt_swap_rr. apply Rminus_lt_subNonnegTot;
-  assumption. Qed.
+  z < c -> a - b + z < c -> a -nn- b + z < c.
+  intros.
+  unfold subNonnegTot, zeroNonneg. destruct (Rle_dec b a); simpl; lra. Qed.
 
 Lemma subNonnegTot_le_Rminus_eq (r1 r2 : nonnegreal) :
   r2 <= r1 -> nonneg (r1 -nn- r2) = r1 - r2. intros.
   unfold subNonnegTot. remember (Rle_dec r2 r1). destruct s.
   reflexivity. false. Qed.
 
-Lemma Rlt_double x : 0 < x -> x < x + x. intro. cut (0 + x < x + x).
-  intros. rewrite Rplus_0_l in H0. assumption. apply Rplus_lt_le_compat.
-  assumption. apply Rle_refl. Qed.
+Lemma Rlt_double x : 0 < x -> x < x + x.
+  intro. lra. Qed.
   
 Lemma Rmult_lt_0 y z : 0 < y -> 0 < z -> 0 < y * z.
-  intros. replace 0 with (0 * z);[ | ring].
-  apply Rmult_lt_compat_r; assumption. Qed.
+  intros. nra. Qed.
 
 Lemma Rlt_le_zero_plus r1 r2 : 0 < r1 -> 0 <= r2 -> 0 < r1 + r2.
-  intros. replace 0 with (0 + 0). apply Rplus_lt_le_compat; assumption.
-  ring. Qed.
+  intros. lra. Qed.
 
-Lemma Rmax_lt_l x y a : a < x -> a < Rmax x y. intros. unfold Rmax.
-  remember (Rle_dec x y). destruct s. eapply Rlt_le_trans; eassumption.
-  assumption. Qed.
+Lemma Rmax_lt_l x y a : a < x -> a < Rmax x y.
+  intros.
+  pose proof (Rmax_l x y). lra. Qed.
 
 Lemma subNonnegTot_0_or_Rminus r1 r2 :
   nonneg (r1 -nn- r2) = 0 \/
@@ -690,42 +648,34 @@ Ltac Rplus3_swap_2_3_free := match goal with
   end.
 
 Lemma Rle_subNonnegTot_r (r1 r2 r3 : nonnegreal) :
-  r1 <= r2 -> (r1 -nn- r3) <= (r2 -nn- r3). intros.
-  lets RLD : Rle_or_lt r3 r1. elim_intro RLD LER LTR.
-  repeat rewrite subNonnegTot_le_Rminus_eq. apply Rplus_le_compat_r.
-  assumption. eapply Rle_trans; eassumption. assumption.
-  rewrite subNonnegTot_lt_0. apply cond_nonneg. assumption. Qed.
+  r1 <= r2 -> (r1 -nn- r3) <= (r2 -nn- r3).
+  intros.
+  destruct (Rle_lt_dec r3 r1).
+  rewrite !subNonnegTot_le_Rminus_eq; lra.
+  rewrite subNonnegTot_lt_0 by assumption. apply cond_nonneg. Qed.
 
 Lemma addNonneg_subNonnegTot_le_assoc r1 r2 r3 :
   (r1 +nn+ r2) -nn- r3 <= r1 +nn+ (r2 -nn- r3).
-  lets RLD : Rle_lt_dec r3 r2. elim_intro RLD LER LTR.
-  rewrite addNonnegFact. rewrite (subNonnegTot_le_Rminus_eq r2 r3);[ | assumption].
-  assert (nonneg r3 <= nonneg (r1 +nn+ r2)). rewrite addNonnegFact.
-  eapply Rle_trans. apply LER. Rplus_le_tac. apply cond_nonneg.
-  rewrite subNonnegTot_le_Rminus_eq; [ | assumption].
-  rewrite addNonnegFact. apply Req_le. ring.
-  rewrite addNonnegFact. rewrite (subNonnegTot_lt_0 r2 r3);[ | assumption].
-  lets STM : subNonnegTot_0_or_Rminus (r1 +nn+ r2) r3. elim_intro STM SZ SM.
-  rewrite SZ. Rplus_le_tac. apply cond_nonneg. rewrite SM.
-  rewrite addNonnegFact. lets RP : RltPlusExistsR LTR. exand_flat.
-  rewrite AND. replace (nonneg r1 + nonneg r2 - (nonneg r2 + x))
-  with (nonneg r1 - x);[ | ring]. apply Rplus_le_swap_rr.
-  rewrite Rplus_assoc. Rplus_le_tac. Rplus_le_tac.
-  apply Rlt_le. assumption. Qed.
+  pose proof (cond_nonneg r1). rewrite addNonnegFact.
+  destruct (Rle_lt_dec r3 r2).
+  rewrite !subNonnegTot_le_Rminus_eq; rewrite ?addNonnegFact; lra.
+  rewrite (subNonnegTot_lt_0 r2 r3) by assumption.
+  destruct (subNonnegTot_0_or_Rminus (r1 +nn+ r2) r3) as [E|E];
+  rewrite E, ?addNonnegFact; lra. Qed.
 
 Lemma multNonneg_Rmult_eq r1 r2 :
   nonneg (r1 *nn* r2) = r1 * r2. destruct r1, r2.
   reflexivity. Qed.
 
 Lemma subNonnegTot_le_Rminus (r1 r2 : nonnegreal) :
-  r1 - r2 <= (r1 -nn- r2). lets RLD : Rle_lt_dec r2 r1.
-  elim_intro RLD LER LTR. rewrite subNonnegTot_le_Rminus_eq.
-  apply Rle_refl. assumption. rewrite subNonnegTot_lt_0.
-  apply Rplus_le_swap_rl. apply Rlt_le in LTR. my_applys_eq LTR.
-  ring. assumption. Qed.
+  r1 - r2 <= (r1 -nn- r2).
+  destruct (Rle_lt_dec r2 r1).
+  rewrite subNonnegTot_le_Rminus_eq by assumption. lra.
+  rewrite subNonnegTot_lt_0 by assumption. lra. Qed.
 
 Lemma subNonnegTot_plus_lt_Rminus (a b : nonnegreal) c z :
-  a -nn- b + z < c -> a - b + z < c. intros. eapply Rle_lt_trans;
-  [ | apply H]. Rplus_le_tac. apply subNonnegTot_le_Rminus. Qed.
+  a -nn- b + z < c -> a - b + z < c.
+  intros.
+  pose proof (subNonnegTot_le_Rminus a b). lra. Qed.
 
 (*-LOCAL TIDY*)

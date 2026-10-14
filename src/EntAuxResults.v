@@ -202,13 +202,75 @@ Lemma gotMsgStateEnt_urgent (e e' : Entity) (d : Delay) m l :
   reachableEnt e -> gotMsgStateEnt m l e -> e -ED- d ->> e' -> False.
   Admitted.
 
+(* begin helpers for gotRangeStateEnt_urgent *)
+(** A process in the gotRange state can read any mode on the channel mCurr.*)
+Lemma gotRangeStateEnt_urgent_aux1 (p : ProcTerm) (m m0 : Mode) (r : Distance) :
+  gotRangeState m r p -> discActEnabled p (chanMCurr ;? [baseMode m0]).
+  activation_tac. Qed.
+
+(** If the software component of an entity can read any mode on mCurr, then the
+entity cannot delay, because the mode state can always output its current mode on mCurr.*)
+Lemma gotRangeStateEnt_urgent_aux2 (p : ProcTerm) (l : Position) (h : Interface)
+  (k : ModeState) (e' : Entity) (d : Delay) :
+  (forall m0, discActEnabled p (chanMCurr ;? [baseMode m0])) ->
+  [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DA DEL. noSyncNow_tac.
+  destruct (NS _ (DA (currModeMState k))) as [_ NM].
+  apply NM. simpl. apply modeState_curr_enabled.
+Qed.
+(* end helpers *)
+
 Lemma gotRangeStateEnt_urgent (e e' : Entity) (d : Delay) m r :
   reachableEnt e -> gotRangeStateEnt m r e -> e -ED- d ->> e' -> False.
-  Admitted.
+Proof.
+  intros RE GS DEL. destruct e as [p l h k].
+  inversion GS; subst.
+  match goal with [H : gotRangeStateProt _ _ _ |- _] => inversion H; subst end.
+  eapply gotRangeStateEnt_urgent_aux2; [ | eassumption].
+  intro m0. apply parTriple_dae_intro3.
+  eapply gotRangeStateEnt_urgent_aux1. eassumption.
+Qed.
+
+(* begin helpers for currCompStateEnt_urgent *)
+(** A process in the currComp state can input on mStable.*)
+Lemma currCompStateEnt_urgent_aux1 (p : ProcTerm) (m : Mode) (r : Distance) :
+  currCompState m r p -> discActEnabled p (chanMStable *?).
+  activation_tac. Qed.
+
+(** A process in the currComp state can input any mode on mNext.*)
+Lemma currCompStateEnt_urgent_aux2 (p : ProcTerm) (m m0 : Mode) (r : Distance) :
+  currCompState m r p -> discActEnabled p (chanMNext ;? [baseMode m0]).
+  activation_tac. Qed.
+
+(** If the software component of an entity can input on mStable and can input any
+mode on mNext, then the entity cannot delay: a stable mode state can always output on
+mStable, and an unstable one can always output its next mode on mNext.*)
+Lemma currCompStateEnt_urgent_aux3 (p : ProcTerm) (l : Position) (h : Interface)
+  (k : ModeState) (e' : Entity) (d : Delay) :
+  discActEnabled p (chanMStable *?) ->
+  (forall m0, discActEnabled p (chanMNext ;? [baseMode m0])) ->
+  [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DS DN DEL. noSyncNow_tac. destruct k as [m1 | m1 m2 t].
+  - destruct (NS _ DS) as [_ NM]. apply NM. simpl.
+    econstructor. apply stepMsOutStable.
+  - destruct (NS _ (DN m2)) as [_ NM]. apply NM. simpl.
+    econstructor. apply stepMsOutNext.
+Qed.
+(* end helpers *)
 
 Lemma currCompStateEnt_urgent (e e' : Entity) (d : Delay) m r :
   reachableEnt e -> currCompStateEnt m r e -> e -ED- d ->> e' -> False.
-  Admitted. (*Relies on the result that the mode state can always
+Proof.
+  intros RE CS DEL. destruct e as [p l h k].
+  inversion CS; subst.
+  match goal with [H : currCompStateProt _ _ _ |- _] => inversion H; subst end.
+  eapply currCompStateEnt_urgent_aux3; [ | | eassumption].
+  - apply parTriple_dae_intro3. eapply currCompStateEnt_urgent_aux1. eassumption.
+  - intro m0. apply parTriple_dae_intro3.
+    eapply currCompStateEnt_urgent_aux2. eassumption.
+Qed. (*Relies on the result that the mode state can always
 EITHER output on next or stable. #modif-urgent*)
 
 Lemma abortOvlpStateEnt_urgent (e e' : Entity) (d : Delay) :
@@ -397,7 +459,14 @@ Lemma msgAbortPathEnt_urgent e e' d :
 (** The interface component is irrelevant to the msgAbortPath.*)
 Lemma msgAbort_inter_irrel p l h h' k :
   msgAbortPathEnt ([|p, l, h, k|]) ->
-  msgAbortPathEnt ([|p, l, h', k|]). Admitted.  
+  msgAbortPathEnt ([|p, l, h', k|]).
+Proof.
+  intro H. inversion H; subst.
+  - eapply mapMsg; try reflexivity; eassumption.
+  - eapply mapGrng; try reflexivity; eassumption.
+  - eapply mapCuco; eassumption.
+  - eapply mapAbort; eassumption.
+Qed.  
 
 (***************************** Delay Behaviour *****************************)
 
@@ -547,25 +616,240 @@ Lemma tfsStart_next_ent e e' a :
   tfsStartStateEnt e' \/ exists m, tfsNextStateEnt m e'.
   Admitted. (*#fwd-track-lift-ent*)
   
+(* begin helpers for tfsNext_next_ent *)
+(** An application process is bisimilar to its unfolded body. *)
+Lemma tfsNext_next_ent_app n l1 p l : def n = (l1, p) ->
+  ProcEquiv.bisimulation (app n l) (subProcTerm (listsToSub l1 l) p).
+Proof.
+  intros D. constructor; intros a p' T; exists p'; (split; [ | apply ProcEquiv.bisim_refl]).
+  - inversion T; subst.
+    + apply stepPDisc.
+      match goal with [V : app _ _ -PA- _ -PA> _ |- _] => inversion V; subst end.
+      match goal with [E : def n = _ |- _] => rewrite D in E; inversion E; subst end.
+      assumption.
+    + apply stepPTimed.
+      match goal with [V : app _ _ -PD- _ -PD> _ |- _] => inversion V; subst end.
+      match goal with [E : def n = _ |- _] => rewrite D in E; inversion E; subst end.
+      assumption.
+  - inversion T; subst.
+    + apply stepPDisc. eapply stepDpApp; eassumption.
+    + apply stepPTimed. eapply stepTpApp; eassumption.
+Qed.
+
+Lemma tfsNext_next_ent_currN : ProcEquiv.bisimulation (tfsCurrN $([])$) tfsCurr.
+Proof.
+  eapply ProcEquiv.bisim_trans.
+  - apply (tfsNext_next_ent_app tfsCurrN [] tfsCurr []). reflexivity.
+  - change (listsToSub [] []) with idSubst. rewrite subProc_id_eq. apply ProcEquiv.bisim_refl.
+Qed.
+
+Lemma tfsNext_next_ent_nextN (m : Mode) :
+  ProcEquiv.bisimulation (tfsNextN $([eBase (baseMode m)])$) (tfsNext m).
+Proof.
+  eapply ProcEquiv.bisim_trans.
+  - apply (tfsNext_next_ent_app tfsNextN [vM] (tfsNext (eVar vM))). reflexivity.
+  - replace (subProcTerm (listsToSub [vM] [eBase (baseMode m)]) (tfsNext (eVar vM)))
+      with (tfsNext m); [apply ProcEquiv.bisim_refl | ].
+    unfold tfsNext. simpl. unfold update. unfold varEq.
+    destruct (varEqDec vM vM) as [_ | C]; [reflexivity | contradiction C; reflexivity].
+Qed.
+
+Lemma tfsNext_next_ent_proc m p p' b : tfsNextState m p -> p -PA- b -PA> p' ->
+  tfsNextState m p' \/ tfsCurrState p'.
+Proof.
+  unfold tfsNextState, tfsCurrState. intros B T.
+  destruct B as [F _].
+  destruct (F b p' (stepPDisc _ _ _ T)) as [q [Tq Bq]].
+  inversion Tq; subst.
+  match goal with [V : tfsNext _ -PA- _ -PA> _ |- _] => unfold tfsNext in V; inversion V; subst end.
+  - match goal with [V : outPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion V; subst end.
+    right. eapply ProcEquiv.bisim_trans; [eassumption | apply tfsNext_next_ent_currN].
+  - match goal with [V : outPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion V; subst end.
+    left. eapply ProcEquiv.bisim_trans; [eassumption | apply tfsNext_next_ent_nextN].
+Qed.
+
+Lemma tfsNext_next_ent_soft p p' l l' h h' k k' a :
+  [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] -> p = p' \/ exists b, p -PA- b -PA> p'.
+Proof.
+  intros T. inversion T; subst;
+  first [left; reflexivity | right; eexists; eassumption].
+Qed.
+
+Lemma tfsNext_next_ent_par p1 p2 p3 p' b : p1 $||$ p2 $||$ p3 -PA- b -PA> p' ->
+  exists p1' p2' p3', p' = p1' $||$ p2' $||$ p3' /\
+  (p2 = p2' \/ exists b', p2 -PA- b' -PA> p2').
+Proof.
+  intros T. inversion T; subst;
+  try match goal with [V : p2 $||$ p3 -PA- _ -PA> _ |- _] => inversion V; subst end;
+  do 3 eexists; (split; [reflexivity | ]);
+  first [left; reflexivity | right; eexists; eassumption].
+Qed.
+(* end helpers *)
+
 Lemma tfsNext_next_ent e e' a m :
   e -EA- a ->> e' -> tfsNextStateEnt m e ->
   tfsNextStateEnt m e' \/ tfsCurrStateEnt e'.
-  Admitted. (*#fwd-track-lift-ent*)
+Proof.
+  intros T N. destruct e as [p l h k]. destruct e' as [p' l' h' k'].
+  inversion N as [p0 l0 h0 k0 NP]; subst.
+  inversion NP as [p1 p2 p3 NP2]; subst.
+  destruct (tfsNext_next_ent_soft _ _ _ _ _ _ _ _ _ T) as [E | [b TP]].
+  - subst. left. constructor. constructor. assumption.
+  - destruct (tfsNext_next_ent_par _ _ _ _ _ TP) as [p1' [p2' [p3' [E [E2 | [b' T2]]]]]]; subst.
+    + left. constructor. constructor. assumption.
+    + destruct (tfsNext_next_ent_proc _ _ _ _ NP2 T2) as [X | X].
+      * left. constructor. constructor. assumption.
+      * right. constructor. constructor. assumption.
+Qed.
+
+(* begin helpers for tfsCurr_next_ent *)
+(** Support for the #fwd-track-lift-ent family (tfsCurr/tfsBc/tfsListen _next_ent):
+forward tracking of an overlap-component state predicate, lifted from single
+process terms (where the state predicates are bisimilarity classes) to entities.*)
+
+(** An application process is bisimilar to its unfolded body.*)
+Lemma tfsCurr_next_ent_app_bisim n l2 :
+  ProcEquiv.bisimulation (app n l2)
+    (subProcTerm (listsToSub (fst (def n)) l2) (snd (def n))).
+Proof.
+  destruct (def n) as [l1 b] eqn:D. simpl. constructor.
+  - intros a p' H. exists p'. split; [ | apply ProcEquiv.bisim_refl].
+    inversion H; subst.
+    + apply stepPDisc.
+      match goal with [V : app n l2 -PA- _ -PA> _ |- _] => inversion V; subst end.
+      match goal with [V : def n = (_, _) |- _] => rewrite D in V; inversion V; subst end.
+      assumption.
+    + apply stepPTimed.
+      match goal with [V : app n l2 -PD- _ -PD> _ |- _] => inversion V; subst end.
+      match goal with [V : def n = (_, _) |- _] => rewrite D in V; inversion V; subst end.
+      assumption.
+  - intros a q' H. exists q'. split; [ | apply ProcEquiv.bisim_refl].
+    inversion H; subst.
+    + apply stepPDisc. eapply stepDpApp; eassumption.
+    + apply stepPTimed. eapply stepTpApp; eassumption.
+Qed.
+
+(** A discrete step of one side of a bisimilarity is matched by the other side.*)
+Lemma tfsCurr_next_ent_bisim_step p q p' a :
+  ProcEquiv.bisimulation p q -> p -PA- a -PA> p' ->
+  exists q', q -PA- a -PA> q' /\ ProcEquiv.bisimulation p' q'.
+Proof.
+  intros B S. destruct B as [B1 B2]. apply stepPDisc in S. apply B1 in S.
+  destruct S as [q' [S1 S2]]. exists q'. split; [ | assumption].
+  inversion S1; subst; assumption.
+Qed.
+
+(** The software component of an entity is either preserved by a discrete
+entity step, or performs a discrete step itself.*)
+Lemma tfsCurr_next_ent_soft p p' l l' h h' k k' a :
+  [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
+  p = p' \/ exists b, p -PA- b -PA> p'.
+Proof.
+  intros S. inversion S; subst;
+  first [left; reflexivity | right; eexists; eassumption].
+Qed.
+
+(** The middle component of a parallel triple is either preserved by a step of
+the triple, or performs a discrete step itself.*)
+Lemma tfsCurr_next_ent_par2 p1 p1' p2 p2' p3 p3' a :
+  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+  p2 = p2' \/ exists b, p2 -PA- b -PA> p2'.
+Proof.
+  intros S. inversion S; subst;
+  try (left; reflexivity);
+  match goal with [V : p2 $||$ p3 -PA- _ -PA> p2' $||$ p3' |- _] =>
+    inversion V; subst; first [left; reflexivity | right; eexists; eassumption] end.
+Qed.
+
+(** Generic lifting: a forward-tracking result for an overlap state predicate X
+lifts from process terms to entities.*)
+Lemma tfsCurr_next_ent_lift (X Y : ProcTerm -> Prop) e e' a :
+  (forall q q' b, q -PA- b -PA> q' -> X q -> X q' \/ Y q') ->
+  e -EA- a ->> e' -> liftProcEnt (liftOverlap X) e ->
+  liftProcEnt (liftOverlap X) e' \/ liftProcEnt (liftOverlap Y) e'.
+Proof.
+  intros F S L. inversion L as [p l h k LO]; subst.
+  inversion LO as [p1 p2 p3 X2]; subst.
+  destruct e' as [p' l' h' k'].
+  destruct (tfsCurr_next_ent_soft _ _ _ _ _ _ _ _ _ S) as [E | [b B]].
+  - subst p'. left. constructor. constructor. assumption.
+  - destruct (link_par_triple_discEx _ _ _ _ _ B) as [p1' [p2' [p3' E]]]. subst p'.
+    destruct (tfsCurr_next_ent_par2 _ _ _ _ _ _ _ B) as [E | [b' B']].
+    + subst p2'. left. constructor. constructor. assumption.
+    + destruct (F _ _ _ B' X2) as [Z | Z]; [left | right];
+      constructor; constructor; exact Z.
+Qed.
+
+(** Closes a goal [S p'] (S a bisimilarity-class state predicate) from a
+hypothesis [p' ~p~ n $(l)$] by unfolding the application.*)
+Ltac tfsCurr_next_ent_close_tac :=
+  match goal with [B1 : ProcEquiv.bisimulation ?p' ?q' |- _] =>
+    hnf; eapply ProcEquiv.bisim_trans; [exact B1 | ];
+    eapply ProcEquiv.bisim_trans; [apply tfsCurr_next_ent_app_bisim | ];
+    clean_proc; apply ProcEquiv.bisim_refl
+  end.
+
+(** Process-level forward tracking for a goal of the form
+[p -PA- b -PA> p' -> S p -> S1 p' \/ ... \/ Sn p'], where S, S1..Sn are
+bisimilarity-class state predicates and the body of S is a sum of prefixes
+whose continuations are name applications.*)
+Ltac tfsCurr_next_ent_fwd_tac :=
+  let S := fresh "S" in let B := fresh "B" in
+  intros S B; hnf in B;
+  let q' := fresh "q'" in let S1 := fresh "S1" in let B1 := fresh "B1" in
+  destruct (tfsCurr_next_ent_bisim_step _ _ _ _ B S) as [q' [S1 B1]];
+  clear S B;
+  try unfold tfsCurr in S1; try unfold tfsBc in S1; try unfold tfsListen in S1;
+  repeat invert_trans; simpl in B1;
+  repeat match goal with [ |- _ \/ _ ] =>
+    first [left; solve [tfsCurr_next_ent_close_tac] | right] end;
+  tfsCurr_next_ent_close_tac.
+
+(** Process-level forward tracking from the tfsCurr state.*)
+Lemma tfsCurr_next_ent_aux p p' b :
+  p -PA- b -PA> p' -> tfsCurrState p -> tfsCurrState p' \/ tfsBcState p'.
+Proof. tfsCurr_next_ent_fwd_tac. Qed.
+(* end helpers *)
 
 Lemma tfsCurr_next_ent e e' a :
   e -EA- a ->> e' -> tfsCurrStateEnt e ->
   tfsCurrStateEnt e' \/ tfsBcStateEnt e'.
-  Admitted. (*#fwd-track-lift-ent*)
+Proof.
+  intros S T.
+  exact (tfsCurr_next_ent_lift tfsCurrState tfsBcState _ _ _ tfsCurr_next_ent_aux S T).
+Qed.
+
+(* begin helpers for tfsBc_next_ent *)
+(** Process-level forward tracking from the tfsBc state
+(uses the #fwd-track-lift-ent support from tfsCurr_next_ent).*)
+Lemma tfsBc_next_ent_aux p p' b :
+  p -PA- b -PA> p' -> tfsBcState p -> tfsBcState p' \/ tfsListenState p'.
+Proof. tfsCurr_next_ent_fwd_tac. Qed.
+(* end helpers *)
 
 Lemma tfsBc_next_ent e e' a :
   e -EA- a ->> e' -> tfsBcStateEnt e ->
   tfsBcStateEnt e' \/ tfsListenStateEnt e'.
-  Admitted. (*#fwd-track-lift-ent*)
+Proof.
+  intros S T.
+  exact (tfsCurr_next_ent_lift tfsBcState tfsListenState _ _ _ tfsBc_next_ent_aux S T).
+Qed.
+
+(* begin helpers for tfsListen_next_ent *)
+(** Process-level forward tracking from the tfsListen state
+(uses the #fwd-track-lift-ent support from tfsCurr_next_ent).*)
+Lemma tfsListen_next_ent_aux p p' b :
+  p -PA- b -PA> p' -> tfsListenState p -> tfsListenState p' \/ dormantState p'.
+Proof. tfsCurr_next_ent_fwd_tac. Qed.
+(* end helpers *)
 
 Lemma tfsListen_next_ent e e' a :
   e -EA- a ->> e' -> tfsListenStateEnt e ->
   tfsListenStateEnt e' \/ dormantStateEnt e'.
-  Admitted. (*#fwd-track-lift-ent*)
+Proof.
+  intros S T.
+  exact (tfsCurr_next_ent_lift tfsListenState dormantState _ _ _ tfsListen_next_ent_aux S T).
+Qed.
 
 (*A simpl linking theorem from entity to output list, saying that either
 interfaces are equal or one transitions to the other by some input or

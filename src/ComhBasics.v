@@ -5,19 +5,19 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 are defined here such as the notion of a network of entities.*)
 
 Require Import ComhCoq.Extras.LibTactics.
-Require Import Coq.Reals.Reals.
+From Stdlib Require Import Reals Arith Lia.
 
 (*********Imports********)
-Require Export List.
+From Stdlib Require Export List.
 (**Notations stolen from tutorial.*)
 Notation "x :: l" := (cons x l) (at level 60, right associativity).
 Notation "[ ]" := nil.
 Notation "[ x , .. , y ]" := (cons x .. (cons y nil) ..).
 Notation "e _: n" := (In e n) (at level 60).
-Require Export Logic.Decidable.
+From Stdlib Require Export Logic.Decidable.
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.StandardResults.
-Require Import ListSet.
+From Stdlib Require Import Lists.ListSet.
 
 
 (*********Basic Stuff********)
@@ -76,8 +76,7 @@ Lemma delayEqR : forall (d1 d2 : Delay), pos d1 = pos d2 -> d1 = d2.
 Open Scope nat_scope.
 
 Lemma lt_notEq : forall (n m : nat),
-  n < m -> n <> m. intros. unfold not; intros.
-  rewrite H0 in H. apply lt_irrefl in H. assumption. Qed.
+  n < m -> n <> m. intros. lia. Qed.
 
 (** Converts a decidable proposition to a boolean.*)
 Definition decToBool {P : Prop} (p : {P} + {~P}) : bool :=
@@ -94,21 +93,16 @@ Definition decToOption {P : Prop} (p : {P} + {~P}) : option P :=
   end.
 
 Lemma lt_plus_r (m n : nat) :
-  0 < n -> m < m + n. intros. apply le_lt_trans with (m := m + 0).
-  replace (m + 0) with m. apply le_refl. ring.
-  apply plus_le_lt_compat. apply le_refl. assumption. Qed.
+  0 < n -> m < m + n. intros. lia. Qed.
 
 Lemma lt_plus_l (m n : nat) :
-  0 < n -> m < n + m. intros. rewrite plus_comm. apply lt_plus_r.
-  assumption. Qed.
+  0 < n -> m < n + m. intros. lia. Qed.
 
 Lemma le_plus_r (m n : nat) :
-  m <= m + n. intros. apply le_trans with (m := m + 0).
-  replace (m + 0) with m. apply le_refl. ring.
-  apply plus_le_compat. apply le_refl. apply le_0_n. Qed.
+  m <= m + n. intros. lia. Qed.
 
 Lemma le_plus_l (m n : nat) :
-  m <= n + m. intros. rewrite plus_comm. apply le_plus_r. Qed.
+  m <= n + m. intros. lia. Qed.
 
 Open Scope R_scope.
 
@@ -509,13 +503,13 @@ Theorem rightmost : forall (j k : nat) (p : nat -> Prop)
   p j -> j <= k ->
   exists j', j <= j' <= k /\ p j' /\
   forall x : nat, j' < x <= k -> ~ p x. intros.
-  induction H0. exists j. split. split; apply le_refl.
+  induction H0. exists j. split. split; apply Nat.le_refl.
   split. assumption. intros. inversion H0. apply False_ind.
-  eapply lt_not_le. apply H1. assumption.
+  eapply (proj1 (Nat.lt_nge _ _)). apply H1. assumption.
   invertClear IHle. addHyp (K (S m)). invertClear H2.
-  exists (S m). split. split. constructor. assumption. apply le_refl.
+  exists (S m). split. split. constructor. assumption. apply Nat.le_refl.
   split. assumption. intros. invertClear H2. apply False_ind.
-  eapply lt_not_le. apply H4. assumption. exists x.
+  eapply (proj1 (Nat.lt_nge _ _)). apply H4. assumption. exists x.
   invertClear H1. invertClear H4. split. invertClear H2.
   split. assumption. constructor. assumption. split.
   assumption. intros. invertClear H4. invertClear H7.
@@ -599,14 +593,14 @@ Theorem leftmost : forall (j k : nat) (p : nat -> Prop)
   exists j', j <= j' <= k /\ p j' /\
   forall x : nat, j <= x < j' -> ~ p x. intros.
   rewrite leAltLe in H0. induction H0.
-  exists n. split. split; apply le_refl.
+  exists n. split. split; apply Nat.le_refl.
   split. assumption. intros. inversion H0. apply False_ind.
-  eapply lt_not_le. apply H2. assumption. apply IHleAlt in H.
+  eapply (proj1 (Nat.lt_nge _ _)). apply H2. assumption. apply IHleAlt in H.
   clear IHleAlt. invertClear H. addHyp (K (m)).
   invertClear H1. invertClear H3. invertClear H.
   exists m. split. split. constructor. rewrite leAltLe.
   constructor. assumption. split. assumption.
-  intros. invertClear H. unfold not. intros. eapply lt_not_le.
+  intros. invertClear H. unfold not. intros. eapply (proj1 (Nat.lt_nge _ _)).
   apply H6. assumption. exists x. split. invertClear H2. split.
   apply le_S_n. constructor. assumption. assumption.
   split. assumption. intros. invertClear H.
@@ -640,7 +634,7 @@ Theorem rightmostCont : forall (j k : nat) (p : nat -> Prop)
   (~p (S j') \/ j' = k). intros. induction H0.
   exists j. split. split; constructor. intros. split.
   assert (m = j). invertClear H0.
-  apply le_antisym; assumption. rewrite H1. assumption.
+  apply Nat.le_antisymm; assumption. rewrite H1. assumption.
   right. reflexivity. invertClear IHle. invertClear H1.
   rename x into j'. invertClear H2.
   apply le_lt_eq_dec in H4. invertClear H4.
@@ -650,7 +644,7 @@ Theorem rightmostCont : forall (j k : nat) (p : nat -> Prop)
   rename m0 into n. addHyp (H3 n H4). clear H3.
   invertClear H5. split. assumption. invertClear H6.
   left. assumption. apply False_ind. rewrite <- H5 in H2.
-  eapply lt_irrefl. apply H2.
+  eapply Nat.lt_irrefl. apply H2.
   (*Case j' = m*)
   addHyp (K (S m)). invertClear H4.
   (*Case p is true at the last p*)

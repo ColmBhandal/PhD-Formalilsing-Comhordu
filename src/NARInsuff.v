@@ -5,7 +5,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (*Require Import Reals.
 Require Import List.*)
-Require Import Equality.
+From Stdlib Require Import Program.Equality.
 
 Require Import ComhCoq.Extras.LibTactics.
 
@@ -37,9 +37,56 @@ Lemma tfs_state_rel i n (p : reachableNet n) :
   (*Proof: Induction on reachable.*)
 
 (*TOGO: NARMisc?*)
+(* begin helpers for tfs_currModeNet *)
+Ltac tfs_currModeNet_close :=
+  unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
+    ovReadyState, switchBcState, switchCurrState, switchListenState, tfsStartState,
+    tfsNextState, tfsCurrState, tfsBcState, tfsListenState, initState, ovAbortState,
+    listeningState, rangeBadState, currOKState, abortOvlpState, badOvlpState,
+    currCompState, pausedState, gotMsgState, gotRangeState, currEqState, nextEqState,
+    currPincCheckState, nextPincCheckState in *;
+  match goal with
+  | [V : ProcEquiv.bisimulation ?p ?x, V1 : ProcEquiv.bisimulation ?p ?y |- False] =>
+    let BT := fresh "BT" in
+    assert (ProcEquiv.bisimulation x y) as BT by
+      (eapply ProcEquiv.bisim_trans; [apply ProcEquiv.bisim_symm; exact V | exact V1]);
+    unfold bcWait, sleeping, bcReady, dormant, init, ovWait, ovReady, switchBc,
+      switchCurr, switchListen, tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen, ovAbort,
+      listening, checkRange, rangeBad, currEq, badOvlp, currOK, nextEq, abortOvlp,
+      gotMsg, gotRange, currPincCheck, currComp, nextPincCheck, paused in BT;
+    first [solve [bisim_contra BT] |
+      apply ProcEquiv.bisim_symm in BT; solve [bisim_contra BT]]
+  end.
+(* end helpers *)
+
 Lemma tfs_currModeNet m1 m2 t i n p : tfs m1 t i n p ->
   currModeNet m2 i n -> ~failSafe m2 -> m1 = m2.
-  Admitted. (*4*)
+Proof.
+  intro H. induction H as [i n p TS CM | a t i n n' p w TF IH TSN | d t i n n' p w TF IH];
+    intros C NF.
+  - apply currMode_ent_ex in CM. apply currMode_ent_ex in C.
+    destruct CM as [e [E1 E2]]. destruct C as [e' [E1' E2']].
+    pose proof (entInNetUnique _ _ _ _ E1 E1') as EQ. subst e'. congruence.
+  - destruct (currMode_pres_bkwd n n' a m2 i w C) as [x X].
+    destruct (eqDecMode x m2) as [EQ | NEQ].
+    + subst. apply IH; assumption.
+    + destruct (currModeNet_switch_states n n' a x m2 i p w X C NEQ)
+        as [[SC SL] | [TC TB]].
+      * exfalso.
+        destruct SL as [e E I]. destruct TSN as [e' E' I'].
+        pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
+        destruct E as [q l h k P]. inversion P; subst.
+        inversion E'; subst.
+        match goal with Hq : tfsStateProt _ |- _ => inversion Hq; subst end.
+        match goal with Hq : tfsState _ |- _ => inversion Hq; subst end;
+          tfs_currModeNet_close.
+      * exfalso. apply NF. destruct TB as [e E I].
+        apply currMode_ent_ex in C. destruct C as [e' [I' C']].
+        pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
+        rewrite <- C'. apply tfsBc_failSafe. exact E.
+  - apply IH; [ | assumption].
+    apply (proj2 (currModeNet_del_pres n n' d m2 i w)). assumption.
+Qed.
 (**Proof: induction on tfs. The first base follows from the definition of
 tfs. The discrete inductive case follows by application of I.H. and use
 of the mode-swith-states(exact name?) theorem to eliminate all states
@@ -52,53 +99,72 @@ currModeNet over a delay*)
 
 (***************************** Basic Results *****************************)
 
+(* begin helpers for currModeNet_notifBad_pres_bkwd *)
+Ltac currModeNet_notifBad_pres_bkwd_close :=
+  unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
+    ovReadyState, switchBcState, switchCurrState, switchListenState, tfsStartState,
+    tfsNextState, tfsCurrState, tfsBcState, tfsListenState, initState, ovAbortState,
+    listeningState, rangeBadState, currOKState, abortOvlpState, badOvlpState,
+    currCompState, pausedState, gotMsgState, gotRangeState, currEqState, nextEqState,
+    currPincCheckState, nextPincCheckState in *;
+  match goal with
+  | [V : ProcEquiv.bisimulation ?p ?x, V1 : ProcEquiv.bisimulation ?p ?y |- False] =>
+    let BT := fresh "BT" in
+    assert (ProcEquiv.bisimulation x y) as BT by
+      (eapply ProcEquiv.bisim_trans; [apply ProcEquiv.bisim_symm; exact V | exact V1]);
+    unfold bcWait, sleeping, bcReady, dormant, init, ovWait, ovReady, switchBc,
+      switchCurr, switchListen, tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen, ovAbort,
+      listening, checkRange, rangeBad, currEq, badOvlp, currOK, nextEq, abortOvlp,
+      gotMsg, gotRange, currPincCheck, currComp, nextPincCheck, paused in BT;
+    first [solve [bisim_contra BT] |
+      apply ProcEquiv.bisim_symm in BT; solve [bisim_contra BT]]
+  end.
+
+Lemma currModeNet_notifBad_pres_bkwd_paused i n :
+  pausedStateNet i n -> notifBadPathNet i n -> False.
+Proof.
+  intros P N. destruct P as [e E1 I1]. destruct N as [e' E2 I2].
+  pose proof (entInNetUnique _ _ _ _ I1 I2) as EQ. subst e'.
+  destruct E1 as [q l h k P]. inversion P as [p1 p2 p3 S]. subst.
+  inversion E2; subst.
+  - match goal with H : rangeBadStateProt _ _ |- _ => inversion H; subst end.
+    currModeNet_notifBad_pres_bkwd_close.
+  - match goal with H : badOvlpStateProt _ |- _ => inversion H; subst end.
+    currModeNet_notifBad_pres_bkwd_close.
+Qed.
+(* end helpers *)
+
 Lemma currModeNet_notifBad_pres_bkwd m i n n' a
   (rn : reachableNet n) (w : n -NA- a -NA> n') :
   currModeNet m i n' -> notifBadPathNet i n ->
   ~failSafe m ->
   currModeNet m i n \/
-  exists t, tfs m t i n' (reachNetDisc n n' a rn w). introz U.
-  lets CPB : currMode_pres_bkwd w U. ex_flat.
-  lets EDM : eqDecMode x m. elim_intro EDM EQ NEQ.
-  subst. left. assumption.
-  lets CSS : currModeNet_switch_states rn w H U NEQ.
-  lets NBC : notifBadPathNet_cases U0 H.
-  elim_intro CSS SW TF. and_flat.
-  (*For the first case let's use paused switch.*)
-  lets PS : paused_switch_net i rn.
-  assert (switchStateNet i n) as SSN. inversion AND.
-  inversion H0. inversion H2. subst.
-  econstructor; [do 2 econstructor | ].
-  eapply switCurSt. eassumption. eassumption.
-  rewrite <- PS in SSN.
-  (*
-  (*Now we can eliminate the paused/rangeBad/badOvlp clash.*)
-  or_flat.
-  state_pred_elim OR SSN. entnetuniq2 EN n. subst.
-  state_pred_elim H0 H2. state_pred_elim H4 H6.
-  subst. state_pred_elim H7 H10.
-  state_pred_elim OR0 SSN. entnetuniq2 EN n. subst.
-  state_pred_elim H0 H2. state_pred_elim H4 H6.
-  subst. state_pred_elim H7 H10.
-  (*Now we show the RHS because a tfs state implies tfs for all reachable
-  networks.*)
-  assert (tfsStateNet i n') as TSS. and_flat. apply tfsBc_tfs_net.
-  assumption. remember (reachNetDisc n n' a rn w) as rn'.
-  lets TSR : tfs_state_rel rn' TSS. ex_flat.
-  right. exists x1. my_applys_eq H1.
-  eapply tfs_currModeNet; eassumption. Qed.*)
-  Admitted. (*R*)
+  exists t, tfs m t i n' (reachNetDisc n n' a rn w).
+Proof.
+  intros U U0 U1.
+  destruct (currMode_pres_bkwd n n' a m i w U) as [x H].
+  destruct (eqDecMode x m) as [EQ | NEQ].
+  - subst. left. assumption.
+  - destruct (currModeNet_switch_states n n' a x m i rn w H U NEQ) as [[SC SL] | [TC TB]].
+    + exfalso. apply (currModeNet_notifBad_pres_bkwd_paused i n); [ | assumption].
+      apply (proj2 (paused_switch_net n i rn)).
+      destruct SC as [e E I]. destruct E as [q l h k P]. destruct P as [p1 p2 p3 S].
+      econstructor; [ | exact I]. constructor. constructor. apply switCurSt. exact S.
+    + exfalso. apply U1.
+      destruct TB as [e E I].
+      apply currMode_ent_ex in U. destruct U as [e' [I' C']].
+      pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
+      rewrite <- C'. apply tfsBc_failSafe. exact E.
+Qed.
 
 Lemma currEq_eq_badOvlp_net m m'' i n :
   m = m'' -> currEqStateNet m m'' i n -> badOvlpStateNet i n.
-  (*Proof: Just lift the appropriate definitions*)
-  introz U. subst. inversion U0. inversion H.
-  inversion H1. subst. econstructor; [do 2 econstructor | ];
-  [ | eassumption].
-  (*
-  inversion H3; econstructor; try eassumption;
-  reflexivity. Qed.*)
-  Admitted. (*R*)
+Proof.
+  intros E U. destruct U as [e E1 E2]. destruct E1 as [q l h k P].
+  destruct P as [p1 p2 p3 S].
+  econstructor; [ | exact E2]. constructor. constructor.
+  eapply currEq_cond_true; eassumption.
+Qed.
 
 (***************************** More Complex Results *****************************)
 
@@ -369,24 +435,51 @@ Theorem insuff_incomingNotif_bad (n n' : Network) (a : ActDiscNet) (m : Mode)
 (** If the badOvlp state holds at a particular reachable state,
 and in the next state listening holds, then the next state is tfs for some
 time t, with the mode parameter equal to the current mode.*)
+(* begin helpers for badOvlp_listening_tfs *)
+Ltac badOvlp_listening_tfs_close :=
+  unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
+    ovReadyState, switchBcState, switchCurrState, switchListenState, tfsStartState,
+    tfsNextState, tfsCurrState, tfsBcState, tfsListenState, initState, ovAbortState,
+    listeningState, rangeBadState, currOKState, abortOvlpState, badOvlpState,
+    currCompState, pausedState, gotMsgState, gotRangeState, currEqState, nextEqState,
+    currPincCheckState, nextPincCheckState in *;
+  match goal with
+  | [V : ProcEquiv.bisimulation ?p ?x, V1 : ProcEquiv.bisimulation ?p ?y |- False] =>
+    let BT := fresh "BT" in
+    assert (ProcEquiv.bisimulation x y) as BT by
+      (eapply ProcEquiv.bisim_trans; [apply ProcEquiv.bisim_symm; exact V | exact V1]);
+    unfold bcWait, sleeping, bcReady, dormant, init, ovWait, ovReady, switchBc,
+      switchCurr, switchListen, tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen, ovAbort,
+      listening, checkRange, rangeBad, currEq, badOvlp, currOK, nextEq, abortOvlp,
+      gotMsg, gotRange, currPincCheck, currComp, nextPincCheck, paused in BT;
+    first [solve [bisim_contra BT] |
+      apply ProcEquiv.bisim_symm in BT; solve [bisim_contra BT]]
+  end.
+(* end helpers *)
+
 Theorem badOvlp_listening_tfs n n' a i m 
   (rn : reachableNet n) (w : n -NA- a -NA> n') :
   badOvlpStateNet i n -> listeningStateNet i n' ->
   currModeNet m i n ->
   exists t, tfs m t i n' (reachNetDisc n n' a rn w).
-(*Proof: Going to have to solidify this one a bit, but the intuition is as follows.
-Either the derivative state is tfs or it is not (a result to prove in itself?). If it
-is, then the conclusion is done (though we may need to prove an auxiliary result that
-the mode parameter of tfs always matches the current mode? Or is this already done?).
-If the derivative state is not tfs, then we can show a contradiction. We show this
-by tracking the transition from badOvlp to listening, showing that the listener
-component must output on "bad" for this to occur, and show (inter-comp?)
-that the only other component capable of matching this output is the overlap
-component. Then show (brute force?) that the overlap component is capable of inputting
-on this channel only if it is in a tfs state. Then show (or use existing result?) that
-tfsState implies tfs for some parameters. And again use an auxiliary result to show
-that the tfs mode parameter must match the current mode*)
-Admitted. (*2*)
+Proof.
+  intros BO LS CM.
+  assert (msgBadPathNet i n) as MB.
+  { destruct BO as [e E I]. econstructor; [ | exact I].
+    inversion E as [q l h k P]; subst. apply mbpBad. exact P. }
+  destruct (msgBad_disc_net n n' a i m rn w MB CM) as [MB' | TF].
+  - exfalso. destruct MB' as [e E I]. destruct LS as [e' E' I'].
+    pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
+    inversion E' as [q l h k LP]; subst.
+    inversion LP as [p1 p2 p3 L3]; subst.
+    inversion E; subst;
+    match goal with
+    | H : gotMsgStateProt _ _ _ |- _ => inversion H; subst
+    | H : gotRangeStateProt _ _ _ |- _ => inversion H; subst
+    | H : badOvlpStateProt _ |- _ => inversion H; subst
+    end; badOvlp_listening_tfs_close.
+  - exists zeroTime. exact TF.
+Qed.
 
 (*If an entity is on the notification bad path, and a discrete transition
 happens, then in the next state it is either still on the notification bad path,
@@ -424,12 +517,16 @@ Lemma tfs_pres_not_currSince m t i n n' p a
   (w : n -NA- a -NA> n') : tfs m t i n p ->
   tfs m t i n' (reachNetDisc n n' a p w) \/
   (forall m' t' p', ~currSince m' t' i n p').
-(*Note: might want to ease up on the generality of the second conjunct?
-All we really need is the t general, the m and the p are not necessary.
-Proof:  Most tfs cases are preserved forward. We can separately prove for
-tfsBc and tfsListen that ~currSince holds. Then the tfsListen case is done
-here.*)
-Admitted. (*2*)
+Proof.
+  intro U.
+  lets D : tfsStateNet_dec i n'. unfold decidable in D.
+  destruct D as [D | D].
+  - left. apply tfsDisc; assumption.
+  - right. intros m' t' p'.
+    eapply (tfsState_not_currSince m' t' i n n' p' a w).
+    + eapply tfs_rel_state. eassumption.
+    + assumption.
+Qed.
 
 (* If a message with mode m was delivered exactly AN time units ago, and the coverage
 of the message was insufficient with respect to said mode, and we have been broadcasting

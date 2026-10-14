@@ -261,12 +261,17 @@ Theorem inOrIgEnt : forall (e : Entity) (m : Message),
   rename x into i'. exists ([|p, l, i', k|]).
   apply stepDeIn; assumption. Qed.
 
-Conjecture dec_compatible : forall (e1 e2 : Entity),
+Lemma dec_compatible : forall (e1 e2 : Entity),
   e1 ~~ e2 \/ ~(e1 ~~e2).
+Proof.
+  intros. unfold compatible. destruct (Rle_dec (minDistComp e1 e2) (dist2d e1 e2));
+  [left | right]; assumption. Qed.
 (**Proof: Obvious*)
 
-Conjecture currMode_ent_mState : forall (p : ProcTerm) (l : Position) (h : Interface)
+Lemma currMode_ent_mState : forall (p : ProcTerm) (l : Position) (h : Interface)
   (k : ModeState) (m : Mode), currModeEnt ([|p, l, h, k|]) = m -> currModeMState k = m.
+Proof.
+  intros. simpl in H. assumption. Qed.
 (**Proof: Obvious from definitions*)
 
 Lemma link_ent_inter_disc p p' l l' h h' k k' a :

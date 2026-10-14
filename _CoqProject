@@ -1,8 +1,8 @@
 -R src ComhCoq
 
 src/Extras/LibTactics.v
-src/Main.v
 src/ComhBasics.v
+src/ModelConsistency.v
 src/EntAuxDefs.v
 src/EntAuxResults.v
 src/EntityLanguage.v

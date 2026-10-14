@@ -24,7 +24,11 @@ Require Import ComhCoq.NetAuxDefs.
 Require Import ComhCoq.NARMisc.
 
 Lemma ovWait_nextSinceState_net m t x y i n : 
-  ovWaitStateNet m t x y i n -> nextSinceStateNet i n. Admitted (*9*).
+  ovWaitStateNet m t x y i n -> nextSinceStateNet i n.
+Proof.
+  intro U. destruct U as [e U1 U2]. destruct U1 as [q l h k U3].
+  destruct U3 as [p1 p p3 U4]. econstructor;[ | exact U2].
+  constructor. constructor. econstructor. exact U4. Qed.
 (*Proof: Is there some auto tactic for this? #lift-compound-net-tac*)
 
 (*If we are in the ovWaitState then we are either pending or nextSince.*)

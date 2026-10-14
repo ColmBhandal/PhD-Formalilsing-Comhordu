@@ -5,8 +5,8 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.StandardResults.
-Require Import Decidable.
-Require Import ListSet.
+From Stdlib Require Import Logic.Decidable.
+From Stdlib Require Import Lists.ListSet.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.ComhBasics.
 
@@ -650,8 +650,20 @@ Ltac evalExp_evalExpFunTime_step := match goal with
 
 (** If a is in sort d' of p' and p transitions to p' by d, then a is in the sort
 d + d' of p.*)
+(* begin helpers for sortDeriv *)
+(** Helper for sortDeriv: the case of a guard that has been partially counted down.*)
+Lemma sortDeriv_aux (a : DiscAct) (d d' : Delay) (t : Time) (H : d <= t) e p :
+  evalExpFunTime e = Some t ->
+  sort a d' ($< minusTime t d H >$ p) -> sort a (d +d+ d') ($< e >$ p).
+  intros EV S. inversion S; subst. simpl in H4. injection H4. intro EQ.
+  replace (d +d+ (t0 +dt+ d0)) with (t +dt+ d0).
+  constructor; assumption. apply delayEqR. subst. simpl. ring. Qed.
+(* end helpers *)
+
 Theorem sortDeriv : forall (a : DiscAct) (d d' : Delay) (p p' : ProcTerm),
-  sort a d' p' -> p -PD- d -PD> p' -> sort a (d +d+ d') p. intros.
+  sort a d' p' -> p -PD- d -PD> p' -> sort a (d +d+ d') p.
+Proof.
+ intros.
   induction H0; try solve [inversion H; constructor; assumption].
   apply IHstepTimedProc in H. constructor. rewrite evalBoolExpTrueTot.
   assumption. assumption. inversion H. rewrite evalBoolExpTrueTot in H5.
@@ -662,16 +674,20 @@ Theorem sortDeriv : forall (a : DiscAct) (d d' : Delay) (p p' : ProcTerm),
   assumption. apply IHstepTimedProc in H. eapply sortApp. apply H0.
   assumption. apply IHstepTimedProc in H. rewrite delTimeAddAssoc2.
   constructor; assumption.
+  eapply sortDeriv_aux; eassumption.
+  inversion H. rewrite H0 in H5. inversion H5.
   (*Not sure what happened here - proof seems to have got corrupted:
   eapply sort_guard_eval_eq. apply H. rewrite H1.
   apply evalExpFunTime_time.
   inversion H. rewrite H0 in H5. inversion H5. Qed.*)
-  Admitted.
+  Qed.
 
 Lemma sort_minus_guard a d' d t H p :
   sort a d' ($<eBase (baseTime (minusTime (nonneg (time t))
   (pos (delay d)) H))>$ p) ->
-  sort a (d +d+ d') ($<eBase (baseTime t)>$ p). Admitted.
+  sort a (d +d+ d') ($<eBase (baseTime t)>$ p).
+Proof.
+  apply sortDeriv_aux. destruct t. reflexivity. Qed.
 
 Lemma evalExpFunTime_time t :
   evalExpFunTime (eBase (baseTime t)) = Some t.
