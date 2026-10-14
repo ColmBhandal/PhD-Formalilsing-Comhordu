@@ -1,8 +1,6 @@
 # Method and trust
 
-[← Report summary](README.md)
-
-How the results were produced, and so how far to trust them.
+[← Proof completion, pass 1](README.md)
 
 ## How each proof was checked
 

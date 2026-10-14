@@ -1,8 +1,8 @@
 # Lemma index: the 108 targets that could not be proved as stated
 
-[← Report summary](../README.md)
+[← Proof completion, pass 1](../README.md)
 
-One row per target. Follow a link for the full write-up. Rows in `safety`'s assumption cone come first, then the rest. Within each group, rows are sorted by how serious the audit verdict is. The verdicts are explained in [results](../results.md#why-the-unprovable-ones-fail), and the root causes in [root causes and fixes](../root-causes-and-fixes.md).
+The verdicts are explained in [results](../results.md#why-the-unprovable-ones-fail), and the root causes in [root causes and fixes](../root-causes-and-fixes.md).
 
 | Lemma | Module | In cone | Audit verdict | Root cause |
 |---|---|---|---|---|

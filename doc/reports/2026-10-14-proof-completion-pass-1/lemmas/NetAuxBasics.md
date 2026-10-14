@@ -1,8 +1,8 @@
 # Unproved lemmas in `NetAuxBasics`
 
-[← Lemma index](README.md) · [Report summary](../README.md)
+[← Lemma index](README.md) · [Proof completion, pass 1](../README.md)
 
-33 lemmas here could not be proved as stated, 11 of them in `safety`'s assumption cone. Each section gives the lemma's intent, why it fails, how the failure ripples up towards `safety`, and a suggested fix.
+33 lemmas here could not be proved as stated, 11 of them in `safety`'s assumption cone.
 
 The **Audit** line is the independently checked verdict. The text below it is the prover's own write-up.
 

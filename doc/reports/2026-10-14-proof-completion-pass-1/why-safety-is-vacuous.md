@@ -1,6 +1,6 @@
 # Why `safety` proves nothing yet
 
-[← Report summary](README.md)
+[← Proof completion, pass 1](README.md)
 
 `safety` in `src/Main.v` ends in `Qed`, but `Print Assumptions safety` still lists admitted lemmas. If any of those can be refuted, then `False` follows from what `safety` rests on, and the theorem says nothing. Two independent problems make that true today, and either one is enough on its own.
 

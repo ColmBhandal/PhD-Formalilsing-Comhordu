@@ -2,9 +2,9 @@
 
 **2026-10-14** · Part of the [Rocq upgrade and proof completion workstream](../../workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md)
 
-This was the first agent pass over every unproved result in the development: all 228 `Admitted` lemmas and all 28 `Conjecture`s, 256 targets in total. This page is the five-minute version. The rest of this folder is detail, there for when you need it.
+This was the first agent pass over every unproved result in the development: all 228 `Admitted` lemmas and all 28 `Conjecture`s, 256 targets in total.
 
-## The short version
+## Where things stand
 
 - **The upgrade is done.** The project builds on Rocq 9.2.0, no existing proof broke, and CI is green.
 - **123 of the 256 targets are now proved**, with their statements untouched. Another 25 proofs exist, but they're held back because they lean on lemmas that turned out to be inconsistent.

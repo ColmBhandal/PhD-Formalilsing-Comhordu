@@ -1,8 +1,8 @@
 # What changed in the repository
 
-[← Report summary](README.md)
+[← Proof completion, pass 1](README.md)
 
-What this pass actually changed, area by area. **Statements, definitions, model axioms and `Parameter` stubs are unchanged everywhere.** Every change of that kind is a proposal in [root causes and fixes](root-causes-and-fixes.md), waiting for approval.
+**Statements, definitions, model axioms and `Parameter` stubs are unchanged everywhere.** Every change of that kind is a proposal in [root causes and fixes](root-causes-and-fixes.md), waiting for approval.
 
 | Area | Change |
 |---|---|

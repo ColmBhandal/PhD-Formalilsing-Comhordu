@@ -26,6 +26,10 @@
 - `make clean` removes build products.
 - CI (`.github/workflows/build.yml`) builds every push and pull request and reports remaining assumptions. Keep it green: never merge a red build.
 
+## Writing
+
+- Don't tell readers what a document is or how to read it: no "this page is the short version", "the rest is detail" or "this section goes through…". Write it so it flows, and let them experience that for themselves. This applies to all prose: docs, READMEs and PR descriptions.
+
 ## Working rules
 
 - Work is planned and tracked in `doc/workstreams/`, decisions are recorded in `doc/adr/`, and results go in `doc/reports/`.

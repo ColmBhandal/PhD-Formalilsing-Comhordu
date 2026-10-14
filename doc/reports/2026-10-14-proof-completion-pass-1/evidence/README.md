@@ -1,8 +1,8 @@
 # Evidence
 
-[← Report summary](../README.md)
+[← Proof completion, pass 1](../README.md)
 
-The machine-checkable material behind the [pass-1 proof-completion report](../README.md): refutations, held-back proofs and validated fixes. None of it is part of the build.
+None of this is part of the build.
 
 | Path | What it is |
 |---|---|

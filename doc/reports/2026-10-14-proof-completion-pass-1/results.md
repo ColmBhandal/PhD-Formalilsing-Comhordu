@@ -1,8 +1,6 @@
 # Results
 
-[← Report summary](README.md)
-
-The numbers behind the summary: how the 256 targets came out, why the unprovable ones fail, and which proofs are being held back.
+[← Proof completion, pass 1](README.md)
 
 ## Overall
 

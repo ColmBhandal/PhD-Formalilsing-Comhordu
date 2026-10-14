@@ -1,8 +1,8 @@
 # Root causes and proposed fixes
 
-[← Report summary](README.md)
+[← Proof completion, pass 1](README.md)
 
-Of the 108 targets that can't be proved as written, almost all fail for one of about a dozen reasons. This page goes through each reason: what's wrong, the fix I propose, how far that fix has been checked, and which lemmas it affects. The causes are ranked by how much they matter to `safety`.
+Almost all of the 108 targets that can't be proved as written fail for one of twelve reasons. The ones that matter most to `safety` come first.
 
 **Every fix here changes a statement, a definition or the axioms, so each one needs your approval.** None of them has been applied.
 
