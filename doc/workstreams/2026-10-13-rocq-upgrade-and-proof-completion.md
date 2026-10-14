@@ -67,7 +67,7 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
 
 This phase runs as a loop: pick an item, agree the fix, open a PR, review and merge, repeat. Each PR applies its fix and re-proves what the fix unblocks, including pass 1's held-back and conditional proofs. The order below makes `safety` meaningful soonest, but it is a suggestion, not a rule.
 
-- [ ] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). Fixes `listening_AN_prot`. The fix departs from the thesis (p.134).
+- [ ] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). Fixes `listening_AN_prot`. The fix departs from the thesis (p.122).
 - [ ] 🧑 **13. Component-state predicates** ([root cause 1](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#1-incomplete-component-state-predicates)). Fixes `reachableProt_triple`, the most structural problem.
 - [ ] 🧑 **14. Quick fixes in the cone:** `link_ent_outList` and `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
 - [ ] 🧑 **15. Reachability hypotheses and `noSyncNow`** ([root causes 2](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#2-missing-reachability-hypotheses) and [6](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#6-nosyncnow-is-missing-the-thesiss-position-read-clause)).

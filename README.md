@@ -18,6 +18,7 @@ Project documentation lives under [`doc/`](doc):
  - [`doc/reports/`](doc/reports): point-in-time reports, e.g. the results of a proving pass.
  - [`doc/adr/`](doc/adr): architecture decision records.
  - [`doc/archive/`](doc/archive): superseded historical documents, e.g. the original 2015 project plan.
+ - [`doc/references/`](doc/references): source material, e.g. the [PhD thesis](doc/references/2014-10-28-phd-thesis.pdf) itself.
 
 ## Building the Project
 
