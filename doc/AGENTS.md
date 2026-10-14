@@ -5,7 +5,7 @@
   - `reports/`: point-in-time reports.
   - `adr/`: architecture decision records.
   - `archive/`: superseded historical material.
-  - `references/`: source material the project is based on, such as the thesis.
+  - `thesis/`: the PhD thesis the project formalises, and the corrections to it.
 - Name dated documents `YYYY-MM-DD-{kebab-title}.md`, where the date is the **creation** date in ISO format. Never change the date after creation. Reports are dated folders instead; see [`reports/AGENTS.md`](reports/AGENTS.md).
 - Follow the `AGENTS.md` in each subfolder for its specific rules.
 - Link between documents with relative paths.
