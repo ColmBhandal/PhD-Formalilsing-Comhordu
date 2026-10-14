@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | **Started** | 2026-10-13 |
-| **Status** | 🧑 Awaiting human review (Phase 4, step 11) |
-| **Branch** | `claude/awesome-faraday-8n07pj` |
+| **Status** | 🧑 Phase 5: one fix per PR, starting with step 12 |
+| **Branch** | One per PR |
 | **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
 | **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
 
@@ -61,21 +61,31 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
 ## Phase 4: Review (🤖 then 🧑)
 
 - [x] 🤖 **10. Report and PR.** ✅ 2026-10-14. [Report](../reports/2026-10-14-proof-completion-pass-1/README.md) written; branch pushed; PR opened.
-- [ ] 🧑 **11. Review** the PR and the report.
+- [x] 🧑 **11. Review** the PR and the report. ✅ 2026-10-14. Reviewed and merged in [#1](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/1).
 
-## Phase 5: Open / later (🧑 decisions, then 🤖 follow-up)
+## Phase 5: Decide and fix, one PR at a time (🧑 then 🤖)
 
-- [ ] 🧑 Decide the definition fixes in the [report](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md). #1 (component-state predicates) and #4 (listener arity, which is also in the thesis) matter most; without them `safety` stays vacuous.
-- [ ] 🧑 Decide on statement changes for lemmas found false or mis-stated (from step 8), mostly added reachability hypotheses. Corrected statements are in the [lemma write-ups](../reports/2026-10-14-proof-completion-pass-1/lemmas/README.md).
-- [ ] 🧑 Decide on completions for the `Parameter` stubs (from step 9).
-- [ ] 🧑 Decide on the `Module Type` refactor of the model axioms (from step 6).
-- [ ] 🧑 Decide whether to delete admitted lemmas that are **outside** the `Print Assumptions safety` cone rather than prove them. This is the 2015 plan's "garbage collection".
-- [ ] 🧑 Decide whether to prove a **non-triviality** result: without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
-- [ ] 🤖 **Pass 2:** apply the approved fixes, re-check the 25 held-back proofs and the cloud provers' conditional proofs, and re-run the fan-out on what's still affected.
+This phase runs as a loop: pick an item, agree the fix, open a PR, review and merge, repeat. Each PR applies its fix and re-proves what the fix unblocks, including pass 1's held-back and conditional proofs. The order below makes `safety` meaningful soonest, but it is a suggestion, not a rule.
+
+- [ ] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). Fixes `listening_AN_prot`. The fix departs from the thesis (p.134).
+- [ ] 🧑 **13. Component-state predicates** ([root cause 1](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#1-incomplete-component-state-predicates)). Fixes `reachableProt_triple`, the most structural problem.
+- [ ] 🧑 **14. Quick fixes in the cone:** `link_ent_outList` and `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
+- [ ] 🧑 **15. Reachability hypotheses and `noSyncNow`** ([root causes 2](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#2-missing-reachability-hypotheses) and [6](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#6-nosyncnow-is-missing-the-thesiss-position-read-clause)).
+- [ ] 🧑 **16. `Parameter` stubs** ([suggestions](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#parameter-stubs)), then add `reachableNet n` to `tfsListen_failSafe_net`. This breaks the [pair that makes `safety` trivial](../reports/2026-10-14-proof-completion-pass-1/why-safety-is-vacuous.md#2-a-pair-that-makes-safety-trivial).
+
+Steps 12–16 cover every known reason `safety` is vacuous today. After that, any order works.
+
+- [ ] 🧑 **17. Other statement changes** for lemmas found false or mis-stated in step 8: the rest of root causes [10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation) and [12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs), and the [model-axiom gaps](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#11-gaps-in-the-model-axioms). Corrected statements are in the [lemma write-ups](../reports/2026-10-14-proof-completion-pass-1/lemmas/README.md).
+- [ ] 🧑 **18. Semantics fixes outside the cone:** root causes [3](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#3-untyped-process-inputs), [5](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#5-range-typing-esubtract-vs-bpossinc), [7](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#7-stepdetest-changes-the-mode-state-without-the-process), [8](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#8-missing-write-stbl-rule) and [9](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#9-internal-synchronisation-on-mode-state-channels).
+- [ ] 🧑 **19. Garbage collection.** Decide whether to delete admitted lemmas **outside** the `Print Assumptions safety` cone rather than prove them, as the 2015 plan suggested. Best done just before pass 2, so the provers skip anything that will go.
+- [ ] 🤖 **20. Pass 2.** Re-run the fan-out on whatever is still unproved.
+- [ ] 🧑 **21. `Module Type` refactor** of the model axioms (from step 6). It touches 22 files, so it is easier after pass 2.
+- [ ] 🧑 **22. Non-triviality.** Decide whether to prove that, without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
 - [ ] 🧑 _Placeholder: anything else the first pass couldn't decide._
 
 ## Log
 
+- **2026-10-14:** Pass 1 reviewed and merged. Phase 5 reordered and set up as a one-fix-per-PR loop.
 - **2026-10-14:** Pass 1 complete. 123 targets proved, 25 held back, 108 written up and audited. `Print Assumptions safety` went from 134 to 85, but `safety` is vacuous until the inconsistent admits are fixed. Reals modernised. PR opened for review.
 - **2026-10-13:** Upgrade to Rocq 9.2.0 done with no broken proofs; assumption set unchanged. Standard tooling and CI added. Rules moved into `AGENTS.md` files.
 - **2026-10-13:** Workstream started. Coq 8.15 baseline is green; Rocq 9.2.0 breaks on `elimtype`. Reals [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md) accepted: option (c), stdlib reals with the `Rstruct` bridge. 2015 plan archived.
