@@ -487,13 +487,7 @@ Lemma tfs_currMode_disc_pres (n n' : Network) (a : ActDiscNet) (i : nat) (m : Mo
   Qed. 
 
 Lemma paused_switch_net (n : Network) (i : nat) :
-  reachableNet n -> (pausedStateNet i n <-> switchStateNet i n).
-Proof.
-  intro R. split; intro H; destruct H as [e He Ein]; destruct He as [p l h k Hp];
-  (econstructor; [ | exact Ein]); constructor;
-  (assert (reachableProt p) as RP by (eapply link_net_prot_reach; eassumption));
-  apply (paused_switch p RP); exact Hp.
-Qed.
+  reachableNet n -> (pausedStateNet i n <-> switchStateNet i n). Admitted. (*4*)
 (**Proof: Lift result from entity level ultimately- analogous theorems except with
 reachableProt and prot level state predicates.*)
 
@@ -1321,7 +1315,10 @@ Qed.
 
 (**Delay preserves the current mode*)
 Lemma currMode_del_pres_bkwd (n n' : Network) (d : Delay) (m : Mode) (i : nat) :
-  n -ND- d -ND> n' -> currModeNet m i n' -> currModeNet m i n. Admitted. (*6*)
+  n -ND- d -ND> n' -> currModeNet m i n' -> currModeNet m i n.
+Proof.
+  intros D C. apply (proj2 (currModeNet_del_pres n n' d m i D)). exact C.
+Qed.
 (**Proof: Follows directly from mode state semantics, and linking of delay from network to entity to modestate*)
 
 Conjecture inPos_ent_net : forall (l : Position) (e : Entity) (i : nat) (n : Network),

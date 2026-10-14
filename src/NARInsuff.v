@@ -37,9 +37,56 @@ Lemma tfs_state_rel i n (p : reachableNet n) :
   (*Proof: Induction on reachable.*)
 
 (*TOGO: NARMisc?*)
+(* begin helpers for tfs_currModeNet *)
+Ltac tfs_currModeNet_close :=
+  unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
+    ovReadyState, switchBcState, switchCurrState, switchListenState, tfsStartState,
+    tfsNextState, tfsCurrState, tfsBcState, tfsListenState, initState, ovAbortState,
+    listeningState, rangeBadState, currOKState, abortOvlpState, badOvlpState,
+    currCompState, pausedState, gotMsgState, gotRangeState, currEqState, nextEqState,
+    currPincCheckState, nextPincCheckState in *;
+  match goal with
+  | [V : ProcEquiv.bisimulation ?p ?x, V1 : ProcEquiv.bisimulation ?p ?y |- False] =>
+    let BT := fresh "BT" in
+    assert (ProcEquiv.bisimulation x y) as BT by
+      (eapply ProcEquiv.bisim_trans; [apply ProcEquiv.bisim_symm; exact V | exact V1]);
+    unfold bcWait, sleeping, bcReady, dormant, init, ovWait, ovReady, switchBc,
+      switchCurr, switchListen, tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen, ovAbort,
+      listening, checkRange, rangeBad, currEq, badOvlp, currOK, nextEq, abortOvlp,
+      gotMsg, gotRange, currPincCheck, currComp, nextPincCheck, paused in BT;
+    first [solve [bisim_contra BT] |
+      apply ProcEquiv.bisim_symm in BT; solve [bisim_contra BT]]
+  end.
+(* end helpers *)
+
 Lemma tfs_currModeNet m1 m2 t i n p : tfs m1 t i n p ->
   currModeNet m2 i n -> ~failSafe m2 -> m1 = m2.
-  Admitted. (*4*)
+Proof.
+  intro H. induction H as [i n p TS CM | a t i n n' p w TF IH TSN | d t i n n' p w TF IH];
+    intros C NF.
+  - apply currMode_ent_ex in CM. apply currMode_ent_ex in C.
+    destruct CM as [e [E1 E2]]. destruct C as [e' [E1' E2']].
+    pose proof (entInNetUnique _ _ _ _ E1 E1') as EQ. subst e'. congruence.
+  - destruct (currMode_pres_bkwd n n' a m2 i w C) as [x X].
+    destruct (eqDecMode x m2) as [EQ | NEQ].
+    + subst. apply IH; assumption.
+    + destruct (currModeNet_switch_states n n' a x m2 i p w X C NEQ)
+        as [[SC SL] | [TC TB]].
+      * exfalso.
+        destruct SL as [e E I]. destruct TSN as [e' E' I'].
+        pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
+        destruct E as [q l h k P]. inversion P; subst.
+        inversion E'; subst.
+        match goal with Hq : tfsStateProt _ |- _ => inversion Hq; subst end.
+        match goal with Hq : tfsState _ |- _ => inversion Hq; subst end;
+          tfs_currModeNet_close.
+      * exfalso. apply NF. destruct TB as [e E I].
+        apply currMode_ent_ex in C. destruct C as [e' [I' C']].
+        pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
+        rewrite <- C'. apply tfsBc_failSafe. exact E.
+  - apply IH; [ | assumption].
+    apply (proj2 (currModeNet_del_pres n n' d m2 i w)). assumption.
+Qed.
 (**Proof: induction on tfs. The first base follows from the definition of
 tfs. The discrete inductive case follows by application of I.H. and use
 of the mode-swith-states(exact name?) theorem to eliminate all states

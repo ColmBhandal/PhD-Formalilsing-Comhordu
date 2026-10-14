@@ -252,7 +252,9 @@ Proof.
 Qed.
 
 Lemma modeState_abort_in_not k k' :
-  k -ms- chanAbort @? -ms> k' -> False. Admitted.
+  k -ms- chanAbort @? -ms> k' -> False.
+Proof.
+  intros H. inversion H. Qed.
 
 Lemma unstable_stable_out_not k : unstable k ->
   ~ discActEnabledMState (chanMStable *!) k. unfold not. intros.

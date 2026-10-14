@@ -68,42 +68,46 @@ Theorem sent_outgoing (n : Network) (v : list BaseType) (t : Time) (i : nat)
   intros. apply timeEqR. simpl. ring. Qed.
 
 (*If an entity is nextSince m t, then <m, l0> was sent exactly t time units ago for some l0.*)
+(* begin helpers for fst_sent *)
+(*ovWait m' t' x y can input on abort.*)
+Lemma fst_sent_aux0 p m t x y : ovWaitState m t x y p -> discActEnabled p (chanAbort *?).
+  activation_tac. Qed.
+
+(*No process is both ovReady and ovWait: ovWait can input on abort but ovReady can't.*)
+Lemma fst_sent_aux1 p m t l m' t' x y : ovReadyState m t l p -> ovWaitState m' t' x y p -> False.
+  intros U V. apply fst_sent_aux0 in V. eapply bisim_dae in V;[ | apply U].
+  inversion V. unfold ovReady in H. repeat invert_trans_rich. Qed.
+
+Lemma fst_sent_aux2 q m t l m' t' x y : ovReadyStateProt m t l q -> ovWaitStateProt m' t' x y q -> False.
+  intros U V. inversion U; subst. inversion V; subst.
+  eapply fst_sent_aux1; eassumption. Qed.
+(* end helpers *)
+
 Theorem fst_sent (n : Network) (m : Mode) (t : Time) (i : nat)
   (p : reachableNet n) : nextSince m t i n p ->
   exists l0, sent [baseMode m, basePosition l0] t i n p.
+Proof.
 (**Proof: By induction on nextSince.*)
   intros. induction H.
-  (*In the base case, first off let's do some inversions*)
-  state_pred_net_destr H0. state_pred_net_destr H1.
-  (*Apply a linking tactic*)
-  link_netentdisc_tac b.
-  (*Eliminate the case of equal entities by inverting different state predicates.
-  This is a hack, a proper tactic state_pred_elim_ent would be better but would
-  take ages to write.*)
-  state_pred_elim H2 H5. state_pred_elim H9 H10. state_pred_elim H9 H10.
-  state_pred_elim H16 H12.
-  (*Now we're left with the case where there is a transition from one entity to the other.
-  Then we can add an entity-level tracking result. Tracking yields that the software component
-  of the entity i outputs on io of <m, l0> which is complemented by an input of same by the
-  interface of that entity.*)
-  (*
-  lets OOTE : ovReady_ovWait_track_ent H2 H5 H11. andflat OOT.
-  (*Show that the position hasn't changed.*)
-  ent_disc_pres_pos_tac. subst.  
-  (*We show that the network action must be a tau because the software
-  term has changed.*)
-  assert (p0 <> p1) as PNE. unfold not. intros. subst. state_pred_elim H7 H4.
-  state_pred_elim H10 H8. lets PTN : procNeq_tau_net H3 H6 w PNE. subst.
-  (*There is now enough information to prove the base case for sent, with t = 0. Hence we
-  use l1 as our existential witness and satisfy the goal.*)
-  exists l1. eapply sentBase; eassumption.
+  (*In the base case, the entity i goes from ovReady to ovWait.*)
+  destruct H0 as [e E1 E2]. destruct H1 as [e' E1' E2'].
+  destruct e as [q l1 h k]. destruct e' as [q' l1' h' k'].
+  lets L : link_net_ent_disc w E2 E2'. destruct L as [EQ | [a' ST]].
+  (*The entity can't be unchanged, because ovReady and ovWait are exclusive.*)
+  inversion EQ; subst. inversion E1; inversion E1'; subst. false. eapply fst_sent_aux2; eassumption.
+  (*Tracking yields that the software component outputs <m, l> on outProc and the interface
+  inputs it, with the mode state and position unchanged.*)
+  lets T : ovReady_ovWait_track_ent E1 E1' ST. destruct T as [T1 [T2 [T3 [T4 T5]]]]. subst.
+  lets PP : stepEnt_disc_pres_pos ST. simpl in PP. subst.
+  (*The software term has changed, so the network action is a tau.*)
+  assert (q <> q') as NE. intro. subst. inversion E1; inversion E1'; subst. eapply fst_sent_aux2; eassumption.
+  lets TAU : procNeq_tau_net E2 E2' w NE. subst.
+  exists l1'. eapply sentBase; eassumption.
   (*In the inductive cases, we simply apply the inductive hypothesis and
   then the appropriate constructor of sent.*)
-  invertClearAs2 IHnextSince l0 IH. exists l0. constructor.
-  assumption.
-  invertClearAs2 IHnextSince l0 IH. exists l0. constructor.
-  assumption. Qed.*)
-  Admitted. (*R*)
+  destruct IHnextSince as [l0 S]. exists l0. constructor. assumption.
+  destruct IHnextSince as [l0 S]. exists l0. constructor. assumption.
+  Qed.
 
 (* If an entity has sent a message v mL time units ago, then said message is in the output
 queue of the interface component with timestamp 0 or it has been delivered 0 time units ago.*)
