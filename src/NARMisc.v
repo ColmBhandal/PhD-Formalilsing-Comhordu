@@ -24,17 +24,82 @@ Require Import ComhCoq.NetAuxBasics.
 Require Import ComhCoq.NetAuxDefs.
 Require Import ComhCoq.ProtAuxResults.
 
+(* begin helpers for state_disj_paused_notifAbort *)
+(* Given D : discActEnabled q a, where q is (bisimilar-free) concrete protocol
+   state term, unfold q and invert every transition, closing the goal when q
+   cannot perform a. *)
+Ltac state_disj_paused_notifAbort_dae_contra D :=
+  let q := fresh "q" in let TR := fresh "TR" in
+  destruct D as [q TR];
+  unfold rangeBad, currOK, abortOvlp, paused, tfsCurr, tfsStart, tfsBc,
+    switchListen, switchBc, switchCurr, ovReady, ovWait, init in TR;
+  repeat (match goal with [T : stepDiscProc _ _ _ |- _] =>
+    inversion T; clear T; subst end).
+
+(* Given RS : X p (with X p unfolding to p ~p~ q) and PU : discActEnabled p a,
+   derive a contradiction when q cannot perform a. *)
+Ltac state_disj_paused_notifAbort_bisim_contra RS PU :=
+  let D := fresh "D" in
+  lets D : bisim_dae RS PU; state_disj_paused_notifAbort_dae_contra D.
+(* end helpers *)
+
 Lemma state_disj_paused_notifAbort i n :
-  pausedStateNet i n -> notifAbortPathNet i n -> False. Admitted. (*#state-pred-elim*)
+  pausedStateNet i n -> notifAbortPathNet i n -> False.
+Proof.
+  intros U V. inversion U as [e U1 U2]. inversion V as [e' V1 V2].
+  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption). subst e'.
+  inversion U1 as [p l h k PP]; subst.
+  inversion PP as [p1 p2 p3 PS]; subst.
+  lets PU : paused_unpause_in PS. clear PS.
+  inversion V1; subst;
+  first [ match goal with [X : rangeBadStateProt _ _ |- _] => inversion X; subst end
+        | match goal with [X : currOKStateProt _ _ |- _] => inversion X; subst end
+        | match goal with [X : abortOvlpStateProt _ |- _] => inversion X; subst end ];
+  match goal with [RS : _ p3 |- _] =>
+    state_disj_paused_notifAbort_bisim_contra RS PU end.
+Qed.
 
 Lemma state_disj_tfsCurr_start : forall (i : nat) (n : Network),
-  tfsCurrStateNet i n -> tfsStartStateNet i n -> False. Admitted. (*#state-pred-elim*)
+  tfsCurrStateNet i n -> tfsStartStateNet i n -> False.
+Proof.
+  intros i n U V. inversion U as [e U1 U2]. inversion V as [e' V1 V2].
+  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption). subst e'.
+  inversion U1 as [p l h k PP]; subst.
+  inversion PP as [p1 p2 p3 PS]; subst. clear PP.
+  lets PU : tfsCurr_abort_in PS. clear PS.
+  inversion V1; subst.
+  match goal with [X : _ (p1 $||$ p2 $||$ p3) |- _] => inversion X; subst end.
+  match goal with [RS : _ p2 |- _] =>
+    state_disj_paused_notifAbort_bisim_contra RS PU end.
+Qed.
 
 Lemma state_disj_tfsCurr_bc : forall (i : nat) (n : Network),
-  tfsCurrStateNet i n -> tfsBcStateNet i n -> False. Admitted. (*#state-pred-elim*)
+  tfsCurrStateNet i n -> tfsBcStateNet i n -> False.
+Proof.
+  intros i n U V. inversion U as [e U1 U2]. inversion V as [e' V1 V2].
+  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption). subst e'.
+  inversion U1 as [p l h k PP]; subst.
+  inversion PP as [p1 p2 p3 PS]; subst. clear PP.
+  lets PU : tfsCurr_abort_in PS. clear PS.
+  inversion V1; subst.
+  match goal with [X : _ (p1 $||$ p2 $||$ p3) |- _] => inversion X; subst end.
+  match goal with [RS : _ p2 |- _] =>
+    state_disj_paused_notifAbort_bisim_contra RS PU end.
+Qed.
 
 Lemma state_disj_tfsCurr_switchListen : forall (i : nat) (n : Network),
-  tfsCurrStateNet i n -> switchListenStateNet i n -> False. Admitted. (*#state-pred-elim*)
+  tfsCurrStateNet i n -> switchListenStateNet i n -> False.
+Proof.
+  intros i n U V. inversion U as [e U1 U2]. inversion V as [e' V1 V2].
+  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption). subst e'.
+  inversion U1 as [p l h k PP]; subst.
+  inversion PP as [p1 p2 p3 PS]; subst. clear PP.
+  lets PU : tfsCurr_abort_in PS. clear PS.
+  inversion V1; subst.
+  match goal with [X : _ (p1 $||$ p2 $||$ p3) |- _] => inversion X; subst end.
+  match goal with [RS : _ p2 |- _] =>
+    state_disj_paused_notifAbort_bisim_contra RS PU end.
+Qed.
 
 (*The following string of results should be provable by lifting inter-component
 relationships. Except the one with nextSince, not so sure there.*)
@@ -45,7 +110,12 @@ Lemma ovWait_ovReady_nextMode_net i n (p : reachableNet n) :
   (forall m t x y, ovWaitStateNet m t x y i n ->
    nextModeNet m i n) /\
   (forall m t l, ovReadyStateNet m t l i n -> nextModeNet m i n).
-  Admitted. (*4*)
+Proof.
+  split; intros.
+  - eapply ComhCoq.NetAuxBasics.ovWaitState_nextMode_net; eassumption.
+  - eapply ComhCoq.NetAuxBasics.ovWait_ovReady_nextMode_net
+      with (x := zeroTime) (y := zeroTime); [exact p | right; eassumption].
+Qed.
 (*+*)
 Lemma switchBc_nextMode_net m i n :
   switchBcStateNet m i n -> nextModeNet m i n. Admitted. (*4*)
@@ -54,20 +124,279 @@ Lemma switchCurr_nextSince_nextMode_net m t i n p :
   nextSince m t i n p ->
   switchCurrStateNet i n -> nextModeNet m i n. Admitted. (*4*)
 
+(* begin helpers for nextSince_switchBc_modeEq *)
+(** Given D : discActEnabled q a, where q is a concrete protocol state term,
+unfold q and invert every transition, closing the goal when q cannot do a. *)
+Ltac nextSince_switchBc_modeEq_dae_contra D :=
+  let q := fresh "q" in let TR := fresh "TR" in
+  destruct D as [q TR];
+  unfold rangeBad, currOK, abortOvlp, paused, tfsCurr, tfsStart, tfsBc,
+    switchListen, switchBc, switchCurr, ovReady, ovWait, init in TR;
+  repeat (match goal with [T : stepDiscProc _ _ _ |- _] =>
+    inversion T; clear T; subst end).
+
+(** Given RS : X p (unfolding to p ~p~ q) and PU : discActEnabled p a,
+derive a contradiction when q cannot perform a. *)
+Ltac nextSince_switchBc_modeEq_bisim_contra RS PU :=
+  let D := fresh "D" in
+  lets D : bisim_dae RS PU; nextSince_switchBc_modeEq_dae_contra D.
+
+(** Two next-mode facts about the same entity coincide. *)
+Lemma nextSince_switchBc_modeEq_uniq m m' i n :
+  nextModeNet m i n -> nextModeNet m' i n -> m = m'.
+Proof.
+  intros NM NM'. apply nextMode_ent_ex in NM. destruct NM as [e [EIN NME]].
+  apply nextMode_ent_ex in NM'. destruct NM' as [e' [EIN' NME']].
+  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption). subst e'.
+  destruct e as [p l h k].
+  apply nextMode_ent_mState in NME. apply nextMode_ent_mState in NME'.
+  rewrite NME in NME'. inversion NME'. reflexivity.
+Qed.
+
+(** Across a discrete step whose target is neither switchListen nor tfsBc,
+the mode state is unchanged, so next modes before and after coincide. *)
+Lemma nextSince_switchBc_modeEq_mst m m0 i n n' a :
+  reachableNet n -> n -NA- a -NA> n' -> nextModeNet m i n ->
+  nextModeNet m0 i n' -> ~ switchListenStateNet i n' ->
+  ~ tfsBcStateNet i n' -> m = m0.
+Proof.
+  intros RN W NM NM0 NSL NTB.
+  apply nextMode_ent_ex in NM. destruct NM as [e [EIN NME]].
+  apply nextMode_ent_ex in NM0. destruct NM0 as [e0 [EIN0 NME0]].
+  destruct e as [p l h k]. destruct e0 as [p0 l0 h0 k0].
+  apply nextMode_ent_mState in NME. apply nextMode_ent_mState in NME0.
+  destruct (eqDecModeState k k0) as [EQ | NEQ].
+  - subst. rewrite NME in NME0. inversion NME0. reflexivity.
+  - exfalso.
+    assert (mState_in_net k i n) as MS by (econstructor; eassumption).
+    assert (mState_in_net k0 i n') as MS0 by (econstructor; eassumption).
+    lets MSS : mState_switch_states RN NEQ W MS MS0.
+    destruct MSS as [[_ TB] | [_ SL]]; [apply NTB | apply NSL]; assumption.
+Qed.
+
+(** A nextSince state is neither switchListen nor tfsBc. *)
+Lemma nextSince_switchBc_modeEq_nss_not i n :
+  nextSinceStateNet i n -> ~ switchListenStateNet i n /\ ~ tfsBcStateNet i n.
+Proof.
+  intro U. inversion U as [e U1 U2]. inversion U1 as [p l h k PP]; subst.
+  inversion PP as [p1 p2 p3 PS]; subst. clear PP U1 U.
+  split; intro V; inversion V as [e' V1 V2];
+  (assert (e' = [|p1 $||$ p2 $||$ p3, l, h, k|]) as EQ
+    by (eapply entInNetUnique; eassumption)); subst e';
+  inversion V1; subst;
+  (match goal with [X : _ (p1 $||$ p2 $||$ p3) |- _] => inversion X; subst end);
+  (match goal with [RS : _ p2 |- _] =>
+    first [lets PU : switchListen_unpause_out RS | lets PU : tfsBc_trans_out RS];
+    clear RS end);
+  inversion PS; clear PS; subst;
+  (match goal with [RS : _ p2 |- _] =>
+    nextSince_switchBc_modeEq_bisim_contra RS PU end).
+Qed.
+
+(** nextSince m implies that the next mode is m, by induction on nextSince,
+comparing mode states across each discrete step. *)
+Lemma nextSince_switchBc_modeEq_next m t i n p :
+  nextSince m t i n p -> nextModeNet m i n.
+Proof.
+  intro NS. induction NS as [a i0 n0 n0' p0 w l t0 t0' x y PND OR OW
+    | a t0 i0 n0 n0' p0 w NS IH NSS | d t0 i0 n0 n0' p0 w NS IH].
+  - eapply ovWaitState_nextMode_net; [ | eassumption].
+    eapply reachNetDisc; eassumption.
+  - assert (reachableNet n0') as RN' by (eapply reachNetDisc; eassumption).
+    lets NOT : nextSince_switchBc_modeEq_nss_not NSS. destruct NOT as [NSL NTB].
+    lets NSN : nexSinceStateNet_cases NSS.
+    destruct NSN as [OW | [OR | [SB | SC]]].
+    + destruct OW as [m0 [t1 [x1 [y1 OW]]]].
+      lets NM0 : ovWaitState_nextMode_net RN' OW.
+      assert (m = m0) as EQ
+        by (eapply nextSince_switchBc_modeEq_mst with (n := n0); eassumption).
+      subst. assumption.
+    + destruct OR as [m0 [t1 [l1 OR]]].
+      assert (nextModeNet m0 i0 n0') as NM0.
+      { eapply ComhCoq.NetAuxBasics.ovWait_ovReady_nextMode_net
+          with (x := zeroTime) (y := zeroTime); [exact RN' | right; eassumption]. }
+      assert (m = m0) as EQ
+        by (eapply nextSince_switchBc_modeEq_mst with (n := n0); eassumption).
+      subst. assumption.
+    + destruct SB as [m0 SB].
+      assert (nextModeNet m0 i0 n0') as NM0
+        by (eapply switchBc_nextMode_net; eassumption).
+      assert (m = m0) as EQ
+        by (eapply nextSince_switchBc_modeEq_mst with (n := n0); eassumption).
+      subst. assumption.
+    + eapply switchCurr_nextSince_nextMode_net; [ | eassumption].
+      exact (nextSinceDisc _ _ _ _ _ _ _ w NS NSS).
+  - eapply nextModeNet_del_pres; eassumption.
+Qed.
+(* end helpers *)
+
 Lemma nextSince_switchBc_modeEq m m' t i n p :
   nextSince m t i n p -> switchBcStateNet m' i n -> m = m'.
-(*Proof: Inudction nextSince, eliminate all non-matching state predicates.*)
-  Admitted. (*4*)
+Proof.
+  intros NS SB.
+  lets NM : nextSince_switchBc_modeEq_next NS.
+  lets NM' : switchBc_nextMode_net SB.
+  eapply nextSince_switchBc_modeEq_uniq; eassumption.
+Qed.
+
+(* begin helpers for nextSince_ovWait_modeEq *)
+(** Two next-mode facts about the same entity coincide. *)
+Lemma nextSince_ovWait_modeEq_uniq m m' i n :
+  nextModeNet m i n -> nextModeNet m' i n -> m = m'.
+Proof.
+  intros NM NM'. apply nextMode_ent_ex in NM. destruct NM as [e [EIN NME]].
+  apply nextMode_ent_ex in NM'. destruct NM' as [e' [EIN' NME']].
+  assert (e' = e) as EQ by (eapply entInNetUnique; eassumption). subst e'.
+  destruct e as [p l h k].
+  apply nextMode_ent_mState in NME. apply nextMode_ent_mState in NME'.
+  rewrite NME in NME'. inversion NME'. reflexivity.
+Qed.
+
+(** Across a discrete step whose target is neither switchListen nor tfsBc,
+the mode state is unchanged, so next modes before and after coincide. *)
+Lemma nextSince_ovWait_modeEq_mst m m0 i n n' a :
+  reachableNet n -> n -NA- a -NA> n' -> nextModeNet m i n ->
+  nextModeNet m0 i n' -> ~ switchListenStateNet i n' ->
+  ~ tfsBcStateNet i n' -> m = m0.
+Proof.
+  intros RN W NM NM0 NSL NTB.
+  apply nextMode_ent_ex in NM. destruct NM as [e [EIN NME]].
+  apply nextMode_ent_ex in NM0. destruct NM0 as [e0 [EIN0 NME0]].
+  destruct e as [p l h k]. destruct e0 as [p0 l0 h0 k0].
+  apply nextMode_ent_mState in NME. apply nextMode_ent_mState in NME0.
+  destruct (eqDecModeState k k0) as [EQ | NEQ].
+  - subst. rewrite NME in NME0. inversion NME0. reflexivity.
+  - exfalso.
+    assert (mState_in_net k i n) as MS by (econstructor; eassumption).
+    assert (mState_in_net k0 i n') as MS0 by (econstructor; eassumption).
+    lets MSS : mState_switch_states RN NEQ W MS MS0.
+    destruct MSS as [[_ TB] | [_ SL]]; [apply NTB | apply NSL]; assumption.
+Qed.
+
+(** A nextSince state is neither switchListen nor tfsBc. *)
+Lemma nextSince_ovWait_modeEq_nss_not i n :
+  nextSinceStateNet i n -> ~ switchListenStateNet i n /\ ~ tfsBcStateNet i n.
+Proof.
+  intro U. inversion U as [e U1 U2]. inversion U1 as [p l h k PP]; subst.
+  inversion PP as [p1 p2 p3 PS]; subst. clear PP U1 U.
+  split; intro V; inversion V as [e' V1 V2];
+  (assert (e' = [|p1 $||$ p2 $||$ p3, l, h, k|]) as EQ
+    by (eapply entInNetUnique; eassumption)); subst e';
+  inversion V1; subst;
+  (match goal with [X : _ (p1 $||$ p2 $||$ p3) |- _] => inversion X; subst end);
+  (match goal with [RS : _ p2 |- _] =>
+    first [lets PU : switchListen_unpause_out RS | lets PU : tfsBc_trans_out RS];
+    clear RS end);
+  inversion PS; clear PS; subst;
+  (match goal with [RS : _ p2 |- _] =>
+    state_disj_paused_notifAbort_bisim_contra RS PU end).
+Qed.
+
+(** nextSince m implies that the next mode is m. Proved directly by induction
+on nextSince, comparing mode states across each discrete step. *)
+Lemma nextSince_ovWait_modeEq_next m t i n p :
+  nextSince m t i n p -> nextModeNet m i n.
+Proof.
+  intro NS. induction NS as [a i0 n0 n0' p0 w l t0 t0' x y PND OR OW
+    | a t0 i0 n0 n0' p0 w NS IH NSS | d t0 i0 n0 n0' p0 w NS IH].
+  - eapply ovWaitState_nextMode_net; [ | eassumption].
+    eapply reachNetDisc; eassumption.
+  - assert (reachableNet n0') as RN' by (eapply reachNetDisc; eassumption).
+    lets NOT : nextSince_ovWait_modeEq_nss_not NSS. destruct NOT as [NSL NTB].
+    lets NSN : nexSinceStateNet_cases NSS.
+    destruct NSN as [OW | [OR | [SB | SC]]].
+    + destruct OW as [m0 [t1 [x1 [y1 OW]]]].
+      lets NM0 : ovWaitState_nextMode_net RN' OW.
+      assert (m = m0) as EQ
+        by (eapply nextSince_ovWait_modeEq_mst with (n := n0); eassumption).
+      subst. assumption.
+    + destruct OR as [m0 [t1 [l1 OR]]].
+      assert (nextModeNet m0 i0 n0') as NM0.
+      { eapply ComhCoq.NetAuxBasics.ovWait_ovReady_nextMode_net
+          with (x := zeroTime) (y := zeroTime); [exact RN' | right; eassumption]. }
+      assert (m = m0) as EQ
+        by (eapply nextSince_ovWait_modeEq_mst with (n := n0); eassumption).
+      subst. assumption.
+    + destruct SB as [m0 SB].
+      assert (nextModeNet m0 i0 n0') as NM0
+        by (eapply switchBc_nextMode_net; eassumption).
+      assert (m = m0) as EQ
+        by (eapply nextSince_ovWait_modeEq_mst with (n := n0); eassumption).
+      subst. assumption.
+    + eapply switchCurr_nextSince_nextMode_net; [ | eassumption].
+      exact (nextSinceDisc _ _ _ _ _ _ _ w NS NSS).
+  - eapply nextModeNet_del_pres; eassumption.
+Qed.
+(* end helpers *)
 
 Lemma nextSince_ovWait_modeEq m m' t t' x y i n p :
   nextSince m t i n p -> ovWaitStateNet m' t' x y i n -> m = m'.
-(*Proof: Inudction nextSince, eliminate all non-matching state predicates.*)
-  Admitted. (*4*)
+Proof.
+  intros NS OW.
+  lets NM : nextSince_ovWait_modeEq_next NS.
+  lets NM' : ovWaitState_nextMode_net p OW.
+  eapply nextSince_ovWait_modeEq_uniq; eassumption.
+Qed.
 (*+PROBABLY NEED TO PROVE THESE TOGETHER FROM A MASTER "MUTUAL" RESULT+*)
+(* begin helpers for nextSince_ovReaddy_modeEq *)
+(** Two overlap-component state predicates holding for the same entity in the
+same network reduce to both holding of the same overlap process.*)
+Lemma nextSince_ovReaddy_modeEq_lift (X Y : ProcTerm -> Prop) i n :
+  liftEntNet (liftProcEnt (liftOverlap X)) i n ->
+  liftEntNet (liftProcEnt (liftOverlap Y)) i n ->
+  (forall p, X p -> Y p -> False) -> False.
+Proof.
+  intros H1 H2 HXY.
+  inversion H1 as [e1 E1 I1]; inversion H2 as [e2 E2 I2].
+  assert (e1 = e2) as EQ by (eapply entInNetUnique; eassumption). subst e2.
+  inversion E1 as [p l h k P1 EQ1]; subst.
+  inversion E2 as [p' l' h' k' P2 EQ2]; subst.
+  inversion P1 as [a b c X1 EQ3]; subst.
+  inversion P2 as [a' b' c' Y1 EQ4]; subst.
+  eapply HXY; eassumption.
+Qed.
+
+(** Given D : discActEnabled B a, with B a concrete overlap process body that
+cannot perform a, closes the goal by exhaustive inversion.*)
+Ltac nextSince_ovReaddy_modeEq_inv D :=
+  let p' := fresh "p'" in let T := fresh "T" in
+  destruct D as [p' T];
+  cbv [ovWait ovReady tfsStart tfsNext tfsCurr tfsBc tfsListen switchCurr
+    switchBc switchListen dormant init ovAbort] in T;
+  repeat match goal with
+  | T0 : _ -PA- _ -PA> _ |- _ => inversion T0; subst; clear T0
+  end.
+
+Lemma nextSince_ovReaddy_modeEq_ovReady_out m t l p :
+  ovReadyState m t l p ->
+  discActEnabled p (chanOutProc ;! [baseMode m, basePosition l]).
+Proof. activation_tac. Qed.
+
+Lemma nextSince_ovReaddy_modeEq_wr m t x y m' t' l i n :
+  ovWaitStateNet m t x y i n -> ovReadyStateNet m' t' l i n -> False.
+Proof.
+  intros W R.
+  apply (nextSince_ovReaddy_modeEq_lift (ovReadyState m' t' l)
+    (ovWaitState m t x y) i n R W).
+  intros p HR HW.
+  lets D : nextSince_ovReaddy_modeEq_ovReady_out HR.
+  eapply bisim_dae in D; [ | exact HW].
+  nextSince_ovReaddy_modeEq_inv D.
+Qed.
+(* end helpers *)
+
 Lemma nextSince_ovReaddy_modeEq m m' t t' l i n p :
   nextSince m t i n p -> ovReadyStateNet m' t' l i n -> m = m'.
-(*Proof: Inudction nextSince, eliminate all non-matching state predicates.*)
-  Admitted. (*4*)
+Proof.
+  intros NS. revert t' l. induction NS; intros t0 l0 OR.
+  - exfalso. eapply nextSince_ovReaddy_modeEq_wr; eassumption.
+  - match goal with W : _ -NA- _ -NA> _ |- _ =>
+      lets PR : ovReady_prev_net OR W end.
+    destruct PR as [OR' | [x0 [y0 OW]]].
+    + eapply IHNS; eassumption.
+    + eapply nextSince_ovWait_modeEq; eassumption.
+  - eapply IHNS. eapply ovReady_del_pres_bkwd_net; eassumption.
+Qed.
 
 (*If an entity is tfs m, then it is in some tfsState.*)
 Theorem tfs_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
@@ -128,7 +457,19 @@ Lemma currModeNet_switch_states n n' a m m' i :
   reachableNet n -> n -NA- a -NA> n' -> currModeNet m i n ->
   currModeNet m' i n' -> m <> m' ->
   (switchCurrStateNet i n /\ switchListenStateNet i n') \/
-  (tfsCurrStateNet i n /\ tfsBcStateNet i n'). Admitted. (*3*)
+  (tfsCurrStateNet i n /\ tfsBcStateNet i n').
+Proof.
+  intros RN W CM CM' NEQ.
+  apply currMode_ent_ex in CM. apply currMode_ent_ex in CM'.
+  destruct CM as [e [EIN CE]]. destruct CM' as [e' [EIN' CE']].
+  destruct e as [p l h k]. destruct e' as [p' l' h' k'].
+  assert (k <> k') as KNE.
+  { intro EQ. subst k'. apply NEQ. rewrite <- CE, <- CE'. reflexivity. }
+  destruct (mState_switch_states n n' i a k k' RN KNE W
+    (minet k i n p l h EIN) (minet k' i n' p' l' h' EIN')) as [[A B] | [A B]].
+  - right; split; assumption.
+  - left; split; assumption.
+Qed.
 (*Proof: First of all use a tactic to generate the entities and the entity level
 predicates, then do brute force elimination on these using a tactic leaving only
 the desirable cases. Finally map the entity level results back up to the network
@@ -405,8 +746,63 @@ Theorem outgoing_timeout_disc (n n' : Network) (a : ActDiscNet) (i : nat)
 (**Proof: In steps above*)
 
 (*AMALGAMATE WITH OTHERS- cull repetitions?*)
+(* begin helpers for notifAbortPathNet_urgent *)
+Lemma notifAbortPathNet_urgent_rangeBad_in m m0 p :
+  rangeBadState m p -> discActEnabled p (chanMCurr ;? [baseMode m0]).
+Proof. activation_tac. Qed.
+
+Lemma notifAbortPathNet_urgent_currOK_in m m0 p :
+  currOKState m p -> discActEnabled p (chanMNext ;? [baseMode m0]).
+Proof. activation_tac. Qed.
+
+(** An entity whose listener is in the rangeBad state can always read the
+current mode from its mode state, so it cannot delay. No reachability needed.*)
+Lemma notifAbortPathNet_urgent_rangeBad_ent m p l h k e' d :
+  rangeBadStateProt m p -> [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros RB ED. inversion RB as [p1 p2 p3 RB3 EQ]; subst.
+  noSyncNow_tac.
+  destruct (NS (chanMCurr ;? [baseMode (currModeMState k)])) as [_ DM].
+  - apply parTriple_dae_intro3.
+    exact (notifAbortPathNet_urgent_rangeBad_in m (currModeMState k) p3 RB3).
+  - apply DM. exact (modeState_curr_enabled k).
+Qed.
+
+(** An entity whose listener is in the currOK state while its mode state has
+a next mode m' can read m' on mNext, so it cannot delay.*)
+Lemma notifAbortPathNet_urgent_currOK_ent m m' p l h k e' d :
+  currOKStateProt m p -> nextModeMState k = Some m' ->
+  [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros CO NM ED. inversion CO as [p1 p2 p3 CO3 EQ]; subst.
+  noSyncNow_tac.
+  destruct (NS (chanMNext ;? [baseMode m'])) as [_ DM].
+  - apply parTriple_dae_intro3.
+    exact (notifAbortPathNet_urgent_currOK_in m m' p3 CO3).
+  - apply DM. destruct k as [m0 | m0 m1 t0]; simpl in NM; inversion NM; subst.
+    econstructor. apply stepMsOutNext.
+Qed.
+
+Lemma notifAbortPathNet_urgent_ent e e' d :
+  reachableEnt e -> notifAbortPathEnt e -> e -ED- d ->> e' -> False.
+Proof.
+  intros RE NA ED.
+  inversion NA as [p l h k m m' RB CM NE NM | p l h k m' CO NM | p l h k AO]; subst.
+  - eapply notifAbortPathNet_urgent_rangeBad_ent; eassumption.
+  - eapply notifAbortPathNet_urgent_currOK_ent; eassumption.
+  - eapply abortOvlpStateEnt_urgent; [exact RE | econstructor; exact AO | exact ED].
+Qed.
+(* end helpers *)
+
 Lemma notifAbortPathNet_urgent (i : nat) (n n' : Network) (d : Delay) :
-  reachableNet n -> notifAbortPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
+  reachableNet n -> notifAbortPathNet i n -> n -ND- d -ND> n' -> False.
+Proof.
+  intros RN NA W.
+  destruct NA as [e NE EIN].
+  destruct (del_net_ent e i n n' d EIN W) as [e' ED].
+  eapply notifAbortPathNet_urgent_ent;
+    [eapply reachable_net_ent; eassumption | exact NE | exact ED].
+Qed.
 (**Proof: lift from...EA::urgency... #urgent-path*)
 
 Lemma notifBadPathNet_urgent i n n' d :
@@ -419,19 +815,47 @@ Lemma msgBadPathNet_urgent (n n' : Network) (d : Delay) (i : nat) :
   msgBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
 (**Proof: Lift urgency from EA urgency result. #urgent-path*)
 
+(* begin helpers for msgAbort_paused_disj_net *)
+Lemma msgAbort_paused_disj_net_unp q :
+  pausedState q -> exists q', q -PA- chanUnpause *? -PA> q'.
+Proof.
+  intro P.
+  assert (exists q', paused -PA- chanUnpause *? -PA> q') as [q0 TR].
+  { eexists. unfold paused. constructor. reflexivity. }
+  apply ComhCoq.ProcEquiv.bisim_symm in P.
+  exact (bisim_disc_match _ _ _ _ P TR).
+Qed.
+
+Ltac msgAbort_paused_disj_net_inv :=
+  repeat (match goal with V : _ -PA- _ -PA> _ |- _ => inversion V; subst; clear V end).
+(* end helpers *)
+
 Lemma msgAbort_paused_disj_net (i : nat) (n : Network) :
   msgAbortPathNet i n -> pausedStateNet i n -> False.
-  (*Proof: Follows directly from the definition of msgAbortPath,
-  all of the cases of which are disjoint from a paused state*)
-  introz U. inversion U. inversion U0. entnetuniq EN e e0.
-  subst. clear H0. inversion H1. subst. inversion H; subst.
-  (*
-  state_pred_elim H0 H7. state_pred_elim H3 H5.
-  state_pred_elim H0 H7. state_pred_elim H3 H5.
-  state_pred_elim H0 H6. state_pred_elim H3 H5.
-  state_pred_elim H0 H4. state_pred_elim H3 H6.
-  Qed.*)
-  Admitted. (*R*)
+Proof.
+  intros U V. destruct U as [e E1 E2]. destruct V as [e' E1' E2'].
+  assert (e' = e) by (eapply entInNetUnique; eassumption). subst e'.
+  inversion E1' as [p l h k P]; subst.
+  inversion P as [p1 p2 p3 P3]; subst.
+  destruct (msgAbort_paused_disj_net_unp _ P3) as [q' TQ].
+  inversion E1; subst.
+  - match goal with H : gotMsgStateProt _ _ _ |- _ => inversion H; subst end.
+    match goal with H : gotMsgState _ _ _ |- _ =>
+      let X := fresh "X" in lets X : bisim_disc_match H TQ; destruct X as [qq TR] end.
+    clear - TR. unfold gotMsg in TR. msgAbort_paused_disj_net_inv.
+  - match goal with H : gotRangeStateProt _ _ _ |- _ => inversion H; subst end.
+    match goal with H : gotRangeState _ _ _ |- _ =>
+      let X := fresh "X" in lets X : bisim_disc_match H TQ; destruct X as [qq TR] end.
+    clear - TR. unfold gotRange in TR. msgAbort_paused_disj_net_inv.
+  - match goal with H : currCompStateProt _ _ _ |- _ => inversion H; subst end.
+    match goal with H : currCompState _ _ _ |- _ =>
+      let X := fresh "X" in lets X : bisim_disc_match H TQ; destruct X as [qq TR] end.
+    clear - TR. unfold currComp in TR. msgAbort_paused_disj_net_inv.
+  - match goal with H : abortOvlpStateProt _ |- _ => inversion H; subst end.
+    match goal with H : abortOvlpState _ |- _ =>
+      let X := fresh "X" in lets X : bisim_disc_match H TQ; destruct X as [qq TR] end.
+    clear - TR. unfold abortOvlp in TR. msgAbort_paused_disj_net_inv.
+Qed.
 
 (** If we are switching from a tfs state to a non tfs state, then we cannot be currSince.*)
 Lemma tfsState_not_currSince (m : Mode) (t : Time) (i : nat) (n n' : Network)
@@ -499,7 +923,10 @@ cancelled, and then the I.H. is applicable.*)
 (*The mode parameter of ovWait is the same as that of the nextSince relation if both hold.*)
 Lemma nextSince_ovWait_modes_eq (n : Network) (m1 m2 : Mode) (t t1 x y : Time)
   (i : nat) (p : reachableNet n) :
-  ovWaitStateNet m1 t x y i n -> nextSince m2 t1 i n p -> m1 = m2. Admitted. (*3*)
+  ovWaitStateNet m1 t x y i n -> nextSince m2 t1 i n p -> m1 = m2.
+Proof.
+  intros OW NS. symmetry. eapply nextSince_ovWait_modeEq; eassumption.
+Qed.
 (**Proof: Generalise the statement to include a similar statement about ovReadyState, then proceed by induction on nextSince. Back tracking
 shows that ovReadySate and ovWaitState are predecessors to each other and so the I.H. carries forward. The base case follows directly from the
 definition of nextSince.*)
@@ -544,10 +971,18 @@ Lemma rangeBad_notifBad_net m i n :
 
 Lemma badOvlp_notifBad_net i n :
   badOvlpStateNet i n -> notifBadPathNet i n.
-  Admitted. (*#notifBadNetLift #complexNetLift*)
+Proof.
+  intro H. destruct H as [e H1 H2]. destruct H1 as [p l h k H3].
+  econstructor; [ | apply H2]. apply nbpBad. exact H3.
+Qed.
 
 Lemma ovReady_nextSince_state m t l i n :
   ovReadyStateNet m t l i n -> nextSinceStateNet i n.
-  Admitted. (*#complexNetLift #nextSinceStateNetLift*)
+Proof.
+  intro H. destruct H as [e H1 H2]. destruct H1 as [p l' h k H3].
+  inversion H3; subst.
+  econstructor; [ | apply H2]. constructor. constructor.
+  eapply nexsOvrSt. eassumption.
+Qed.
 
 (*-LOCAL TIDY*)
