@@ -364,11 +364,16 @@ Proof.
 Qed.
 (**Proof sketch: Because none of its constituents can output on said channel.*)
 
-(*!Think this needs to be changed from generic "v" to specific list of [r, m'']...*)           
-(** A process in the listening state is listening on the channel AN.*)
+(** A process in the listening state is listening on the channel AN, for any
+notification of the right length: [r, m'', l'].*)
 Lemma listening_AN_prot p v :
-  listeningStateProt p -> discActEnabled p (chanAN ;? v).
-  Admitted. (*C*)(*5*)
+  length v = 3%nat -> listeningStateProt p -> discActEnabled p (chanAN ;? v).
+Proof.
+  intros L LS. inversion LS as [p1 p2 p3 Q]; subst.
+  apply daeParR; apply daeParR.
+  eapply bisim_dae; [apply bisim_symm; apply Q | ]. unfold listening.
+  apply daeSumL; apply daeSumL; apply daeSumL. apply dae_inPfx. simpl. rewrite L. reflexivity.
+Qed.
 (**Proof: Lift an activation result from simple level.
 Come up with a general tactic for that lifting?*)
 

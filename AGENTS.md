@@ -10,11 +10,11 @@
 
 ## Project
 
-- This is a Rocq formalisation of the Comhordú real-time coordination protocol and its safety proof, based on a 2014 PhD thesis.
+- This is a Rocq formalisation of the Comhordú real-time coordination protocol and its safety proof, based on a [2014 PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf).
 - The top-level theorem is `safety` in `src/Main.v`.
 - Layout:
   - `src/`: the Rocq development. Logical path `ComhCoq`. See `src/AGENTS.md`.
-  - `doc/`: workstreams, reports, ADRs and archive. See `doc/AGENTS.md`.
+  - `doc/`: workstreams, reports, ADRs, archive, and the thesis with its corrections. See `doc/AGENTS.md`.
   - `helper-scripts/`: scripts the build doesn't need, such as reporting tools. See `helper-scripts/AGENTS.md`.
   - `scripts/`: reserved for scripts the build does need. There are none yet.
   - `.github/workflows/`: CI.
@@ -30,6 +30,7 @@
 ## Writing
 
 - Don't tell readers what a document is or how to read it: no "this page is the short version", "the rest is detail" or "this section goes through…". Write it so it flows, and let them experience that for themselves. This applies to all prose: docs, READMEs and PR descriptions.
+- Cite the thesis by its printed page number, not the PDF page, and by definition or remark number where there is one. The two page numbers differ; see [`doc/thesis/`](doc/thesis/README.md).
 
 ## Scripts
 
@@ -39,4 +40,5 @@
 
 - Work is planned and tracked in `doc/workstreams/`, decisions are recorded in `doc/adr/`, and results go in `doc/reports/`.
 - Changing what the project *claims* needs explicit human approval: theorem or lemma statements, definitions, model axioms, and deleting results. Agents propose such changes in a report; they don't make them.
+- Whenever a change makes the formalisation depart from the thesis, record the correction in [`doc/thesis/thesis-corrections.md`](doc/thesis/thesis-corrections.md) in the same PR.
 - Never weaken the trust base silently. If a change adds an entry to `make assumptions` output, call it out in the PR and in the relevant report.
