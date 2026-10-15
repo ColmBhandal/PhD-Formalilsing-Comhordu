@@ -24,6 +24,7 @@ Require Import ComhCoq.NetworkLanguage.
 Require Import ComhCoq.NetAuxBasics.
 Require Import ComhCoq.NetAuxDefs.
 Require Import ComhCoq.NARMisc.
+Require Import ComhCoq.ProtocolBridge.
 
 
 (*If any entity has an incomingNet message the network can't delay.*)

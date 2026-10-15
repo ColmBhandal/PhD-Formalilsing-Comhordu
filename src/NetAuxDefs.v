@@ -18,6 +18,7 @@ Require Import ComhCoq.EntityLanguage.
 Require Import ComhCoq.NetworkLanguage.
 Require Import ComhCoq.EntAuxDefs.
 Require Import ComhCoq.NetAuxBasics.
+Require Import ComhCoq.ProtocolBridge.
 
 (*tfs m t i n p says that the entity i in the network n has been transitioning
 to a fail safe mode from the mode m for a time of t. Transitioning to fail safe

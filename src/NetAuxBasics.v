@@ -22,6 +22,7 @@ Require Import ComhCoq.ProtAuxResults.
 Require Import ComhCoq.EntAuxDefs.
 Require Import ComhCoq.EntAuxResults.
 Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.ProtocolBridge.
 
 (*IDEA: MIGRATE SOME OF THE CONTENTS OF THE FILE OVER VARIUOS NAB (NET-AUX-BASICS)
 PREFIXED FILES, THEN *EXPORT* THEM HERE, SO THAT THIS FILE JUST ACTS AS A

@@ -19,6 +19,9 @@ Require Import ComhCoq.ModeStateLanguage.
 (***************Messages*********************)
 
 
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
 (** A message is a vector of values augmented with coverage and location information.*)
 Record Message : Type :=
 mkMsg
@@ -27,7 +30,12 @@ mkMsg
   msgPos : Position;
   msgCoverage : Distance
 }.
+End EntityLanguage.
+
 Notation "[- v , l , r -]" := (mkMsg v l r) (at level 40).
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** Extract the delivery radius from a broadcast.*)
 Definition rangeMsg (m : Message) : Distance :=
@@ -68,7 +76,12 @@ Record Entity : Type := mkEntity
   interEnt :> Interface;
   mstEnt : ModeState 
 }.
+End EntityLanguage.
+
 Notation "[| p , l , i , k |]" := (mkEntity p l i k) (at level 30).
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** Equality on entities is decidable.*)
 Lemma eqDecEnt : eqDec Entity. unfold eqDec.
@@ -91,15 +104,25 @@ Coercion currModeEnt (e : Entity) : Mode :=
 (** The next mode of an entity is the next mode of the mode state.*)
 Definition nextModeEnt (e : Entity) : option Mode :=
   match e with [|_, _, _, a|] => nextModeMState a end.
+End EntityLanguage.
+
 
 Open Scope R_scope.
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** If the minimum distance of compatibiltiy of the respective modes
 of the entities is less than or equal to the separation of the
 entities in space, then they are compatible.*)
 Definition compatible (e1 e2 : Entity) : Prop :=
   (minDistComp e1 e2) <= (dist2d e1 e2).
+End EntityLanguage.
+
 Notation "e1 ~~ e2" := (compatible e1 e2) (left associativity, at level 40).
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** Compatibility is a symmetric relation.*)
 Lemma compatibleSymmetric : forall (e1 e2 : Entity), (e1 ~~ e2) <-> (e2 ~~ e1).
@@ -116,12 +139,17 @@ Inductive ActDiscEnt : Type :=
   | aeTagIn : Message -> ActDiscEnt
   | aeTagIg : Message -> ActDiscEnt
   | aeTau : ActDiscEnt.
+End EntityLanguage.
+
 Notation "b #!" := (aeTagOut b) (at level 30).
 Notation "b #?" := (aeTagIn b) (at level 30).
 Notation "b #:" := (aeTagIg b) (at level 30).
 
 Reserved Notation "e1 -EA- a ->> e2" (left associativity, at level 50).
 Reserved Notation "e1 -ED- a ->> e2" (left associativity, at level 50).
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** The discrete action semantics for entities.*)
 Inductive stepDiscEnt : Entity -> ActDiscEnt -> Entity -> Prop :=
@@ -222,6 +250,10 @@ Inductive stepTimedEnt : Entity -> Delay -> Entity -> Prop :=
     displacement delta <= speedMax * d -> noSync p i k d ->
     [| p , l , i , k |] -ED- d ->> [| p' , addPos l delta, i' , k' |]
   where "e1 -ED- d ->> e2" := (stepTimedEnt e1 d e2).
+End EntityLanguage.
+Notation "e1 -EA- a ->> e2" := (stepDiscEnt e1 a e2).
+Notation "e1 -ED- d ->> e2" := (stepTimedEnt e1 d e2).
+
 
 
 (*************** Results & Tactics *********************)
@@ -229,6 +261,9 @@ Inductive stepTimedEnt : Entity -> Delay -> Entity -> Prop :=
 (*Destruct an entity and then its interface component*)
 Ltac destr_ent_inter e p l k li lo ln := let h := fresh in destruct e as [p l h k];
   destruct h as [li lo ln].
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (**If the current mode has changed across a tau transition, then the software process
 output on mCurr, and the mode state input on the same channel.*)
@@ -292,6 +327,8 @@ Lemma link_ent_inter_disc p p' l l' h h' k k' a :
   right. right. left. exists v. split; assumption.
   do 3 right. left. exists v. assumption.
   do 4 right. exists v r. assumption. Qed.
+End EntityLanguage.
+
 
 (*Adds the result stepDisc_ent_inter to the hypotheses and splits it up and tidies it.*)
 Ltac link_entinterdisc_tac v r U := 
@@ -313,9 +350,14 @@ Ltac link_entinterdisc_tac v r U :=
     ]
   end.
 
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
 Lemma link_ent_inter_del p p' l l' h h' k k' d :
   [|p, l, h, k|] -ED- d ->> [|p', l', h', k'|] ->
   h -i- d -i> h'. intros. inversion H. assumption. Qed.
+End EntityLanguage.
+
 
 Ltac link_entinterdel_tac U :=
   match goal with
@@ -323,9 +365,14 @@ Ltac link_entinterdel_tac U :=
   let U1 := fresh U in lets U1 : link_ent_inter_del H
   end.
 
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
 Lemma link_ent_soft_del p p' l l' h h' k k' d :
   [|p, l, h, k|] -ED- d ->> [|p', l', h', k'|] ->
   p -PD- d -PD> p'. intros. inversion H. assumption. Qed.
+End EntityLanguage.
+
 
 Ltac link_entsoftdel_tac U :=
   match goal with
@@ -333,9 +380,14 @@ Ltac link_entsoftdel_tac U :=
   let U1 := fresh U in lets U1 : link_ent_soft_del H
   end.
 
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
 Lemma link_ent_mState_del p p' l l' h h' k k' d :
   [|p, l, h, k|] -ED- d ->> [|p', l', h', k'|] ->
   k -ms- d -ms> k'. intros. inversion H. assumption. Qed.
+End EntityLanguage.
+
 
 Ltac link_entmstatedel_tac U :=
   match goal with
@@ -343,9 +395,15 @@ Ltac link_entmstatedel_tac U :=
   let U1 := fresh U in lets U1 : link_ent_mState_del H
   end.
 
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
 Lemma timeSplit_ent e e'' d d' d'' :
   e -ED- d'' ->> e'' -> d'' = d +d+ d' ->
-  exists e', e -ED- d ->> e' /\ e' -ED- d' ->> e''. Admitted. (*6*)
+  exists e', e -ED- d ->> e' /\ e' -ED- d' ->> e''.
+Proof using PNames PDefs. Admitted. (*6*)
+End EntityLanguage.
+
 (**Proof: This should follow from time split properties of the underlying components. Also, it would have to be shown that the noSynch predicate would still hold for the intermediate entity component e', with the time parameter changed.*)
 
 
@@ -415,3 +473,12 @@ Ltac del_triple_sort_tac :=
   (lets U : del_triple_sort PD; decompAnd3 U x y z) end.
 
 (*-LOCAL TIDY*)
+
+Section EntityLanguage.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
+(** A discrete action doesn't move an entity.*)
+Lemma stepEnt_disc_pres_pos (e e' : Entity) a :
+  e -EA- a ->> e' -> posEnt e = posEnt e'. intros.
+  destruct e, e'. inversion H; reflexivity. Qed.
+End EntityLanguage.

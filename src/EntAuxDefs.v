@@ -14,6 +14,7 @@ Require Import ComhCoq.ModeStateLanguage.
 Require Import ComhCoq.SoftwareLanguage.
 Require Import ComhCoq.EntityLanguage.
 Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.ProtocolBridge.
 
 
 (***************************** Lifting *****************************) 

@@ -35,6 +35,7 @@ Require Import ComhCoq.NARInsuff.
 Require Import ComhCoq.NARMisc.
 Require Import ComhCoq.NARMsgPosition.
 Require Import ComhCoq.NAROvlpTime.
+Require Import ComhCoq.ProtocolBridge.
 
 (* Let's say we can show that a network is currSince m t i n, then we can show
 that the time parameter to this relation is always greater than mL + max AN trans,

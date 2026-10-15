@@ -23,6 +23,7 @@ Require Import ComhCoq.EntAuxResults.
 Require Import ComhCoq.NetAuxBasics.
 Require Import ComhCoq.NetAuxDefs.
 Require Import ComhCoq.ProtAuxResults.
+Require Import ComhCoq.ProtocolBridge.
 
 (* begin helpers for state_disj_paused_notifAbort *)
 (* Given D : discActEnabled q a, where q is (bisimilar-free) concrete protocol

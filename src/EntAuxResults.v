@@ -18,6 +18,7 @@ Require Import ComhCoq.EntityLanguage.
 Require Import ComhCoq.ProtAuxDefs.
 Require Import ComhCoq.EntAuxDefs.
 Require Import ComhCoq.ProtAuxResults.
+Require Import ComhCoq.ProtocolBridge.
 
 (***************************** Misc *****************************)
 
@@ -556,10 +557,6 @@ Lemma nextEq_mode (m' m'' : Mode) (e : Entity) :
 Lemma nextMode_ent_mState p l h k m :
   nextModeEnt m ([|p, l, h, k|]) -> nextModeMState k = Some m.
   introz U. Admitted. (*D*)
-
-Lemma stepEnt_disc_pres_pos (e e' : Entity) a :
-  e -EA- a ->> e' -> posEnt e = posEnt e'. intros.
-  destruct e, e'. inversion H; reflexivity. Qed.
 
 Ltac ent_disc_pres_pos_tac := match goal with
   [V : [|_, ?l, _, _|] -EA- ?b ->> [|_, ?l', _, _|] |- _ ] =>
