@@ -239,6 +239,11 @@ Lemma modeState_curr_enabled k :
   discActEnabledMState (chanMCurr ;! [baseMode (currModeMState k)]) k.
   destruct k; econstructor; constructor. Qed.
 
+(** A mode state whose transition has timed out can take the switch on mCurr.*)
+Lemma mst_tout_mCurr_in m1 m2 :
+  discActEnabledMState (chanMCurr *?) (<| m1, m2, zeroTime |>).
+Proof. repeat econstructor. Qed.
+
 Lemma mState_stable_next_enabled k m' : currModeMState k -mtr-> m' ->
   discActEnabledMState (chanMStable*?) k \/
   discActEnabledMState (chanMNext;? [baseMode m']) k.
