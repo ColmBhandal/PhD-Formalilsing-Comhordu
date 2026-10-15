@@ -17,6 +17,7 @@ Require Import ComhCoq.lang.SoftwareLanguage.
 Require Import ComhCoq.lang.InterfaceLanguage.
 Require Import ComhCoq.lang.ModeStateLanguage.
 Require Import ComhCoq.lang.NetworkLanguage.
+Require Import ComhCoq.lang.ProcEquiv.
 Require Import ComhCoq.protocol.ProtAuxDefs.
 Require Import ComhCoq.protocol.ProtAuxResults.
 Require Import ComhCoq.protocol.EntAuxDefs.

@@ -27,13 +27,6 @@ Ltac invert_def := match goal with [ U : def _ = (_, _) |- _] =>
 Ltac invert_trans := match goal with [P : _ -PA- _ -PA> _ |- _]
   => invertClear P; subst end.
 
-Lemma subProc_id_eq p : subProcTerm idSubst p = p.
-  induction p; try simpl; try rewrite resetPreservesId;
-  try rewrite idSubBoolExp;
-  try rewrite IHp; try rewrite IHp1; try rewrite IHp2;
-  try rewrite idSubList; try rewrite idSubExp; try reflexivity.
-  Qed.
-
 Ltac clean_proc_trans := match goal with [U : _ -PA- _ -PA> _ |- _] =>
   clean_proc_hyp U end.
 
@@ -43,14 +36,6 @@ Ltac invert_app_trans := match goal with
   | [U : _ $( _ )$ -PA- _ -PA> _ |- _] => invertClear U; invert_def; clean_proc_trans
   | [U : liftNameProc _ -PA- _ -PA> _ |- _] => invertClear U; invert_def; clean_proc_trans
   end. 
-
-Lemma dae_outPfx c l v p :
-  evalExpLists l v -> discActEnabled (c $<l>$! p) (c;! v). intro X.
-  econstructor. constructor. assumption. Qed.
-
-Lemma dae_inPfx c l v p :
-  length l = length v -> discActEnabled (c $<l>$? p) (c;? v).
-  intro W. econstructor. constructor. symmetry. assumption. Qed.
 
 Ltac update_eval := match goal with [H : ?e |_| ?m |- update _ ?x ?e ?x |_| ?m]
   => rewrite updateAppEq; apply H end.
@@ -77,13 +62,6 @@ Ltac lift_act_then b p := match goal with
   [V1 : p -PA- ?a -PA> ?p', V2 : evalBoolExpFunTot b = true |- _] =>
   let V := fresh in rename V1 into V;
   lets V1 : stepDpThen V V2; clear V end.
-
-(*An alternative characterisation of the discrete transition rule for application processes,
-where the equality as a hypothesis is removed.*)
-Lemma stepDpApp_alt : forall (n : Name) (l2 : list Exp) (p' : ProcTerm) (a : DiscAct),
-  stepDiscProc (subProcTerm (listsToSub (fst (def n)) l2) (snd (def n))) a p' ->
-  stepDiscProc (app n l2) a p'. intros. remember (def n). destruct p. eapply stepDpApp.
-  rewrite <- Heqp. reflexivity. apply H. Qed.
 
 (*Converts a hypothesis of an action on the body of n applied to x to a
 hypothesis on the application process (n x)*)
@@ -143,12 +121,6 @@ Ltac gen_disc_acts p :=
   | $< ?e >$ ?p' => idtac
   end.
 
-(*If p and q are bisimlar, and p can do an action, then so can q.*)
-Lemma bisim_disc_match p p' q a : p ~p~ q -> p -PA- a -PA> p' ->
-  exists q', q -PA- a -PA> q'. intros. inversion H.
-  apply stepPDisc in H0. apply H1 in H0. ex_flat. and_flat.
-  exists x. inversion AND. assumption. Qed.
-
 (*A richer inversion on a transition that tries to get rid of definition hypotheses
 and clean up some substitution stuff.*)
 Ltac invert_trans_rich := invert_trans; try invert_def; clean_proc_trans.
@@ -204,15 +176,6 @@ Ltac invert_steps := repeat
   invertClear V end; subst).
 
 (*-TIDY*)
-
-(*TOGO: ProcEquiv, bisimulation*)
-
-Lemma bisim_dae p q a : p ~p~ q -> discActEnabled p a ->
-  discActEnabled q a. introz U. inversion U0.
-  apply stepPDisc in H. apply U in H. exand_flat.
-  eexists. inversion AND. eassumption. Qed.
-
-(*-TOGO*)
 
 (****************** Activation ******************)
 (**Results about whether certain actions are enabled or not.
@@ -348,21 +311,40 @@ Lemma tfsListen_unpause_out_sort d p : tfsListenState p -> sort (chanUnpause *!)
 and show that none of the cases generated match any of the cases for the state predicate.*)
 (**A listener process cannot output on the channel outProc.*)
 (* begin helpers for listener_outProc_out_not *)
-(** Given [Q : p ~p~ X] and [TR : p -P- a -P> p'], transfers the transition
-across the bisimulation to obtain [X -P- a -P> q'] (and [p' ~p~ q']). *)
-Ltac listener_outProc_out_not_bisim_fwd :=
-  match goal with [Q : ?p ~p~ ?X, TR : ?p -P- ?a -P> ?p' |- _] =>
-    let F1 := fresh "F" in let F2 := fresh "F" in
-    inversion Q as [F1 F2]; clear Q; apply F1 in TR; clear F1 F2 end.
+(** Unfolds the simple state predicates into bisimilarities. *)
+Ltac prot_outProc_in_not_unfold :=
+  unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
+    ovReadyState, switchBcState, switchCurrState, switchListenState,
+    tfsStartState, tfsNextState, tfsCurrState, tfsBcState, tfsListenState,
+    initState, ovAbortState, listeningState, rangeBadState, currOKState,
+    abortOvlpState, badOvlpState, currCompState, pausedState, gotMsgState,
+    gotRangeState, currEqState, nextEqState, currPincCheckState,
+    nextPincCheckState in *.
+
+(** Unfolds the bodies of the protocol component processes. *)
+Ltac prot_outProc_in_not_body :=
+  unfold bcWait, sleeping, bcReady, dormant, init, ovWait, ovReady, switchBc,
+    switchCurr, switchListen, tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen,
+    ovAbort, listening, checkRange, rangeBad, currEq, badOvlp, currOK, nextEq,
+    abortOvlp, gotMsg, gotRange, currPincCheck, currComp, nextPincCheck,
+    paused in *.
+
+(** Anti-activation: given p ~p~ q and p -a-> p', transfer the transition to
+    the concrete body q and refute it by brute-force inversion. *)
+Ltac prot_outProc_in_not_contra :=
+  prot_outProc_in_not_unfold;
+  match goal with
+  | [B : ?p ~p~ ?q, TR : ?p -PA- ?a -PA> ?p' |- _] =>
+    let q' := fresh "q'" in let TR' := fresh "TR'" in
+    destruct (bisim_disc_match _ _ _ _ B TR) as [q' TR'];
+    prot_outProc_in_not_body; solve [invert_disc_prefixes]
+  end.
 (* end helpers *)
 
 Theorem listener_outProc_out_not (p p' : ProcTerm) (v : list BaseType) : 
   listenerState p -> p -PA- chanOutProc ;! v -PA> p' -> False.
 Proof.
-  intros LS TR. apply stepPDisc in TR.
-  inversion LS as [Q|m Q|m Q|Q|Q|m r Q]; clear LS; cbv in Q;
-  listener_outProc_out_not_bisim_fwd; exand_flat; invert_steps;
-  repeat invert_trans.
+  intros LS TR. inversion LS; prot_outProc_in_not_contra.
 Qed.
 (**Proof sketch: Because none of its constituents can output on said channel.*)
 
@@ -459,28 +441,17 @@ Lemma goMsg_gotRange_track m m' l r p p' a :
   a = chanPos ;? [basePosition l'] /\
   r = mkDistance (dist2d l l' -nn- speedMax *nn* msgLatency).
 Proof.
-  intros GM GR ST.
-  destruct GM as [F _].
-  destruct (F a p' (stepPDisc _ _ _ ST)) as [q' [QS PQ]].
-  inversion QS; subst.
-  match goal with [H : stepDiscProc (gotMsg _ _) _ _ |- _] => unfold gotMsg in H; inversion H; subst end.
-  match type of PQ with _ ~p~ ?Q =>
-  assert (BT : gotRange m' r ~p~ Q) by (eapply bisim_trans; [apply bisim_symm; exact GR | exact PQ]) end.
-  clear GR PQ F QS ST.
-  destruct BT as [G _].
-  assert (G1 : gotRange m' r -P- (chanMCurr ;? [baseMode m']) -P>
-     subProcTerm (listsToSub [vM] (listBaselistExp [baseMode m'])) (app currPincCheckN [eVar vM, eBase m', eBase r])).
-  { constructor. unfold gotRange. apply stepDpIn. reflexivity. }
-  destruct (G _ _ G1) as [q1 [Q1 B1]].
-  clear G G1.
-  inversion Q1; subst. clear Q1.
-  match goal with [H : stepDiscProc _ _ q1 |- _] => rename H into Q1 end.
-  simpl in Q1.
+  intros GM GR ST. exfalso.
+  destruct (bisim_step_disc _ _ _ _ GM ST) as [q [QS PQ]].
+  unfold gotMsg in QS. invert_disc_prefixes.
+  assert (G1 : gotRange m' r -PA- chanMCurr ;? [baseMode m'] -PA>
+     subProcTerm (listsToSub [vM] (listBaselistExp [baseMode m'])) (app currPincCheckN [eVar vM, eBase m', eBase r]))
+    by (apply stepDpIn; reflexivity).
+  destruct (bisim_step_disc _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ GR) PQ) G1)
+    as [q1 [Q1 B1]].
   destruct (goMsg_gotRange_track_live m' r) as [a1 [g2 GS]].
-  destruct B1 as [F1 _].
-  destruct (F1 _ _ (stepPDisc _ _ _ GS)) as [q2 [QS2 _]].
-  inversion QS2; subst.
-  exfalso. eapply goMsg_gotRange_track_stuck; eassumption.
+  destruct (bisim_step_disc _ _ _ _ B1 GS) as [q2 [QS2 _]].
+  simpl in Q1. eapply goMsg_gotRange_track_stuck; eassumption.
 Qed.
 
 Lemma currOK_listening_track m p p' a : currOKState m p ->
@@ -491,10 +462,8 @@ Lemma abortOvlp_listening_track (p p' : ProcTerm) (a : DiscAct) :
   abortOvlpState p -> listeningState p' -> p -PA- a -PA> p' ->
   a = chanAbort;! [].
 Proof.
-  intros CS LS TR. apply stepPDisc in TR. unfold abortOvlpState in CS.
-  unfold abortOvlp in CS.
-  listener_outProc_out_not_bisim_fwd. exand_flat. invert_steps.
-  repeat invert_trans.
+  intros CS LS TR. unfold abortOvlpState, abortOvlp in CS.
+  destruct (bisim_disc_match _ _ _ _ CS TR) as [q TQ]. invert_disc_prefixes.
   match goal with [H : evalExpLists [] _ |- _] => inversion H end.
   reflexivity.
 Qed.
@@ -547,111 +516,6 @@ Theorem ovWait_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t x y : Time) :
   /\ y = period m /\ a = (chanOutProc ;! [baseMode m, basePosition l]).
   backtrack_weed p. Qed.
 
-(* begin helpers for ovReady_prev *)
-(** Output-prefix congruence for bisimilarity. *)
-Lemma ovReady_prev_out_ctx c es W1 W2 :
-  W1 ~p~ W2 -> outPrefix c es W1 ~p~ outPrefix c es W2.
-Proof.
-  revert c es W1 W2. cofix CIH. intros c es W1 W2 B. constructor.
-  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst. exists W2. split; [ | exact B].
-      apply stepPDisc. constructor. assumption.
-    + inversion S0; subst. exists (outPrefix c es W2). split.
-      * apply stepPTimed. constructor.
-      * apply CIH. exact B.
-  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst. exists W1. split; [ | exact B].
-      apply stepPDisc. constructor. assumption.
-    + inversion S0; subst. exists (outPrefix c es W1). split.
-      * apply stepPTimed. constructor.
-      * apply CIH. exact B.
-Qed.
-
-(** Input-prefix congruence for bisimilarity. *)
-Lemma ovReady_prev_in_ctx c vs P Q :
-  (forall l1, length l1 = length vs ->
-    subProcTerm (listsToSub vs (listBaselistExp l1)) P ~p~
-    subProcTerm (listsToSub vs (listBaselistExp l1)) Q) ->
-  inPrefix c vs P ~p~ inPrefix c vs Q.
-Proof.
-  revert c vs P Q. cofix CIH. intros c vs P Q B. constructor.
-  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst. eexists. split.
-      * apply stepPDisc. constructor. eassumption.
-      * apply B. assumption.
-    + inversion S0; subst. exists (inPrefix c vs Q). split.
-      * apply stepPTimed. constructor.
-      * apply CIH. exact B.
-  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst. eexists. split.
-      * apply stepPDisc. constructor. eassumption.
-      * apply B. assumption.
-    + inversion S0; subst. exists (inPrefix c vs P). split.
-      * apply stepPTimed. constructor.
-      * apply CIH. exact B.
-Qed.
-(** Delay-prefix congruence for bisimilarity. *)
-Lemma ovReady_prev_del_ctx e P Q :
-  P ~p~ Q -> del e P ~p~ del e Q.
-Proof.
-  revert e P Q. cofix CIH. intros e P Q B.
-  destruct B as [B1 B2]. constructor.
-  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst.
-      match goal with H : P -PA- _ -PA> _ |- _ =>
-        apply stepPDisc in H; apply B1 in H; destruct H as [q' [Sq Bq]] end. inversion Sq; subst.
-      exists q'. split; [ | exact Bq].
-      apply stepPDisc. apply stepDpTimeOut; assumption.
-    + inversion S0; subst.
-      * match goal with H : P -PD- _ -PD> _ |- _ =>
-          apply stepPTimed in H; apply B1 in H; destruct H as [q' [Sq Bq]] end. inversion Sq; subst.
-        exists q'. split; [ | exact Bq].
-        apply stepPTimed. apply stepTpDelAdd; assumption.
-      * eexists. split.
-        -- apply stepPTimed. eapply stepTpDelSub. eassumption.
-        -- apply CIH. constructor; assumption.
-      * exists (del e Q). split.
-        -- apply stepPTimed. apply stepTpDelIll. assumption.
-        -- apply CIH. constructor; assumption.
-  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst.
-      match goal with H : Q -PA- _ -PA> _ |- _ =>
-        apply stepPDisc in H; apply B2 in H; destruct H as [p' [Sp Bp]] end. inversion Sp; subst.
-      exists p'. split; [ | exact Bp].
-      apply stepPDisc. apply stepDpTimeOut; assumption.
-    + inversion S0; subst.
-      * match goal with H : Q -PD- _ -PD> _ |- _ =>
-          apply stepPTimed in H; apply B2 in H; destruct H as [p' [Sp Bp]] end. inversion Sp; subst.
-        exists p'. split; [ | exact Bp].
-        apply stepPTimed. apply stepTpDelAdd; assumption.
-      * eexists. split.
-        -- apply stepPTimed. eapply stepTpDelSub. eassumption.
-        -- apply CIH. constructor; assumption.
-      * exists (del e P). split.
-        -- apply stepPTimed. apply stepTpDelIll. assumption.
-        -- apply CIH. constructor; assumption.
-Qed.
-
-(** A named process is bisimilar to its unfolding. *)
-Lemma ovReady_prev_app_unf n vs body es :
-  def n = (vs, body) -> app n es ~p~ subProcTerm (listsToSub vs es) body.
-Proof.
-  intro D. constructor.
-  - intros a p1 S. exists p1. split; [ | apply ComhCoq.lang.ProcEquiv.bisim_refl].
-    inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + inversion S0; subst. rewrite D in *.
-      match goal with H : (vs, body) = _ |- _ => inversion H; subst end.
-      apply stepPDisc. assumption.
-    + inversion S0; subst. rewrite D in *.
-      match goal with H : (vs, body) = _ |- _ => inversion H; subst end.
-      apply stepPTimed. assumption.
-  - intros a q1 S. exists q1. split; [ | apply ComhCoq.lang.ProcEquiv.bisim_refl].
-    inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
-    + apply stepPDisc. eapply stepDpApp; eassumption.
-    + apply stepPTimed. eapply stepTpApp; eassumption.
-Qed.
-(* end helpers *)
-
 Theorem ovReady_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t : Time) (l : Position) :
   p -PA- a -PA> p' -> overlapState p -> ovReadyState m t l p' ->
   exists x, ovWaitState m t x zeroTime p.
@@ -662,33 +526,23 @@ Proof.
   match goal with [H : context [evalExpFun (eBase (baseTime ?x))] |- _] =>
     destruct x as [xr]; simpl in H; inversion H; subst end.
   match goal with [B : chanOutProc $< ?es >$ ! ?W ~p~ ?R |- _] =>
-    let T0 := fresh "T" in
-    assert (chanOutProc $< es >$ ! W -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> W) as T0
+    assert (T0 : chanOutProc $< es >$ ! W -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> W)
       by (repeat constructor);
-    apply stepPDisc in T0; let F1 := fresh "F" in let F2 := fresh "F" in
-    destruct B as [F1 F2]; apply F1 in T0; destruct T0 as [q [TQ BQ]]
+    destruct (bisim_step_disc _ _ _ _ B T0) as [q [TQ BQ]]; clear T0
   end.
-  inversion TQ; subst. clear TQ.
-  match goal with [H : subProcTerm _ _ -PA- _ -PA> _ |- _] => clean_proc_hyp H end.
-  invert_app_trans. repeat invert_trans.
+  clean_proc_hyp TQ. invert_app_trans. repeat invert_trans.
   match goal with [H : evalExpLists _ _ |- _] =>
     let E1 := fresh in let E2 := fresh in
     inversion H as [ | ? ? ? ? E1 E2]; subst; inversion E1; subst end.
   exists x. unfold ovWaitState in *.
-  eapply ComhCoq.lang.ProcEquiv.bisim_trans; [exact H0 | ].
-  unfold ovWait.
-  repeat apply ComhCoq.lang.ProcEquiv.choice_bisim_context;
-    try apply ComhCoq.lang.ProcEquiv.bisim_refl.
-  apply ovReady_prev_del_ctx. apply ovReady_prev_in_ctx.
+  eapply bisim_trans; [exact H0 | ]. unfold ovWait.
+  repeat apply choice_bisim_context; try apply bisim_refl.
+  apply del_bisim_context. apply inPrefix_bisim_context.
   intros l2 Len. destruct l2 as [ | b [ | b' l2]]; simpl in Len; try discriminate.
   clean_proc.
-  eapply ComhCoq.lang.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
-  apply ComhCoq.lang.ProcEquiv.bisim_symm.
-  eapply ComhCoq.lang.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
-  apply ComhCoq.lang.ProcEquiv.bisim_symm.
-  clean_proc.
-  apply ovReady_prev_out_ctx.
-  apply ComhCoq.lang.ProcEquiv.bisim_symm. exact BQ.
+  eapply bisim_trans; [apply app_bisim_def; reflexivity | ].
+  eapply bisim_trans; [ | apply bisim_symm, app_bisim_def; reflexivity].
+  clean_proc. apply outPrefix_bisim_context. apply bisim_symm. exact BQ.
 Qed.
 
 Theorem switchBc_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) :
@@ -701,12 +555,10 @@ Proof.
   match goal with [H : context [evalExpFun (eBase (baseTime ?x))] |- _] =>
     destruct x as [xr]; simpl in H; inversion H; subst end.
   match goal with [B : ?X ~p~ switchBcN $( _ )$ |- _] =>
-    let T0 := fresh "T" in let q := fresh "q" in
-    assert (exists q, X -PA- chanWake ;! [baseMode m] -PA> q) as [q T0]
+    assert (T0 : exists q, X -PA- chanWake ;! [baseMode m] -PA> q)
       by (eexists; repeat constructor);
-    apply stepPDisc in T0; let F1 := fresh "F" in let F2 := fresh "F" in
-    inversion B as [F1 F2]; apply F1 in T0 end.
-  exand_flat. invert_steps. invert_app_trans. repeat invert_trans.
+    destruct T0 as [q T0]; destruct (bisim_disc_match _ _ _ _ B T0) as [q' T1]; clear T0 end.
+  invert_app_trans. repeat invert_trans.
   match goal with [H : evalExpLists [_] [_] |- _] =>
     let E1 := fresh in let E2 := fresh in
     inversion H as [ | ? ? ? ? E1 E2]; subst; inversion E1; subst end.
@@ -788,27 +640,12 @@ work, or if not I'm sure there's a tactic for this. The main work anyway is
 inversions and eliminations of contradictory cases.*)
 
 (* begin helpers for currOK_next *)
-(** An application process is bisimilar to its (substituted) definition body. *)
-Lemma currOK_next_app_bisim n l :
-  n $( l )$ ~p~ subProcTerm (listsToSub (fst (def n)) l) (snd (def n)).
-Proof.
-  constructor; intros a q T.
-  - exists q. split; [ | apply bisim_refl]. inversion T as [a' q' D | d q' D]; subst.
-    + inversion D; subst. constructor. match goal with [E : def n = _ |- _] =>
-        rewrite E end. simpl. assumption.
-    + inversion D; subst. constructor. match goal with [E : def n = _ |- _] =>
-        rewrite E end. simpl. assumption.
-  - exists q. split; [ | apply bisim_refl]. inversion T as [a' q' D | d q' D]; subst.
-    + constructor. apply stepDpApp_alt. assumption.
-    + constructor. remember (def n) as dn. destruct dn as [l1 b].
-      eapply stepTpApp. symmetry. eassumption. assumption.
-Qed.
 (** Rewrites a goal [app N args ~p~ T] into [body[args/vars] ~p~ T], with the
 substitution computed away. *)
 Ltac currOK_next_unfold_app :=
-  eapply bisim_trans; [apply currOK_next_app_bisim | ];
-  cbn [def protocolDefs protocolDef fst snd listsToSub liftVarList liftExpList subProcTerm subExp subBoolExp
-    listSub map liftNameProc listBaselistExp
+  eapply bisim_trans; [apply app_bisim | ];
+  cbn [unfoldApp def protocolDefs protocolDef fst snd listsToSub liftVarList liftExpList subProcTerm
+    subExp subBoolExp listSub map liftNameProc listBaselistExp
     bcWait sleeping bcReady dormant init ovWait ovReady switchBc switchCurr
     switchListen tfsStart tfsNext tfsCurr tfsBc tfsListen ovAbort listening
     checkRange rangeBad currEq badOvlp currOK nextEq abortOvlp gotMsg gotRange
@@ -816,17 +653,16 @@ Ltac currOK_next_unfold_app :=
   remove_updates.
 
 (** Closes a goal [listeningN $( [] )$ ~p~ listening]. *)
-Ltac currOK_next_listening_app :=
-  eapply bisim_trans; [apply currOK_next_app_bisim | ];
-  cbn [def protocolDefs protocolDef fst snd listsToSub]; rewrite subProc_id_eq; apply bisim_refl.
+Ltac currOK_next_listening_app := apply app_bisim_nil; reflexivity.
 
 (** Pre-processing for forward tracking: from [TR : p -PA- a -PA> p'] and a simple
 state predicate [p ~p~ X] in the context, generates all transitions of [X]
 and leaves the goal with [p' ~p~ D] for each derivative [D]. *)
 Ltac currOK_next_fwd_pre :=
-  match goal with [TR : _ -PA- _ -PA> _ |- _] => apply stepPDisc in TR end;
-  listener_outProc_out_not_bisim_fwd; exand_flat; invert_steps;
-  repeat invert_trans;
+  match goal with [S : ?p ~p~ _, TR : ?p -PA- _ -PA> _ |- _] =>
+    let q := fresh "q" in let TQ := fresh "TQ" in let B := fresh "B" in
+    destruct (bisim_step_disc _ _ _ _ S TR) as [q [TQ B]] end;
+  invert_disc_prefixes;
   try match goal with [H : length ?l = length _ |- _] =>
     destruct l as [ | ?b [ | ?b' ?l]]; simpl in H; try discriminate H end;
   cbn [listsToSub liftVarList liftExpList listBaselistExp map subProcTerm listSub
@@ -901,29 +737,6 @@ In general, the results are of the form "If some conditional state predicate S
 is true, and the condition is true (say), then the state predicate S' corresponding
 to the true branch of S is true"*)
 
-(* begin helpers for currEq_cond_true *)
-(** Unfolding an application process yields a bisimilar process. *)
-Lemma currEq_cond_true_app n l1 l2 p q :
-  def n = (l1, p) -> subProcTerm (listsToSub l1 l2) p = q -> app n l2 ~p~ q.
-Proof.
-  intros D E. subst q. constructor; intros a p' S.
-  - exists p'. split; [ | apply bisim_refl].
-    inversion S; subst.
-    + match goal with H : app n l2 -PA- _ -PA> _ |- _ => inversion H; subst end.
-      rewrite D in *.
-      match goal with H : (_, _) = (_, _) |- _ => injection H; intros; subst end.
-      apply stepPDisc; assumption.
-    + match goal with H : app n l2 -PD- _ -PD> _ |- _ => inversion H; subst end.
-      rewrite D in *.
-      match goal with H : (_, _) = (_, _) |- _ => injection H; intros; subst end.
-      apply stepPTimed; assumption.
-  - exists p'. split; [ | apply bisim_refl].
-    inversion S; subst.
-    + apply stepPDisc. eapply stepDpApp; eassumption.
-    + apply stepPTimed. eapply stepTpApp; eassumption.
-Qed.
-(* end helpers *)
-
 Lemma currEq_cond_true m m'' p :
   m = m'' -> currEqState m m'' p -> badOvlpState p.
 Proof.
@@ -932,7 +745,7 @@ Proof.
     by (eapply bevalEqualTrue; apply evalBase).
   eapply bisim_trans. apply S. unfold currEq.
   eapply bisim_trans. apply (if_then_bisim_true _ _ _ B).
-  eapply currEq_cond_true_app; reflexivity.
+  apply app_bisim_nil; reflexivity.
 Qed.
 
 Lemma currEq_cond_false m m'' p :
@@ -944,7 +757,7 @@ Proof.
     intro E. inversion E. contradiction. }
   eapply bisim_trans. apply S. unfold currEq.
   eapply bisim_trans. apply (if_then_bisim_false _ _ _ B).
-  eapply currEq_cond_true_app. reflexivity. clean_proc. reflexivity.
+  eapply bisim_trans; [apply app_bisim_def; reflexivity | ]. clean_proc. apply bisim_refl.
 Qed.
 
 Lemma nextEq_cond_true m' m'' p :
@@ -955,7 +768,7 @@ Proof.
     by (eapply bevalEqualTrue; apply evalBase).
   eapply bisim_trans. apply S. unfold nextEq.
   eapply bisim_trans. apply (if_then_bisim_true _ _ _ B).
-  eapply currEq_cond_true_app; reflexivity.
+  apply app_bisim_nil; reflexivity.
 Qed.
 
 Lemma nextEq_cond_false m' m'' p :
@@ -967,7 +780,7 @@ Proof.
     intro E. inversion E. contradiction. }
   eapply bisim_trans. apply S. unfold nextEq.
   eapply bisim_trans. apply (if_then_bisim_false _ _ _ B).
-  eapply currEq_cond_true_app. reflexivity. apply subProc_id_eq.
+  apply app_bisim_nil; reflexivity.
 Qed.
 
 Lemma currPincCheck_cond_true m m'' (r : Distance) p :
@@ -981,7 +794,7 @@ Proof.
   eapply bisim_trans. apply S. unfold currPincCheck.
   eapply bisim_trans. apply choice_bisim_symm.
   eapply bisim_trans. apply (if_then_bisim_true _ _ _ B).
-  eapply currEq_cond_true_app; reflexivity.
+  apply app_bisim_nil; reflexivity.
 Qed.
 
 Lemma currPincCheck_cond_false m m'' (r : Distance) p :
@@ -997,7 +810,7 @@ Proof.
   eapply bisim_trans. apply S. unfold currPincCheck.
   eapply bisim_trans. apply choice_bisim_symm.
   eapply bisim_trans. apply (if_then_bisim_false _ _ _ B).
-  eapply currEq_cond_true_app. reflexivity. clean_proc. reflexivity.
+  eapply bisim_trans; [apply app_bisim_def; reflexivity | ]. clean_proc. apply bisim_refl.
 Qed.
 
 Lemma nextPincCheck_cond_true m m'' (r : Distance) p :
@@ -1011,30 +824,8 @@ Proof.
   eapply bisim_trans. apply S. unfold nextPincCheck.
   eapply bisim_trans. apply choice_bisim_symm.
   eapply bisim_trans. apply (if_then_bisim_true _ _ _ B).
-  eapply currEq_cond_true_app; reflexivity.
+  apply app_bisim_nil; reflexivity.
 Qed.
-
-(* begin helpers for nextPincCheck_cond_false *)
-(** An application process is bisimilar to its (substituted) body. *)
-Lemma nextPincCheck_cond_false_app n l1 l2 p :
-  def n = (l1, p) -> app n l2 ~p~ subProcTerm (listsToSub l1 l2) p.
-Proof.
-  intros D. constructor.
-  - intros a x S. exists x. split; [ | apply bisim_refl].
-    inversion S; subst.
-    + apply stepPDisc. match goal with [S0 : app _ _ -PA- _ -PA> _ |- _] =>
-        inversion S0; subst end.
-      match goal with [D0 : def n = _ |- _] => rewrite D in D0;
-        inversion D0; subst end. assumption.
-    + apply stepPTimed. match goal with [S0 : app _ _ -PD- _ -PD> _ |- _] =>
-        inversion S0; subst end.
-      match goal with [D0 : def n = _ |- _] => rewrite D in D0;
-        inversion D0; subst end. assumption.
-  - intros a x S. exists x. split; [ | apply bisim_refl].
-    inversion S; subst; [apply stepPDisc; eapply stepDpApp |
-      apply stepPTimed; eapply stepTpApp]; eassumption.
-Qed.
-(* end helpers *)
 
 Lemma nextPincCheck_cond_false m m'' (r : Distance) p :
   ~possiblyIncompatible m m'' r ->
@@ -1052,9 +843,7 @@ Proof.
     - apply cond_bisim_false. unfold evalBoolExpFunTot. simpl.
       first [exact PB | rewrite PB; reflexivity]. }
   eapply bisim_trans; [apply choice_bism_unit_r | ].
-  eapply bisim_trans;
-    [apply (nextPincCheck_cond_false_app listeningN [] [] listening); reflexivity | ].
-  change (listsToSub [] []) with idSubst. rewrite subProc_id_eq. apply bisim_refl.
+  apply app_bisim_nil; reflexivity.
 Qed.
 
 (****************** Delay Preservation ******************)
@@ -1125,47 +914,28 @@ Lemma ovWait_del_pres m t x y p p' d :
   introz U.
    Admitted. (*#delay-pres*)
 
-(* begin helpers for ovReady_del_pres *)
-(** Generic delay-preservation tactic for state predicates of the form
-  [XState args p := p ~p~ X args] where [X args] is built from prefixes and
-  sums only (so it delays to itself). Expects the goal
-  [XState args p -> p -PD- d -PD> p' -> XState args p']. *)
-Ltac ovReady_del_pres_tac :=
-  let U := fresh "U" in let V := fresh "V" in
-  let U1 := fresh "U" in let U2 := fresh "U" in
-  let q := fresh "q" in let W := fresh "W" in let B := fresh "B" in
-  intros U V; red in U; destruct U as [U1 U2];
-  apply stepPTimed in V; apply U1 in V; destruct V as [q [W B]];
-  clear U1 U2; inversion W; subst;
-  match goal with [H : ?X -PD- _ -PD> q |- _] =>
-    let X' := eval red in X in change X with X' in H end;
-  repeat match goal with
-    | [H : outPrefix _ _ _ -PD- _ -PD> _ |- _] => inversion H; subst; clear H
-    | [H : inPrefix _ _ _ -PD- _ -PD> _ |- _] => inversion H; subst; clear H
-    | [H : sum _ _ -PD- _ -PD> _ |- _] => inversion H; subst; clear H
-    end;
-  exact B.
-(* end helpers *)
-
 Lemma ovReady_del_pres m t l p p' d :
   ovReadyState m t l p -> p -PD- d -PD> p' ->
   ovReadyState m t l p'.
 Proof.
-  ovReady_del_pres_tac.
+  unfold ovReadyState, ovReady. intros.
+  eapply bisim_del_pres; [del_self_tac | eassumption | eassumption].
 Qed.
 
 Lemma switchBc_del_pres m p p' d :
   switchBcState m p -> p -PD- d -PD> p' ->
   switchBcState m p'.
 Proof.
-  ovReady_del_pres_tac.
+  unfold switchBcState, switchBc. intros.
+  eapply bisim_del_pres; [del_self_tac | eassumption | eassumption].
 Qed.
 
 Lemma switchCurr_del_pres p p' d :
   switchCurrState p -> p -PD- d -PD> p' ->
   switchCurrState p'.
 Proof.
-  ovReady_del_pres_tac.
+  unfold switchCurrState, switchCurr. intros.
+  eapply bisim_del_pres; [del_self_tac | eassumption | eassumption].
 Qed.
 
 (*** Compound Predicate Preservation ***)
@@ -1188,18 +958,14 @@ Theorem del_pres_tfsState (p p' : ProcTerm) (d : Delay):
 Proof.
   intros U V. destruct U as [H|m H|H|H|H];
     [apply tfsStaSt | apply (tfsNexSt _ m) | apply tfsCurSt | apply tfsBcSt |
-     apply tfsLisSt]; revert H V; ovReady_del_pres_tac.
+     apply tfsLisSt];
+    unfold tfsStartState, tfsNextState, tfsCurrState, tfsBcState, tfsListenState,
+      tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen in *;
+    (eapply bisim_del_pres; [del_self_tac | eassumption | eassumption]).
 Qed.
 (*Proof: lift delay preservation results in a similar fashion to del_pres_nextSinceState*)
 
 (****************** Linking ******************)
-
-Lemma link_par_triple_discEx (p1 p2 p3 p' : ProcTerm) (a : DiscAct) :
-  p1 $||$ p2 $||$ p3 -PA- a -PA> p' -> exists p1' p2' p3',
-  p' = p1' $||$ p2' $||$ p3'. intros. apply stepPDisc in H.
-  apply parStructPres in H. decompEx2 H p1' q' U. andflat U.
-  apply parStructPres2 in U2. decompEx2 U2 p2' p3' Y. andflat U.
-  rewrite U0. rewrite U1. exists p1' p2' p3'. reflexivity. Qed.
 
 Ltac link_partripdiscex_tac U p1' p2' p3' :=
   match goal with
@@ -1216,13 +982,6 @@ Ltac link_partripdiscex_tac2 p1' p2' p3' :=
   rewrite U1 in H; clear U1
   end.
 
-Lemma link_par_triple_delEx (p1 p2 p3 p' : ProcTerm) (d : Delay) :
-  p1 $||$ p2 $||$ p3 -PD- d -PD> p' -> exists p1' p2' p3',
-  p' = p1' $||$ p2' $||$ p3'. intros. apply stepPTimed in H.
-  apply parStructPres in H. decompEx2 H p1' q' U. andflat U.
-  apply parStructPres2 in U2. decompEx2 U2 p2' p3' Y. andflat U.
-  rewrite U0. rewrite U1. exists p1' p2' p3'. reflexivity. Qed.
-
 Ltac link_partripdelex_tac U p1' p2' p3' :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PD- ?d -PD> ?p' |- _] =>
@@ -1238,38 +997,12 @@ Ltac link_partripdelex_tac2 p1' p2' p3' :=
   rewrite U1 in H; clear U1
   end.
 
-Lemma link_par_triple_out (p1 p2 p3 p1' p2' p3' : ProcTerm)
-  (c : Channel) (v : list BaseType) :
-  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
-  (p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
-  p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
-  p3 -PA- c ;! v -PA> p3' /\ p1 = p1' /\ p2 = p2').
-  introz U. inversion U. left. subst.
-  split; [assumption | ]. split; reflexivity.
-  inversion H2; subst. right. left.
-  split; [assumption | ]. split; reflexivity.
-  right. right. split; [assumption | ]. split; reflexivity.
-  Qed.
-
 Ltac link_partripout_tac U :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?c ;! ?v -PA> ?p1' $||$ ?p2' $||$ ?p3' |- _] =>
   let H1 := fresh in lets H1 : link_par_triple_out H;
   let H2 := fresh in elimOr3 H1 H2; andflat U
   end.
-
-Lemma link_par_triple_in (p1 p2 p3 p1' p2' p3' : ProcTerm)
-  (c : Channel) (v : list BaseType) :
-  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
-  (p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
-  p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
-  p3 -PA- c ;? v -PA> p3' /\ p1 = p1' /\ p2 = p2').
-  introz U. inversion U. left. subst.
-  split; [assumption | ]. split; reflexivity.
-  inversion H2; subst. right. left.
-  split; [assumption | ]. split; reflexivity.
-  right. right. split; [assumption | ]. split; reflexivity.
-  Qed.
 
 Ltac link_partripin_tac U :=
   match goal with
@@ -1279,51 +1012,24 @@ Ltac link_partripin_tac U :=
   end.
 
 (* begin helpers for link_reach_triple_tau *)
-(** Repeatedly inverts discrete transitions whose source is a sum, a prefix,
-  a delay-guard or a conditional, discharging the impossible branches. *)
-Ltac link_reach_triple_tau_inv :=
-  repeat match goal with
-   | [H : sum _ _ -PA- _ -PA> _ |- _] => inversion H; subst; clear H
-   | [H : outPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion H; subst; clear H
-   | [H : inPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion H; subst; clear H
-   | [H : del _ _ -PA- _ -PA> _ |- _] => inversion H; subst; clear H
-   | [H : ifThen _ _ -PA- _ -PA> _ |- _] => inversion H; subst; clear H
-  end.
-
-(** Given [S : XState args p] (i.e. [p ~p~ X args]) and [T : p -PA- a -PA> p'],
-  transfers [T] to the specification process [X args], unfolds it and inverts
-  the transition. Closes the goal when [X args] cannot perform [a]. *)
-Ltac link_reach_triple_tau_noact S T :=
-  let q := fresh "q" in let T' := fresh "T" in
-  red in S; destruct (bisim_disc_match _ _ _ _ S T) as [q T'];
-  match type of T' with ?X -PA- _ -PA> _ =>
-    let X' := eval red in X in change X with X' in T' end;
-  link_reach_triple_tau_inv.
-
 Lemma link_reach_triple_tau_bc p p' :
   broadcastState p -> p -PA- tauAct -PA> p' -> False.
 Proof.
-  intros S T. destruct S as [m x S | S | m l S]; link_reach_triple_tau_noact S T.
+  intros S T. inversion S; prot_outProc_in_not_contra.
 Qed.
 
 Lemma link_reach_triple_tau_ov p p' :
   overlapState p -> p -PA- tauAct -PA> p' -> False.
 Proof.
-  intros S T. destruct S as [S | m t x y S]; link_reach_triple_tau_noact S T.
+  intros S T. inversion S; prot_outProc_in_not_contra.
 Qed.
 
 Lemma link_reach_triple_tau_ls p p' :
   listenerState p -> p -PA- tauAct -PA> p' -> False.
 Proof.
-  intros S T. destruct S as [S | m S | m S | S | S | m r S];
-    link_reach_triple_tau_noact S T.
+  intros S T. inversion S; prot_outProc_in_not_contra.
 Qed.
 
-Ltac link_reach_triple_tau_pick :=
-  let tac := split; [eassumption | split; [eassumption | reflexivity]] in
-  first [ left; tac | right; left; tac | right; right; left; tac
-        | right; right; right; left; tac | right; right; right; right; left; tac
-        | right; right; right; right; right; tac ].
 (* end helpers *)
 
 Lemma link_reach_triple_tau (p1 p2 p3 p1' p2' p3' : ProcTerm) :
@@ -1336,13 +1042,12 @@ Lemma link_reach_triple_tau (p1 p2 p3 p1' p2' p3' : ProcTerm) :
   (p2 -PA- c ;! v -PA> p2' /\ p3 -PA- c ;? v -PA> p3' /\ p1 = p1') \/
   (p2 -PA- c ;? v -PA> p2' /\ p3 -PA- c ;! v -PA> p3' /\ p1 = p1').
 Proof.
-  intros T P. inversion P; subst. clear P.
-  invertClear T; subst;
-    try (match goal with [H : _ $||$ _ -PA- _ -PA> _ |- _] => invertClear H; subst end);
-    try solve [exfalso; first [eapply link_reach_triple_tau_bc; eassumption |
-      eapply link_reach_triple_tau_ov; eassumption |
-      eapply link_reach_triple_tau_ls; eassumption]];
-    do 2 eexists; link_reach_triple_tau_pick.
+  intros T P. inversion P as [? ? ? BS OS LS]; subst.
+  apply parTriple_disc_inv in T.
+  destruct T as [x1 [x2 [x3 [E [[T _] | [[T _] | [[T _] | [_ C]]]]]]]];
+    injection E as ? ? ?; subst;
+    [destruct (link_reach_triple_tau_bc _ _ BS T) | destruct (link_reach_triple_tau_ov _ _ OS T) |
+     destruct (link_reach_triple_tau_ls _ _ LS T) | exact C].
 Qed.
 (**Prove more general result including taus and then eliminate the taus by anti-activation
   on each broadcast, listener and overlap process?
@@ -1359,16 +1064,6 @@ Ltac link_partriptau_tac c v U :=
   let Q1 := fresh in decompEx2 H1 c v Q1;
   let H2 := fresh in elimOr6 Q1 H2; andflat U
   end.
-
-Lemma link_par_triple_del (p1 p2 p3 p1' p2' p3' : ProcTerm)
-  (d : Delay) :
-  p1 $||$ p2 $||$ p3 -PD- d -PD> p1' $||$ p2' $||$ p3' ->
-  (p1 -PD- d -PD> p1' /\ p2 -PD- d-PD> p2' /\ p3 -PD- d -PD> p3').
-  introz U. inversion U. inversion H5.
-  repeat (split; [assumption | ]). assumption.
-  Qed.
-
-(**Proof: Immediate from semantics.*)
 
 Ltac link_partripdel_tac U :=
   match goal with
@@ -1412,78 +1107,21 @@ Ltac reachprot U :=
 followed by activation or anti-activation. Or could be followed by some
 sort of tracking tactic e.g. gotMsg_state.*)
 
-(* begin helpers for bc_outProc_out *)
-(** An application process is bisimilar to its (substituted) body. *)
-Lemma bc_outProc_out_app n l1 l2 p :
-  def n = (l1, p) -> app n l2 ~p~ subProcTerm (listsToSub l1 l2) p.
-Proof.
-  intros D. constructor.
-  - intros a x S. exists x. split; [ | apply bisim_refl].
-    inversion S; subst.
-    + apply stepPDisc. match goal with [S0 : app _ _ -PA- _ -PA> _ |- _] =>
-        inversion S0; subst end.
-      match goal with [D0 : def n = _ |- _] => rewrite D in D0;
-        inversion D0; subst end. assumption.
-    + apply stepPTimed. match goal with [S0 : app _ _ -PD- _ -PD> _ |- _] =>
-        inversion S0; subst end.
-      match goal with [D0 : def n = _ |- _] => rewrite D in D0;
-        inversion D0; subst end. assumption.
-  - intros a x S. exists x. split; [ | apply bisim_refl].
-    inversion S; subst; [apply stepPDisc; eapply stepDpApp |
-      apply stepPTimed; eapply stepTpApp]; eassumption.
-Qed.
-
-(** A delay-guarded process only depends on the value of its guard. *)
-Lemma bc_outProc_out_del_sim e1 e2 P t a x :
-  evalExpFunTime e1 = Some t -> evalExpFunTime e2 = Some t ->
-  del e1 P -P- a -P> x -> del e2 P -P- a -P> x.
-Proof.
-  intros E1 E2 S. inversion S; subst.
-  - apply stepPDisc. match goal with [S0 : del _ _ -PA- _ -PA> _ |- _] =>
-      inversion S0; subst end.
-    apply stepDpTimeOut; [assumption | congruence].
-  - apply stepPTimed. match goal with [S0 : del _ _ -PD- _ -PD> _ |- _] =>
-      inversion S0; subst end.
-    + apply stepTpDelAdd; [assumption | congruence].
-    + apply stepTpDelSub. congruence.
-    + congruence.
-Qed.
-
-Lemma bc_outProc_out_del_bisim e1 e2 P t :
-  evalExpFunTime e1 = Some t -> evalExpFunTime e2 = Some t ->
-  del e1 P ~p~ del e2 P.
-Proof.
-  intros E1 E2. constructor.
-  - intros a x S. exists x. split;
-      [apply (bc_outProc_out_del_sim e1 e2 P t); assumption | apply bisim_refl].
-  - intros a x S. exists x. split;
-      [apply (bc_outProc_out_del_sim e2 e1 P t); assumption | apply bisim_refl].
-Qed.
-(* end helpers *)
-
 Theorem bc_outProc_out (p p' : ProcTerm) (m : Mode) (l : Position) : 
   p -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> p' -> broadcastState p ->
   bcReadyState m l p /\ bcWaitState m (period m) p'.
 Proof.
-  intros T B. destruct B as [m0 x S | S | m0 l0 S];
-    [exfalso; link_reach_triple_tau_noact S T | exfalso; link_reach_triple_tau_noact S T | ].
-  pose proof S as S0. red in S. destruct S as [S1 S2].
-  apply stepPDisc in T. apply S1 in T. destruct T as [q [T1 B1]].
-  inversion T1; subst.
-  match goal with [H : bcReady _ _ -PA- _ -PA> _ |- _] => unfold bcReady in H;
-    inversion H; subst end.
+  intros T B. inversion B as [? ? S | S | m0 l0 S]; try solve [prot_outProc_in_not_contra].
+  destruct (bisim_step_disc _ _ _ _ S T) as [q [TQ BQ]]. unfold bcReady in TQ.
+  invert_disc_prefixes.
   repeat match goal with [H : evalExpLists (_ :: _) _ |- _] => inversion H; subst; clear H end.
   repeat match goal with [H : evalExp (eBase _) _ |- _] => inversion H; subst; clear H end.
-  split; [exact S0 | ].
-  red. eapply bisim_trans; [exact B1 | ].
-  eapply bisim_trans;
-    [apply (bc_outProc_out_app bcWaitN [vM, vX] _ (bcWait (eVar vM) (eVar vX)));
-     reflexivity | ].
+  split; [assumption | ]. red. eapply bisim_trans; [exact BQ | ].
+  eapply bisim_trans; [apply app_bisim_def; reflexivity | ].
   unfold bcWait. simpl. clean_proc.
   apply choice_bisim_context; [ | apply bisim_refl].
   apply choice_bisim_context; [apply bisim_refl | ].
-  apply (bc_outProc_out_del_bisim _ _ _ (period m));
-    unfold evalExpFunTime; simpl; destruct (period m); reflexivity.
+  apply del_bisim_guard. unfold evalExpFunTime; simpl; destruct (period m); reflexivity.
 Qed.
 (**Proof: Brute force try all the other possible broadcast states (auto tactic) and this is the only one that matches*)
 
@@ -1492,55 +1130,11 @@ Theorem ovlp_outProc_out (p p' : ProcTerm) (m : Mode) (l : Position) :
   exists t f, ovReadyState m t l p /\ 
   ovWaitState m (minusTime t (period m) f) (minusTime t (period m) f) (period m) p'.
 Proof.
-  intros T O. exfalso. destruct O as [S | m0 t0 x0 y0 S]; link_reach_triple_tau_noact S T.
+  intros T O. exfalso. inversion O; prot_outProc_in_not_contra.
 Qed.
 (**Proof: Brute force. Analogous to bc_outProc_out but with overlap states*)
 
 (**A protocol process cannot input on the channel outProc.*)
-(* begin helpers for prot_outProc_in_not *)
-(** Repeatedly inverts every discrete transition hypothesis whose source is a
-    syntactic sum, prefix, timeout, conditional or nil. Used for brute-force
-    anti-activation on the bodies of the protocol component processes. *)
-Ltac prot_outProc_in_not_inv :=
-  repeat match goal with
-  | [V : (_ $+$ _) -PA- _ -PA> _ |- _] => inversion V; clear V; subst
-  | [V : inPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion V; clear V; subst
-  | [V : outPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion V; clear V; subst
-  | [V : del _ _ -PA- _ -PA> _ |- _] => inversion V; clear V; subst
-  | [V : ifThen _ _ -PA- _ -PA> _ |- _] => inversion V; clear V; subst
-  | [V : nilProc -PA- _ -PA> _ |- _] => inversion V
-  end.
-
-(** Unfolds the simple state predicates into bisimilarities. *)
-Ltac prot_outProc_in_not_unfold :=
-  unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
-    ovReadyState, switchBcState, switchCurrState, switchListenState,
-    tfsStartState, tfsNextState, tfsCurrState, tfsBcState, tfsListenState,
-    initState, ovAbortState, listeningState, rangeBadState, currOKState,
-    abortOvlpState, badOvlpState, currCompState, pausedState, gotMsgState,
-    gotRangeState, currEqState, nextEqState, currPincCheckState,
-    nextPincCheckState in *.
-
-(** Unfolds the bodies of the protocol component processes. *)
-Ltac prot_outProc_in_not_body :=
-  unfold bcWait, sleeping, bcReady, dormant, init, ovWait, ovReady, switchBc,
-    switchCurr, switchListen, tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen,
-    ovAbort, listening, checkRange, rangeBad, currEq, badOvlp, currOK, nextEq,
-    abortOvlp, gotMsg, gotRange, currPincCheck, currComp, nextPincCheck,
-    paused in *.
-
-(** Anti-activation: given p ~p~ q and p -a-> p', transfer the transition to
-    the concrete body q and refute it by brute-force inversion. *)
-Ltac prot_outProc_in_not_contra :=
-  prot_outProc_in_not_unfold;
-  match goal with
-  | [B : ?p ~p~ ?q, TR : ?p -PA- ?a -PA> ?p' |- _] =>
-    let q' := fresh "q'" in let TR' := fresh "TR'" in
-    destruct (bisim_disc_match _ _ _ _ B TR) as [q' TR'];
-    prot_outProc_in_not_body; solve [prot_outProc_in_not_inv]
-  end.
-(* end helpers *)
-
 Theorem prot_outProc_in_not (p p' : ProcTerm) (v : list BaseType) : 
   p -PA- chanOutProc ;? v -PA> p' -> protocolState p -> False.
 Proof.
@@ -1598,46 +1192,6 @@ Proof.
 Qed.
 
 (**The two cases where the overlap component can output on mCurr.*)
-(* begin helpers for ovlp_abort_in *)
-(** A bisimilarity transfers a discrete transition together with the
-    bisimilarity of the derivatives. *)
-Lemma ovlp_abort_in_bisim_step p q a p' : p ~p~ q -> p -PA- a -PA> p' ->
-  exists q', q -PA- a -PA> q' /\ p' ~p~ q'.
-Proof.
-  intros B TR. inversion B as [F _].
-  destruct (F _ _ (stepPDisc _ _ _ TR)) as [q' [TQ BQ]].
-  exists q'. split; [ | exact BQ]. inversion TQ; subst; assumption.
-Qed.
-
-(** A process name applied to arguments is bisimilar to its unfolded body. *)
-Lemma ovlp_abort_in_appbisim n l2 :
-  app n l2 ~p~ subProcTerm (listsToSub (fst (def n)) l2) (snd (def n)).
-Proof.
-  constructor.
-  - intros a p' H. exists p'. split; [ | apply bisim_refl].
-    inversion H; subst.
-    + apply stepPDisc.
-      match goal with [V : stepDiscProc (app n l2) _ _ |- _] =>
-        inversion V; subst end.
-      match goal with [E : def n = _ |- _] => rewrite E end. assumption.
-    + apply stepPTimed.
-      match goal with [V : stepTimedProc (app n l2) _ _ |- _] =>
-        inversion V; subst end.
-      match goal with [E : def n = _ |- _] => rewrite E end. assumption.
-  - intros a q' H. exists q'. split; [ | apply bisim_refl].
-    inversion H; subst.
-    + apply stepPDisc. eapply stepDpApp; [apply surjective_pairing | eassumption].
-    + apply stepPTimed. eapply stepTpApp; [apply surjective_pairing | eassumption].
-Qed.
-
-(** Specialisation to parameterless process names. *)
-Lemma ovlp_abort_in_appbisim0 n p : def n = ([], p) -> app n [] ~p~ p.
-Proof.
-  intro D. eapply bisim_trans. apply (ovlp_abort_in_appbisim n []).
-  rewrite D. cbn [fst snd listsToSub]. rewrite subProc_id_eq. apply bisim_refl.
-Qed.
-(* end helpers *)
-
 Theorem ovlp_abort_in (p p' : ProcTerm) (m : Mode) :
   p -PA- chanAbort*? -PA> p' -> overlapState p ->
   (dormantState p /\ dormantState p') \/
@@ -1645,17 +1199,11 @@ Theorem ovlp_abort_in (p p' : ProcTerm) (m : Mode) :
   (tfsCurrState p /\ tfsCurrState p') \/
   (tfsListenState p /\ tfsListenState p').
 Proof.
-  intros TR OS. inversion OS as [B | m0 t x y B]; prot_outProc_in_not_unfold.
-  - left. split; [assumption | ].
-    destruct (ovlp_abort_in_bisim_step _ _ _ _ B TR) as [q' [TQ BQ]].
-    unfold dormant in TQ. prot_outProc_in_not_inv.
-    eapply bisim_trans; [exact BQ | ].
-    exact (ovlp_abort_in_appbisim0 dormantN dormant eq_refl).
-  - right. left.
-    destruct (ovlp_abort_in_bisim_step _ _ _ _ B TR) as [q' [TQ BQ]].
-    unfold ovWait in TQ. prot_outProc_in_not_inv.
-    eapply bisim_trans; [exact BQ | ].
-    exact (ovlp_abort_in_appbisim0 ovAbortN ovAbort eq_refl).
+  intros TR OS. inversion OS as [B | m0 t x y B]; prot_outProc_in_not_unfold;
+    destruct (bisim_step_disc _ _ _ _ B TR) as [q' [TQ BQ]];
+    [unfold dormant in TQ | unfold ovWait in TQ]; invert_disc_prefixes;
+    [left; split; [assumption | ] | right; left];
+    (eapply bisim_trans; [exact BQ | ]); apply app_bisim_nil; reflexivity.
 Qed.
 (**Proof: Brute force analysis of overlap states and these are the only ones that fit the transition*)
 
@@ -1680,14 +1228,6 @@ Lemma gotMsg_state p p' m l :
 
 (*LOCAL TIDY*)
 
-Lemma link_ent_soft_disc p p' l l' h h' k k' a :
-  [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
-  p = p' \/ exists b, p -PA- b -PA> p'.
-Proof.
-  intro H. inversion H; subst;
-  first [left; reflexivity | right; eexists; eassumption].
-Qed.
-
 (** Destructs any entities into constituent parts, looks for a
 discrete entity transition in the goal, extracts a process transition
 or a process equality from this.*)
@@ -1710,106 +1250,6 @@ Ltac link_partripdiscex_tac_norm :=
   let p1' := fresh "p1'" in let p2' := fresh "p2'" in
   let p3' := fresh "p3'" in
   link_partripdiscex_tac_subst p1' p2' p3'.
-
-(** If a parallel process triple can do an action, then the first component is either
-preserved or it too can do some action.*)
-(* begin helpers for link_par_triple_discW_1 *)
-(** Shared by link_par_triple_discW_1/2/3: invert the triple-parallel step
-(and the inner parallel step, if any), then close each case either by the
-component being preserved or by exhibiting its own transition. *)
-Ltac link_par_triple_discW_1_tac :=
-  let H := fresh in intro H; inversion H; clear H; subst;
-  repeat match goal with
-  [V : parComp _ _ -PA- _ -PA> parComp _ _ |- _] => inversion V; clear V; subst
-  end;
-  first [left; reflexivity | right; eexists; eassumption].
-(* end helpers *)
-
-Lemma link_par_triple_discW_1 p1 p1' p2 p2' p3 p3' a :
-  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
-  p1 = p1' \/ exists a', p1 -PA- a' -PA> p1'.
-Proof.
-  link_par_triple_discW_1_tac.
-Qed.
-(*+*)
-(** If a parallel process triple can do an action, then the second component is either
-preserved or it too can do some action.*)
-Lemma link_par_triple_discW_2 p1 p1' p2 p2' p3 p3' a :
-  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
-  p2 = p2' \/ exists a', p2 -PA- a' -PA> p2'.
-Proof.
-  link_par_triple_discW_1_tac.
-Qed.
-(*+*)
-(** If a parallel process triple can do an action, then the third component is either
-preserved or it too can do some action.*)
-Lemma link_par_triple_discW_3 p1 p1' p2 p2' p3 p3' a :
-  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
-  p3 = p3' \/ exists a', p3 -PA- a' -PA> p3'.
-Proof.
-  link_par_triple_discW_1_tac.
-Qed.
-
-(* begin helpers for link_par_triple_out_neq1 *)
-(** Shared by link_par_triple_{out,in}_neq{1,2,3}: split the triple-parallel
-input/output step (lemma L = link_par_triple_out / link_par_triple_in) into
-its three cases; the case for the changed component closes the goal, and the
-other two contradict the disequality hypothesis. *)
-Ltac link_par_triple_out_neq1_tac L :=
-  let N := fresh in let H := fresh in let U := fresh in
-  intros N H; lets U : L H;
-  destruct U as [[? [? ?]] | [[? [? ?]] | [? [? ?]]]];
-  first [ solve [split; [assumption | split; assumption]]
-        | solve [exfalso; apply N; assumption] ].
-(* end helpers *)
-
-Lemma link_par_triple_out_neq1 p1 p1' p2 p2' p3 p3' c v :
-  p1 <> p1' ->
-  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
-  p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3'.
-Proof.
-  link_par_triple_out_neq1_tac link_par_triple_out.
-Qed.
-
-Lemma link_par_triple_out_neq2 p1 p1' p2 p2' p3 p3' c v :
-  p2 <> p2' ->
-  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
-  p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3'.
-Proof.
-  link_par_triple_out_neq1_tac link_par_triple_out.
-Qed.
-
-Lemma link_par_triple_out_neq3 p1 p1' p2 p2' p3 p3' c v :
-  p3 <> p3' ->
-  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
-  p3 -PA- c ;! v -PA> p3' /\ p1 = p1' /\ p2 = p2'.
-Proof.
-  link_par_triple_out_neq1_tac link_par_triple_out.
-Qed.
-
-Lemma link_par_triple_in_neq1 p1 p1' p2 p2' p3 p3' c v :
-  p1 <> p1' ->
-  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
-  p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3'.
-Proof.
-  link_par_triple_out_neq1_tac link_par_triple_in.
-Qed.
-
-Lemma link_par_triple_in_neq2 p1 p1' p2 p2' p3 p3' c v :
-  p2 <> p2' ->
-  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
-  p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3'.
-Proof.
-  link_par_triple_out_neq1_tac link_par_triple_in.
-Qed.
-
-Lemma link_par_triple_in_neq3 p1 p1' p2 p2' p3 p3' c v :
-  p3 <> p3' ->
-  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
-  p3 -PA- c ;?v -PA> p3' /\ p1 = p1' /\ p2 = p2'.
-Proof.
-  link_par_triple_out_neq1_tac link_par_triple_in.
-Qed.
 
 Ltac link_partripneq_out_tac :=
   let LPO := fresh "LPO" in
@@ -1838,17 +1278,6 @@ Ltac link_partripneq_in_tac :=
 Ltac link_partripneq_tac := first [link_partripneq_in_tac | link_partripneq_out_tac].
 
 (* begin helpers for ovlp_abort_in_notNextSince *)
-(** If p is bisimilar to both q and r, then any discrete action of q can be
-matched by r. *)
-Lemma ovlp_abort_in_notNextSince_aux p q r a q' :
-  p ~p~ q -> p ~p~ r -> q -PA- a -PA> q' -> exists r', r -PA- a -PA> r'.
-Proof.
-  intros B1 B2 S. destruct B1 as [_ B1]. destruct B2 as [B2 _].
-  apply stepPDisc in S. apply B1 in S. destruct S as [p' [S _]].
-  apply B2 in S. destruct S as [r' [S _]]. inversion S; subst.
-  eexists; eassumption.
-Qed.
-
 (** Search a sum of prefixes for an enabled input prefix. *)
 Ltac ovlp_abort_in_notNextSince_step :=
   first [ apply stepDpIn; reflexivity
@@ -1871,44 +1300,32 @@ Proof.
   apply stepDpOut. constructor.
 Qed.
 
-(** Brute-force inversion of discrete steps out of unfolded sums of prefixes. *)
-Ltac ovlp_abort_in_notNextSince_inv := repeat match goal with
-  | [W : sum _ _ -PA- _ -PA> _ |- _] => inversion W; clear W; subst
-  | [W : inPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion W; clear W; subst
-  | [W : outPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion W; clear W; subst
-  | [W : del _ _ -PA- _ -PA> _ |- _] => inversion W; clear W; subst
-  end.
-
 Ltac ovlp_abort_in_notNextSince_ns X S' :=
   try unfold ovWaitState in X; try unfold ovReadyState in X;
   try unfold switchBcState in X; try unfold switchCurrState in X;
   try unfold ovWait in S'; try unfold ovReady in S';
   try unfold switchBc in S'; try unfold switchCurr in S';
-  ovlp_abort_in_notNextSince_inv.
+  invert_disc_prefixes.
 (* end helpers *)
 
 Lemma ovlp_abort_in_notNextSince p p' :
   p -PA- chanAbort;? [] -PA> p' -> overlapState p -> ~ nextSinceState p'.
 Proof.
-  intros P O N. apply stepPDisc in P.
-  destruct O as [D | m t x y D]; unfold dormantState, ovWaitState in D;
-  destruct D as [D1 _]; apply D1 in P; destruct P as [q' [Q B]];
-  inversion Q; subst; clear Q.
+  intros P O N.
+  destruct O as [D | m t x y D]; red in D;
+    destruct (bisim_step_disc _ _ _ _ D P) as [q' [Q B]];
+    [unfold dormant in Q | unfold ovWait in Q]; invert_disc_prefixes.
   - (* dormant: the only abort input leads back to dormant, which can
        input on mNext, unlike every nextSince state. *)
-    match goal with [V : dormant -PA- _ -PA> _ |- _] => unfold dormant in V end.
-    ovlp_abort_in_notNextSince_inv. simpl in B.
     destruct N as [m0 t0 x0 y0 X | m0 t0 l0 X | m0 X | m0 X];
     destruct (ovlp_abort_in_notNextSince_dorm m0) as [r S];
-    edestruct (ovlp_abort_in_notNextSince_aux _ _ _ _ _ B X S) as [r' S'];
+    destruct (bisim_disc_match _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ B) X) S) as [r' S'];
     clear S; ovlp_abort_in_notNextSince_ns X S'.
   - (* ovWait: the only abort input leads to ovAbort, which can output on
        mStable, unlike every nextSince state. *)
-    match goal with [V : ovWait _ _ _ _ -PA- _ -PA> _ |- _] => unfold ovWait in V end.
-    ovlp_abort_in_notNextSince_inv. simpl in B.
     destruct N as [m0 t0 x0 y0 X | m0 t0 l0 X | m0 X | m0 X];
     destruct ovlp_abort_in_notNextSince_ovab as [r S];
-    edestruct (ovlp_abort_in_notNextSince_aux _ _ _ _ _ B X S) as [r' S'];
+    destruct (bisim_disc_match _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ B) X) S) as [r' S'];
     clear S; ovlp_abort_in_notNextSince_ns X S'.
 Qed.
 
@@ -1917,17 +1334,9 @@ Lemma listening_abort_contra p :
 Proof.
   intros L A. unfold listeningState, abortOvlpState in *.
   (* abortOvlp can output on abort; so p can, and hence so can listening. *)
-  assert (S : abortOvlp -P- chanAbort *! -P> liftNameProc listeningN).
-  { apply stepPDisc. unfold abortOvlp. apply stepDpOut. constructor. }
-  destruct A as [_ A2]. apply A2 in S. destruct S as [p' [P1 _]].
-  destruct L as [L1 _]. apply L1 in P1. destruct P1 as [q' [Q1 _]].
-  inversion Q1; subst.
-  match goal with [V : listening -PA- _ -PA> _ |- _] => unfold listening in V end.
+  assert (S : abortOvlp -PA- chanAbort *! -PA> liftNameProc listeningN)
+    by (apply stepDpOut; constructor).
+  destruct (bisim_disc_match _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ A) L) S) as [q' Q].
   (* But listening is a sum of input prefixes: no output on abort. *)
-  repeat match goal with
-  | [W : sum _ _ -PA- _ -PA> _ |- _] => inversion W; clear W; subst
-  | [W : inPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion W; clear W; subst
-  end.
+  unfold listening in Q. invert_disc_prefixes.
 Qed.
-
-(*-LOCAL TIDY*)
