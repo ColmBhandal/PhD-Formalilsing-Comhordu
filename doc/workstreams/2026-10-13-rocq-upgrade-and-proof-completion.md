@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Started** | 2026-10-13 |
-| **Status** | 🤖 Phase 5: step 13 in progress |
+| **Status** | 🧑 Phase 5: step 13 in review |
 | **Branch** | One per PR |
 | **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
 | **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
@@ -68,7 +68,7 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
 This phase runs as a loop: pick an item, agree the fix, open a PR, review and merge, repeat. Each PR applies its fix and re-proves what the fix unblocks, including pass 1's held-back and conditional proofs. Any departure from the thesis goes in [`thesis-corrections.md`](../thesis/thesis-corrections.md) in the same PR. From step 16 on, each PR also refactors as it goes: it moves language-generic content into `lang/` wherever it can and simplifies the protocol proofs with it, while the statement of `safety` stays the same. The order below is a suggestion, not a rule: it separates the language from the protocol first, then makes `safety` meaningful as soon as possible.
 
 - [x] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). ✅ 2026-10-14. The listener now reads all 3 notification fields, a [thesis correction](../thesis/thesis-corrections.md#1-the-listener-reads-too-few-fields-from-a-notification). `listening_AN_prot` is proved. `incomingNetNotif_del` gains a length hypothesis. [#2](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/2).
-- [ ] 🤖 **13. Make the language generic.** Agreed with a human on 2026-10-15. The thesis's software language is general, like value-passing CCS, but the code builds the protocol into it: its process names, their definitions, some channels and some expression operators. Make the language take the names and definitions as parameters, and prove its results for any definitions that meet stated conditions, such as guarded recursion (Remark 4.2, p.69). A bridge file plugs in the protocol and proves that it meets them. Then do the same for the channels and expression operators. The statement of `safety` stays the same. Process names and definitions are done in [#3](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/3); the channels and expression operators are next.
+- [x] 🤖 **13. Make the language generic.** ✅ 2026-10-15. The code built the protocol's process names and their definitions into the language. Now the language takes them as parameters, and its results hold for any guarded definitions, a weaker form of Remark 4.2 (p.69) and a [thesis correction](../thesis/thesis-corrections.md#2-patience-needs-guarded-definitions). `ProtocolBridge.v` proves that the protocol's definitions are guarded. The statement of `safety` and its 84 assumptions are unchanged. The protocol-only channels are left for step 27. [#3](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/3).
 - [ ] 🤖 **14. Split `src/` into `lib/`, `model/`, `lang/` and `protocol/`.** Agreed with a human on 2026-10-15. Each folder depends only on the ones listed before it, and gets a README.
   - `lib/`: general tools that know nothing about Comhordú: the tactic libraries, the real-number helpers, and general basics such as time and list helpers.
   - `model/`: the Comhordú model (thesis §3.3, p.41): the model axioms, what is defined from them, and `ModelConsistency.v`.
@@ -91,10 +91,12 @@ Step 12 and steps 16–19 cover every known reason `safety` is vacuous today. Af
 - [ ] 🧑 **24. `Module Type` refactor** of the model axioms (from step 6). It touches 22 files, so it is easier after pass 2.
 - [ ] 🧑 **25. Non-triviality.** Decide whether to prove that, without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
 - [ ] 🧑 **26. Initial interfaces.** Decide whether `initialEnt` should constrain an entity's interface, for example to start empty. Today it allows any contents, which is why step 12 needed a length hypothesis.
+- [ ] 🧑 **27. Protocol-only channels.** Decide whether the 5 channels that only the protocol uses (`chanTrans`, `chanWake`, `chanPause`, `chanUnpause` and `chanBad`) should be supplied by the protocol instead of built into the language. The expression operators stay: they wrap the model's functions, so they belong with the model.
 - [ ] 🧑 _Placeholder: anything else the first pass couldn't decide._
 
 ## Log
 
+- **2026-10-15:** Step 13 done: the language is generic in its process names and definitions, and `safety` still rests on 84 assumptions.
 - **2026-10-15:** Step 14 settled: four folders, adding `lib/` and `model/` to `lang/` and `protocol/`.
 - **2026-10-15:** New step 13: make the language generic before splitting `src/`, because the code builds the protocol into the language. Old steps 13–25 are now 14–26.
 - **2026-10-14:** Thesis added under [`doc/thesis/`](../thesis/README.md), with a corrections file. Step 12 done: `safety` rests on 84 assumptions, down from 85.
