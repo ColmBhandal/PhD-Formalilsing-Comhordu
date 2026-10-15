@@ -236,7 +236,8 @@ Theorem nextSince_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
   (*Then we show that delay preserves this state predicate
   (...del_pres_nextSinceState...).*)
   lets DX : net_del_elim U0 w. decompEx4 DX q' l' h' k' DE.
-  andflat Q. match goal with [PD : _ $||$ _ $||$ _ -PD- _ -PD> _ |- _] => triple_del_inv PD end.
+  andflat Q.
+  match goal with [PD : _ $||$ _ $||$ _ -PD- _ -PD> _ |- _] => triple_del_inv PD end.
   dofirst3 econstructor. eapply del_pres_nextSinceState.
   apply U1. eassumption. apply Q. Qed.
 

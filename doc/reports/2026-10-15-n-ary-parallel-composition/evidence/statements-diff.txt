@@ -1,0 +1,397 @@
+2675,2680c2675,2679
+<          (PDefs : SoftwareLanguage.ProcDefs)
+<          (q q0 q1 : SoftwareLanguage.ProcTerm) (l : StandardResults.Position)
+<          (h : InterfaceLanguage.Interface) (k : ModeStateLanguage.ModeState)
+<          (i : nat) (n n' : Network) (d : GenBasics.Delay),
+<        [|SoftwareLanguage.parComp q (SoftwareLanguage.parComp q0 q1), l, h,
+<        k|] @ i .: n ->
+---
+>          (PDefs : SoftwareLanguage.ProcDefs) (p : SoftwareLanguage.ProcTerm)
+>          (l : StandardResults.Position) (h : InterfaceLanguage.Interface)
+>          (k : ModeStateLanguage.ModeState) (i : nat) 
+>          (n n' : Network) (d : GenBasics.Delay),
+>        [|p, l, h, k|] @ i .: n ->
+2683,2690c2682,2685
+<          (q' q0' q1' : SoftwareLanguage.ProcTerm) 
+<        (l' : StandardResults.Position) (h' : InterfaceLanguage.Interface) 
+<        (k' : ModeStateLanguage.ModeState),
+<          [|SoftwareLanguage.parComp q' (SoftwareLanguage.parComp q0' q1'),
+<          l', h', k'|] @ i .: n' /\
+<          SoftwareLanguage.stepTimedProc q d q' /\
+<          SoftwareLanguage.stepTimedProc q0 d q0' /\
+<          SoftwareLanguage.stepTimedProc q1 d q1' /\
+---
+>          (p' : SoftwareLanguage.ProcTerm) (l' : StandardResults.Position) 
+>        (h' : InterfaceLanguage.Interface) (k' : ModeStateLanguage.ModeState),
+>          [|p', l', h', k'|] @ i .: n' /\
+>          SoftwareLanguage.stepTimedProc p d p' /\
+10339a10335,10342
+> @parAll_bisim_context
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (p : SoftwareLanguage.ProcTerm)
+>          (ps : list SoftwareLanguage.ProcTerm)
+>          (p' : SoftwareLanguage.ProcTerm)
+>          (ps' : list SoftwareLanguage.ProcTerm),
+>        List.Forall2 bisimulation (p :: ps) (p' :: ps') ->
+>        SoftwareLanguage.parAll p ps ~p~ SoftwareLanguage.parAll p' ps'
+14303,14311d14305
+< @par_bisim_triple
+<      : forall (PNames : SoftwareLanguage.ProcNames)
+<          (PDefs : SoftwareLanguage.ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : SoftwareLanguage.ProcTerm),
+<        p1 ~p~ p1' ->
+<        p2 ~p~ p2' ->
+<        p3 ~p~ p3' ->
+<        SoftwareLanguage.parComp p1 (SoftwareLanguage.parComp p2 p3) ~p~
+<        SoftwareLanguage.parComp p1' (SoftwareLanguage.parComp p2' p3')
+14327c14321
+< == ComhCoq.lang.SoftwareLanguage (166 names)
+---
+> == ComhCoq.lang.SoftwareLanguage (149 names)
+14491,14500d14484
+< @del_triple_sort
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 p : ProcTerm) (d : GenBasics.Delay),
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> p ->
+<        (forall a : LanguageFoundations.DiscAct,
+<         sort a d p1 -> ~ sort (LanguageFoundations.complement a) d p2) /\
+<        (forall a : LanguageFoundations.DiscAct,
+<         sort a d p1 -> ~ sort (LanguageFoundations.complement a) d p3) /\
+<        (forall a : LanguageFoundations.DiscAct,
+<         sort a d p2 -> ~ sort (LanguageFoundations.complement a) d p3)
+14719,14823d14702
+< @link_par_triple_del
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p1' p2' p3' : ProcTerm) (d : GenBasics.Delay),
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> p1' $||$ p2' $||$ p3' ->
+<        p1 -PD- d -PD> p1' /\ p2 -PD- d -PD> p2' /\ p3 -PD- d -PD> p3'
+< @link_par_triple_delEx
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p' : ProcTerm) (d : GenBasics.Delay),
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> p' ->
+<        exists p1' p2' p3' : ProcTerm, p' = p1' $||$ p2' $||$ p3'
+< @link_par_triple_discEx
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p' ->
+<        exists p1' p2' p3' : ProcTerm, p' = p1' $||$ p2' $||$ p3'
+< @link_par_triple_discW_1
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+<        p1 = p1' \/
+<        (exists a' : LanguageFoundations.DiscAct, p1 -PA- a' -PA> p1')
+< @link_par_triple_discW_2
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+<        p2 = p2' \/
+<        (exists a' : LanguageFoundations.DiscAct, p2 -PA- a' -PA> p2')
+< @link_par_triple_discW_3
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+<        p3 = p3' \/
+<        (exists a' : LanguageFoundations.DiscAct, p3 -PA- a' -PA> p3')
+< @link_par_triple_in
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p1' p2' p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.inAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p1 -PA- LanguageFoundations.inAct c v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
+<        p2 -PA- LanguageFoundations.inAct c v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
+<        p3 -PA- LanguageFoundations.inAct c v -PA> p3' /\ p1 = p1' /\ p2 = p2'
+< @link_par_triple_in_neq1
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p1 <> p1' ->
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.inAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p1 -PA- LanguageFoundations.inAct c v -PA> p1' /\ p2 = p2' /\ p3 = p3'
+< @link_par_triple_in_neq2
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p2 <> p2' ->
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.inAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p2 -PA- LanguageFoundations.inAct c v -PA> p2' /\ p1 = p1' /\ p3 = p3'
+< @link_par_triple_in_neq3
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p3 <> p3' ->
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.inAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p3 -PA- LanguageFoundations.inAct c v -PA> p3' /\ p1 = p1' /\ p2 = p2'
+< @link_par_triple_out
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p1' p2' p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.outAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p1 -PA- LanguageFoundations.outAct c v -PA> p1' /\
+<        p2 = p2' /\ p3 = p3' \/
+<        p2 -PA- LanguageFoundations.outAct c v -PA> p2' /\
+<        p1 = p1' /\ p3 = p3' \/
+<        p3 -PA- LanguageFoundations.outAct c v -PA> p3' /\
+<        p1 = p1' /\ p2 = p2'
+< @link_par_triple_out_neq1
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p1 <> p1' ->
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.outAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p1 -PA- LanguageFoundations.outAct c v -PA> p1' /\
+<        p2 = p2' /\ p3 = p3'
+< @link_par_triple_out_neq2
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p2 <> p2' ->
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.outAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p2 -PA- LanguageFoundations.outAct c v -PA> p2' /\
+<        p1 = p1' /\ p3 = p3'
+< @link_par_triple_out_neq3
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p1' p2 p2' p3 p3' : ProcTerm) (c : LanguageFoundations.Channel)
+<          (v : list LanguageFoundations.BaseType),
+<        p3 <> p3' ->
+<        p1 $||$ p2 $||$ p3 -PA- LanguageFoundations.outAct c v -PA>
+<        p1' $||$ p2' $||$ p3' ->
+<        p3 -PA- LanguageFoundations.outAct c v -PA> p3' /\
+<        p1 = p1' /\ p2 = p2'
+15109a14989,15095
+> parAll =
+> fun PNames : ProcNames =>
+> fix parAll (p : ProcTerm) (ps : list ProcTerm) {struct ps} : ProcTerm :=
+>   match ps with
+>   | nil => p
+>   | (q :: qs)%list => p $||$ parAll q qs
+>   end
+>      : forall {PNames : ProcNames}, ProcTerm -> list ProcTerm -> ProcTerm
+> 
+> Arguments parAll {PNames} p ps%_list_scope
+> @parAll_dae_intro
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm) (q : ProcTerm)
+>          (a : LanguageFoundations.DiscAct),
+>        List.In q (p :: ps) ->
+>        discActEnabled q a -> discActEnabled (parAll p ps) a
+> @parAll_del_inv
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm) (d : GenBasics.Delay)
+>          (r : ProcTerm),
+>        parAll p ps -PD- d -PD> r ->
+>        exists (p' : ProcTerm) (ps' : list ProcTerm),
+>          r = parAll p' ps' /\
+>          List.Forall2 (fun q q' : ProcTerm => q -PD- d -PD> q') 
+>            (p :: ps) (p' :: ps')
+> @parAll_del_sort_not
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm) (d : GenBasics.Delay)
+>          (r : ProcTerm) (i j : nat) (qi qj : ProcTerm)
+>          (a : LanguageFoundations.DiscAct),
+>        parAll p ps -PD- d -PD> r ->
+>        i <> j ->
+>        List.nth_error (p :: ps) i = Some qi ->
+>        List.nth_error (p :: ps) j = Some qj ->
+>        sort a d qi -> ~ sort (LanguageFoundations.complement a) d qj
+> @parAll_del_sync_not
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm) (d : GenBasics.Delay)
+>          (r : ProcTerm) (i j : nat) (qi qj : ProcTerm)
+>          (a : LanguageFoundations.DiscAct),
+>        parAll p ps -PD- d -PD> r ->
+>        i <> j ->
+>        List.nth_error (p :: ps) i = Some qi ->
+>        List.nth_error (p :: ps) j = Some qj ->
+>        discActEnabled qi a ->
+>        discActEnabled qj (LanguageFoundations.complement a) ->
+>        a <> LanguageFoundations.tauAct -> False
+> @parAll_disc_intro
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+>          (a : LanguageFoundations.DiscAct) (i : nat) 
+>          (p : ProcTerm) (ps : list ProcTerm) (p' : ProcTerm)
+>          (ps' : list ProcTerm),
+>        GenBasics.stepAt (fun q q' : ProcTerm => q -PA- a -PA> q') i 
+>          (p :: ps) (p' :: ps') ->
+>        parAll p ps -PA- a -PA> parAll p' ps'
+> @parAll_disc_inv
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm)
+>          (a : LanguageFoundations.DiscAct) (r : ProcTerm),
+>        parAll p ps -PA- a -PA> r ->
+>        exists (p' : ProcTerm) (ps' : list ProcTerm),
+>          r = parAll p' ps' /\
+>          ((exists i : nat,
+>              GenBasics.stepAt (fun q q' : ProcTerm => q -PA- a -PA> q') i
+>                (p :: ps) (p' :: ps')) \/
+>           a = LanguageFoundations.tauAct /\
+>           (exists
+>              (i j : nat) (c : LanguageFoundations.Channel) 
+>            (v : list LanguageFoundations.BaseType) 
+>            (l : list ProcTerm),
+>              i <> j /\
+>              GenBasics.stepAt
+>                (fun q q' : ProcTerm =>
+>                 q -PA- LanguageFoundations.outAct c v -PA> q')
+>                i (p :: ps) l /\
+>              GenBasics.stepAt
+>                (fun q q' : ProcTerm =>
+>                 q -PA- LanguageFoundations.inAct c v -PA> q')
+>                j l (p' :: ps')))
+> @parAll_disc_nonTau
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm)
+>          (a : LanguageFoundations.DiscAct) (r : ProcTerm),
+>        parAll p ps -PA- a -PA> r ->
+>        a <> LanguageFoundations.tauAct ->
+>        exists (p' : ProcTerm) (ps' : list ProcTerm) 
+>        (i : nat),
+>          r = parAll p' ps' /\
+>          GenBasics.stepAt (fun q q' : ProcTerm => q -PA- a -PA> q') i
+>            (p :: ps) (p' :: ps')
+> @parAll_disc_weak
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm)
+>          (a : LanguageFoundations.DiscAct) (r : ProcTerm),
+>        parAll p ps -PA- a -PA> r ->
+>        exists (p' : ProcTerm) (ps' : list ProcTerm),
+>          r = parAll p' ps' /\
+>          List.Forall2
+>            (fun q q' : ProcTerm =>
+>             q = q' \/
+>             (exists b : LanguageFoundations.DiscAct, q -PA- b -PA> q'))
+>            (p :: ps) (p' :: ps')
+> @parAll_sort_intro
+>      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+>          (p : ProcTerm) (ps : list ProcTerm) (q : ProcTerm)
+>          (a : LanguageFoundations.DiscAct) (d : GenBasics.Delay),
+>        List.In q (p :: ps) -> sort a d q -> sort a d (parAll p ps)
+15141,15226d15126
+< @parTriple_dae_intro1
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        discActEnabled p1 a -> discActEnabled (p1 $||$ p2 $||$ p3) a
+< @parTriple_dae_intro2
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        discActEnabled p2 a -> discActEnabled (p1 $||$ p2 $||$ p3) a
+< @parTriple_dae_intro3
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        discActEnabled p3 a -> discActEnabled (p1 $||$ p2 $||$ p3) a
+< @parTriple_del_inv
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (d : GenBasics.Delay) 
+<          (r : ProcTerm),
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> r ->
+<        exists p1' p2' p3' : ProcTerm,
+<          r = p1' $||$ p2' $||$ p3' /\
+<          p1 -PD- d -PD> p1' /\ p2 -PD- d -PD> p2' /\ p3 -PD- d -PD> p3'
+< @parTriple_del_sync_not_12
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct)
+<          (d : GenBasics.Delay) (r : ProcTerm),
+<        discActEnabled p1 a ->
+<        discActEnabled p2 (LanguageFoundations.complement a) ->
+<        a <> LanguageFoundations.tauAct ->
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> r -> False
+< @parTriple_del_sync_not_13
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct)
+<          (d : GenBasics.Delay) (r : ProcTerm),
+<        discActEnabled p1 a ->
+<        discActEnabled p3 (LanguageFoundations.complement a) ->
+<        a <> LanguageFoundations.tauAct ->
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> r -> False
+< @parTriple_del_sync_not_23
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct)
+<          (d : GenBasics.Delay) (r : ProcTerm),
+<        discActEnabled p2 a ->
+<        discActEnabled p3 (LanguageFoundations.complement a) ->
+<        a <> LanguageFoundations.tauAct ->
+<        p1 $||$ p2 $||$ p3 -PD- d -PD> r -> False
+< @parTriple_disc_intro1
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p1' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p1 -PA- a -PA> p1' ->
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2 $||$ p3
+< @parTriple_disc_intro2
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p2' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p2 -PA- a -PA> p2' ->
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p1 $||$ p2' $||$ p3
+< @parTriple_disc_intro3
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs)
+<          (p1 p2 p3 p3' : ProcTerm) (a : LanguageFoundations.DiscAct),
+<        p3 -PA- a -PA> p3' ->
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> p1 $||$ p2 $||$ p3'
+< @parTriple_disc_inv
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p1 p2 p3 : ProcTerm) (a : LanguageFoundations.DiscAct)
+<          (r : ProcTerm),
+<        p1 $||$ p2 $||$ p3 -PA- a -PA> r ->
+<        exists p1' p2' p3' : ProcTerm,
+<          r = p1' $||$ p2' $||$ p3' /\
+<          (p1 -PA- a -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
+<           p2 -PA- a -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
+<           p3 -PA- a -PA> p3' /\ p1 = p1' /\ p2 = p2' \/
+<           a = LanguageFoundations.tauAct /\
+<           (exists
+<              (c : LanguageFoundations.Channel) (v : 
+<                                                 list
+<                                                  LanguageFoundations.BaseType),
+<              p1 -PA- LanguageFoundations.outAct c v -PA> p1' /\
+<              p2 -PA- LanguageFoundations.inAct c v -PA> p2' /\ p3 = p3' \/
+<              p1 -PA- LanguageFoundations.inAct c v -PA> p1' /\
+<              p2 -PA- LanguageFoundations.outAct c v -PA> p2' /\ p3 = p3' \/
+<              p1 -PA- LanguageFoundations.outAct c v -PA> p1' /\
+<              p3 -PA- LanguageFoundations.inAct c v -PA> p3' /\ p2 = p2' \/
+<              p1 -PA- LanguageFoundations.inAct c v -PA> p1' /\
+<              p3 -PA- LanguageFoundations.outAct c v -PA> p3' /\ p2 = p2' \/
+<              p2 -PA- LanguageFoundations.outAct c v -PA> p2' /\
+<              p3 -PA- LanguageFoundations.inAct c v -PA> p3' /\ p1 = p1' \/
+<              p2 -PA- LanguageFoundations.inAct c v -PA> p2' /\
+<              p3 -PA- LanguageFoundations.outAct c v -PA> p3' /\ p1 = p1'))
+15233,15239d15132
+< @par_del_sync_not
+<      : forall (PNames : ProcNames) (PDefs : ProcDefs) 
+<          (p q : ProcTerm) (a : LanguageFoundations.DiscAct)
+<          (d : GenBasics.Delay) (r : ProcTerm),
+<        discActEnabled p a ->
+<        discActEnabled q (LanguageFoundations.complement a) ->
+<        a <> LanguageFoundations.tauAct -> p $||$ q -PD- d -PD> r -> False
+15871c15764
+< == ComhCoq.lib.GenBasics (66 names)
+---
+> == ComhCoq.lib.GenBasics (69 names)
+16147a16041,16062
+> Inductive
+> stepAt (A : Type) (R : A -> A -> Prop) : nat -> list A -> list A -> Prop :=
+>     stepAtHd : forall (x x' : A) (l : list A),
+>                R x x' -> stepAt R 0 (x :: l) (x' :: l)
+>   | stepAtTl : forall (i : nat) (x : A) (l l' : list A),
+>                stepAt R i l l' -> stepAt R (S i) (x :: l) (x :: l').
+> 
+> Arguments stepAt {A}%_type_scope R%_function_scope 
+>   _%_nat_scope (_ _)%_list_scope
+> Arguments stepAtHd {A}%_type_scope R%_function_scope x x' l%_list_scope _
+> Arguments stepAtTl {A}%_type_scope R%_function_scope 
+>   i%_nat_scope x (l l')%_list_scope _
+> @stepAt_Forall2
+>      : forall (A : Type) (R : A -> A -> Prop) (i : nat) (l l' : list A),
+>        stepAt R i l l' -> Forall2 (fun x x' : A => x = x' \/ R x x') l l'
+> @stepAt_stepAt_Forall2
+>      : forall (A : Type) (R1 R2 : A -> A -> Prop) 
+>          (i j : nat) (l l' l'' : list A),
+>        i <> j ->
+>        stepAt R1 i l l' ->
+>        stepAt R2 j l' l'' ->
+>        Forall2 (fun x x' : A => x = x' \/ R1 x x' \/ R2 x x') l l''

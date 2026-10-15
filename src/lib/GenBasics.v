@@ -536,10 +536,6 @@ Inductive stepAt {A : Type} (R : A -> A -> Prop) : nat -> list A -> list A -> Pr
   | stepAtTl (i : nat) (x : A) (l l' : list A) :
     stepAt R i l l' -> stepAt R (S i) (x :: l) (x :: l').
 
-Lemma stepAt_length {A : Type} (R : A -> A -> Prop) i l l' :
-  stepAt R i l l' -> length l = length l'.
-Proof. intro S. induction S; simpl; auto. Qed.
-
 (** Each position is unchanged or related.*)
 Lemma stepAt_Forall2 {A : Type} (R : A -> A -> Prop) i l l' :
   stepAt R i l l' -> Forall2 (fun x x' => x = x' \/ R x x') l l'.
