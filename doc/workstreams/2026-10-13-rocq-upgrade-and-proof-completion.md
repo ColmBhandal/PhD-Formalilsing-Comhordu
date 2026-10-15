@@ -69,7 +69,13 @@ This phase runs as a loop: pick an item, agree the fix, open a PR, review and me
 
 - [x] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). ✅ 2026-10-14. The listener now reads all 3 notification fields, a [thesis correction](../thesis/thesis-corrections.md#1-the-listener-reads-too-few-fields-from-a-notification). `listening_AN_prot` is proved. `incomingNetNotif_del` gains a length hypothesis. [#2](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/2).
 - [ ] 🤖 **13. Make the language generic.** Agreed with a human on 2026-10-15. The thesis's software language is general, like value-passing CCS, but the code builds the protocol into it: its process names, their definitions, some channels and some expression operators. Make the language take the names and definitions as parameters, and prove its results for any definitions that meet stated conditions, such as guarded recursion (Remark 4.2, p.69). A bridge file plugs in the protocol and proves that it meets them. Then do the same for the channels and expression operators. The statement of `safety` stays the same.
-- [ ] 🤖 **14. Split `src/` into `lang/` and `protocol/`.** `lang/` holds the language and the results about it that don't depend on the protocol. `protocol/` holds the protocol and its safety proof. Each folder gets a README. Some files belong to neither, such as the model axioms in `ComhBasics.v`, the tactic libraries and the real-number helpers, so decide whether they get a third folder for shared foundations. After step 13 the language no longer depends on the protocol, so only files move and every definition and statement stays as it is.
+- [ ] 🤖 **14. Split `src/` into `lib/`, `model/`, `lang/` and `protocol/`.** Agreed with a human on 2026-10-15. Each folder depends only on the ones listed before it, and gets a README.
+  - `lib/`: general tools that know nothing about Comhordú: the tactic libraries, the real-number helpers, and general basics such as time and list helpers.
+  - `model/`: the Comhordú model (thesis §3.3, p.41): the model axioms, what is defined from them, and `ModelConsistency.v`.
+  - `lang/`: the language, which is built on the model.
+  - `protocol/`: the protocol's processes, the bridge and the safety proof.
+
+  `ComhBasics.v` mixes the model axioms with general helpers, so it is split between `lib/` and `model/`. Only code moves, so every definition and statement stays as it is.
 - [ ] 🤖 **15. Extract language results from the proved results.** Go through every fully proved result, pull as much as possible out into general results in `lang/`, and re-prove the protocol results from them. Keep every definition and the statement of `safety` unchanged. A protocol lemma whose job a general result now does can be removed, and each removal is called out in its PR. Heavy, so likely several PRs.
 - [ ] 🧑 **16. Component-state predicates** ([root cause 1](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#1-incomplete-component-state-predicates)). Fixes `reachableProt_triple`, the most structural problem.
 - [ ] 🧑 **17. Quick fixes in the cone:** `link_ent_outList` and `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
@@ -89,6 +95,7 @@ Step 12 and steps 16–19 cover every known reason `safety` is vacuous today. Af
 
 ## Log
 
+- **2026-10-15:** Step 14 settled: four folders, adding `lib/` and `model/` to `lang/` and `protocol/`.
 - **2026-10-15:** New step 13: make the language generic before splitting `src/`, because the code builds the protocol into the language. Old steps 13–25 are now 14–26.
 - **2026-10-14:** Thesis added under [`doc/thesis/`](../thesis/README.md), with a corrections file. Step 12 done: `safety` rests on 84 assumptions, down from 85.
 - **2026-10-14:** Pass 1 reviewed and merged. Phase 5 reordered and set up as a one-fix-per-PR loop.
