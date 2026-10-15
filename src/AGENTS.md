@@ -14,7 +14,10 @@
 - The language files (`LanguageFoundations`, `SoftwareLanguage`, `InterfaceLanguage`, `ModeStateLanguage`, `EntityLanguage`, `NetworkLanguage`, `ProcEquiv`) are generic in the process names and their definitions. They never import a protocol file.
 - The protocol plugs in through `Protocol.v`, which defines its processes as instances of `ProcNames` and `ProcDefs`, and `ProtocolBridge.v`, which proves that they meet the language's conditions, such as `GuardedDefs`, and holds facts true only of this protocol. Protocol files import `ProtocolBridge`.
 - Put a language file's generic code in one `Section` whose `Context` takes the class instances. Rocq drops a section's notations, tactics and `Open Scope` when it ends, so put `Reserved Notation` above the section and declare each notation again after it.
-- Place each tactic so that the section never has to close and reopen, because each extra `Section`/`End` pair is clutter. A tactic that only uses what comes before the section goes above it. One that uses the section's own lemmas or notations stays inside if only its own file needs it, and goes after the section otherwise. If a proof inside the section needs a tactic that has to go after it, either write the proof without the tactic, or define the tactic inside the section and again after it, as for notations. Prefer the first when only a proof or two need it, because two copies can drift apart.
+- Place tactics by where they are used, so that the section never has to close and reopen. Each extra `Section`/`End` pair is clutter.
+  - A tactic that needs nothing from the section goes above it.
+  - A tactic that needs the section's lemmas or notations goes inside the section if more than one proof there uses it, and after the section if more than one proof in later files uses it. Both is fine, and the two copies may differ, because uses outside the section may need a slightly different tactic.
+  - A tactic with only one use isn't worth defining. Write that proof without it.
 - Give an `Admitted` lemma inside a section a `Proof using` line. Without one it depends on every instance in the section, including `GuardedDefs`.
 
 ## Markers and conventions
