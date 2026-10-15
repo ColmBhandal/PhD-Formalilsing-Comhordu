@@ -12,6 +12,7 @@ From Stdlib Require Export Lists.ListSet.
 From Stdlib Require Export Reals Arith.
 From Stdlib Require Export List.
 From Stdlib Require Export Logic.FunctionalExtensionality.
+Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 
 Open Scope nat_scope.

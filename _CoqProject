@@ -4,6 +4,7 @@ src/lib/Extras/LibTactics.v
 src/lib/GenTacs.v
 src/lib/RInequalities.v
 src/lib/StandardResults.v
+src/lib/GenBasics.v
 
 src/model/ComhBasics.v
 src/model/ModelConsistency.v

@@ -28,6 +28,7 @@
 
 From Stdlib Require Import Reals Lra.
 Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 
 Open Scope R_scope.

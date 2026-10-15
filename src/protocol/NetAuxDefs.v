@@ -9,6 +9,7 @@ Require Import ComhCoq.lib.Extras.LibTactics.
 (***************************** Specialised Imports *****************************)
 
 Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 Require Import ComhCoq.lang.LanguageFoundations.
 Require Import ComhCoq.lang.SoftwareLanguage.

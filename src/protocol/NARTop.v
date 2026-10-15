@@ -11,6 +11,7 @@ Require Import ComhCoq.lib.Extras.LibTactics.
 
 Require Import ComhCoq.lib.GenTacs.
 Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 Require Import ComhCoq.lang.LanguageFoundations.
 (*

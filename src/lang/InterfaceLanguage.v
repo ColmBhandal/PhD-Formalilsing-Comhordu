@@ -4,6 +4,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 Require Import ComhCoq.lib.Extras.LibTactics.
 
 Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 Require Import ComhCoq.lib.GenTacs.
 Require Import ComhCoq.lib.StandardResults.

@@ -14,6 +14,7 @@ From Stdlib Require Import Logic.Decidable.
 From Stdlib Require Import Lists.ListSet.
 From Stdlib Require Import Lia.
 Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 
 (******************Syntax*******************)
