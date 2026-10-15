@@ -99,7 +99,8 @@ def rocq_output(module, names, src, workdir):
         ["rocq", "c", "-q", "-R", src, LOGICAL_ROOT, vfile],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False,
     )
-    return result.returncode, result.stdout
+    # Warnings name the throwaway file; hide its random directory so runs can be diffed.
+    return result.returncode, result.stdout.replace(workdir, "<tmp>")
 
 
 def main():
