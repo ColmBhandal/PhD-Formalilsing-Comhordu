@@ -6,6 +6,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (*Require Import Reals.
 Require Import List.*)
 From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Lra.
 
 Require Import ComhCoq.Extras.LibTactics.
 
@@ -168,13 +169,27 @@ Qed.
 
 (***************************** More Complex Results *****************************)
 
+(*A delay of at most the timestamp t just ages an incoming notification by d. Unlike
+(Basics::incomingNetNotif_del), this needs nothing about the listener, so it holds for
+any v.*)
+Local Lemma delivered_incomingNetNotif_aux (n n' : Network) (d : Delay) (v : list BaseType)
+  (t : Time) (i : nat) (q : d <= t) :
+  n -ND- d -ND> n' -> incomingNetNotif v t i n ->
+  incomingNetNotif v (minusTime t d q) i n'.
+Proof.
+  introz U. destruct U0.
+  link_netentdelfwd_tac e' Y. destr_ent_inter e' p' l' k' li' lo' ln'.
+  link_entinterdel_tac Y. inversion_clear Y1.
+  econstructor. apply Y. eapply notifList_del_le. apply H3. assumption.
+Qed.
+
 (*If a message was delivered at a time less than AN ago, then a notification of that
 message's delivery is enqueued with time stamp AN - t. *)
 Theorem delivered_incomingNetNotif (n : Network) (v : list BaseType) (r : Distance)
   (l : Position) (t : Time) (i : nat) (p : reachableNet n) :
-  delivered ([-v, l, r-]) t i n p -> length v = 2%nat -> forall q : t < adaptNotif,
+  delivered ([-v, l, r-]) t i n p -> forall q : t < adaptNotif,
   incomingNetNotif ((baseDistance r)::v) (minusTime adaptNotif t (Rlt_le t adaptNotif q)) i n.
-  intros H L q.
+  intros H q.
   (**Proof: Induction on delivered.*)
   induction H.
   (*The base case enforces an output of v to r by i. By looking at the semantics,
@@ -190,11 +205,13 @@ Theorem delivered_incomingNetNotif (n : Network) (v : list BaseType) (r : Distan
   assert (t < adaptNotif) as Q. eapply Rplus_lt_weaken_lr. apply q. apply Rlt_le. delPos.
   (*So by IH incomingNetNotif r::v (AN - t) i n.*)
   lets IH : IHdelivered Q. clear IHdelivered.
-  (*Then by (Basics::incomingNetNotif-del) we have incomingNetNotif r::v (AN - t - d) i n' which is the
-  same as incomingNetNotif r::v (AN - (t + d)) i n and we're done.*)
-  assert (length ((baseDistance r)::v) = 3%nat) as L3 by (simpl; rewrite L; reflexivity).
-  lets Q1 : incomingNetNotif_del p w IH L3.
-  invertClearAs2 Q1 p1 Q2. my_applys_eq Q2. apply timeEqR. simpl. ring. Qed.
+  (*Since t + d < AN, the delay d is at most AN - t, so by (delivered_incomingNetNotif_aux) we
+  have incomingNetNotif r::v (AN - t - d) i n' which is the same as incomingNetNotif r::v
+  (AN - (t + d)) i n and we're done.*)
+  assert (d <= minusTime adaptNotif t (Rlt_le t adaptNotif Q)) as DL.
+  simpl. simpl in q. lra.
+  lets Q2 : delivered_incomingNetNotif_aux DL w IH.
+  my_applys_eq Q2. apply timeEqR. simpl. ring. Qed.
 
 
 Theorem insuff_incomingNotif_abort (n n' : Network) (a : ActDiscNet) (m : Mode)
@@ -419,7 +436,7 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
   (*Delay case: Apply (delivered_incomingNetNotif) to previous state and get
   incomingNetNotif <r, m, l> (AN _ (AN - d)) i n = incomingNetNotif <r, m, l> d i n.*)
   assert (t0 < adaptNotif) as Q. rewrite <- x. simpl. Rplus_lt_tac. delPos.
-  lets W : delivered_incomingNetNotif H (@eq_refl nat 2%nat) Q.
+  lets W : delivered_incomingNetNotif H Q.
   (*Then by (Basics::incomingNetNotif_del) we get incomingNetNotif <r, m, l> 0 i n',
   our left disjunct.*)
   left. lets E : incomingNetNotif_del p w W (@eq_refl nat 3%nat). invertClearAs2 E Z1 Z2.
@@ -594,7 +611,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   Then from (delivered_incomingNetNotif) and incomingNetNotif delay constructor,
   we have the LHS.*)
   assert (t0 < adaptNotif) as TLAN. rewrite <- x. simpl. Rplus_lt_tac.
-  delPos. lets DIN : delivered_incomingNetNotif H (@eq_refl nat 2%nat) TLAN. left. 
+  delPos. lets DIN : delivered_incomingNetNotif H TLAN. left. 
   lets IND : incomingNetNotif_del p w DIN (@eq_refl nat 3%nat). destruct IND. my_applys_eq i0.
   apply timeEqR. simpl. rewrite <- x. simpl. ring.
   (*Note, the proof is Similar to instant_insuff_abort.*)
@@ -629,7 +646,7 @@ Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
   Well, we again do a case analysis this time on t < AN or t = AN.*)
   apply Rle_lt_or_eq_dec in Q2. elim_intro Q2 F1 F2.
   (*If t' < AN, then by (delivered_incomingNetNotif), we get incomingNetNotif <r, m, l0> (AN - t') i n.*)
-  lets K : delivered_incomingNetNotif H0 (@eq_refl nat 2%nat) F1.
+  lets K : delivered_incomingNetNotif H0 F1.
   (*Now, we already have from our hypothesis that AN < t' + d, rearranging to AN - t' < d.
   However, (Basiscs::incomingNetNotif-del) gives us that d <= AN - t', which is a
   contradiction.*)
@@ -711,7 +728,7 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   (*Otherwise, t' <= AN. In which case we have either t' < AN or t' = AN.*)
   remember ([baseMode m, basePosition l]) as v. apply Rle_lt_or_eq_dec in H5. invertClear H5.
   (*We apply (delivered_incomingNetNotif) for the t' < AN case, towards a contradiction.*)
-  addHyp (delivered_incomingNetNotif n v r l0 t' i p H0 (f_equal (@length _) Heqv) H4).
+  addHyp (delivered_incomingNetNotif n v r l0 t' i p H0 H4).
   remember (minusTime (nonneg (time adaptNotif)) (nonneg (time t'))
   (Rlt_le (nonneg (time t')) (nonneg (time adaptNotif)) H4)) as t''.
   addHyp (incomingNetNotif_del n n' d ((baseDistance r)::v) t'' i p w H5
