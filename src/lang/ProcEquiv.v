@@ -54,6 +54,198 @@ CoFixpoint bisim_symm p q : p ~p~ q -> q ~p~ p.
   apply bisim_symm in AND0. exists x. split; assumption.
   Qed.
 
+(*** Matching Steps ***)
+
+(** One side of a bisimulation matches a discrete step of the other, with bisimilar
+derivatives.*)
+Lemma bisim_step_disc p q a p' : p ~p~ q -> p -PA- a -PA> p' ->
+  exists q', q -PA- a -PA> q' /\ p' ~p~ q'.
+Proof.
+  intros B TR. inversion B as [F _].
+  destruct (F _ _ (stepPDisc _ _ _ TR)) as [q' [TQ BQ]].
+  exists q'. split; [ | exact BQ]. inversion TQ; subst; assumption.
+Qed.
+
+(** One side of a bisimulation matches a delay of the other, with bisimilar
+derivatives.*)
+Lemma bisim_step_del p q d p' : p ~p~ q -> p -PD- d -PD> p' ->
+  exists q', q -PD- d -PD> q' /\ p' ~p~ q'.
+Proof.
+  intros B TR. inversion B as [F _].
+  destruct (F _ _ (stepPTimed _ _ _ TR)) as [q' [TQ BQ]].
+  exists q'. split; [ | exact BQ]. inversion TQ; subst; assumption.
+Qed.
+
+(** If one side of a bisimulation can do a discrete action, so can the other.*)
+Lemma bisim_disc_match p p' q a : p ~p~ q -> p -PA- a -PA> p' ->
+  exists q', q -PA- a -PA> q'.
+Proof.
+  intros B TR. destruct (bisim_step_disc _ _ _ _ B TR) as [q' [TQ _]]. eauto.
+Qed.
+
+(** Bisimilarity to a process that delays only to itself survives delays.*)
+Lemma bisim_del_pres p p' X d : (forall d' q, X -PD- d' -PD> q -> q = X) ->
+  p ~p~ X -> p -PD- d -PD> p' -> p' ~p~ X.
+Proof.
+  intros S B TR. destruct (bisim_step_del _ _ _ _ B TR) as [q [TQ BQ]].
+  apply S in TQ. subst. exact BQ.
+Qed.
+
+(*** Unfolding and Prefixes ***)
+
+(** A name applied to arguments is bisimilar to its unfolding.*)
+Lemma app_bisim n l : n $( l )$ ~p~ unfoldApp n l.
+Proof.
+  rewrite unfoldApp_body. constructor.
+  - intros a p' H. exists p'. split; [ | apply bisim_refl].
+    inversion H; subst.
+    + apply stepPDisc.
+      match goal with [V : stepDiscProc (app n l) _ _ |- _] =>
+        inversion V; subst end.
+      match goal with [E : def n = _ |- _] => rewrite E end. assumption.
+    + apply stepPTimed.
+      match goal with [V : stepTimedProc (app n l) _ _ |- _] =>
+        inversion V; subst end.
+      match goal with [E : def n = _ |- _] => rewrite E end. assumption.
+  - intros a q' H. exists q'. split; [ | apply bisim_refl].
+    inversion H; subst.
+    + apply stepPDisc. eapply stepDpApp; [apply surjective_pairing | eassumption].
+    + apply stepPTimed. eapply stepTpApp; [apply surjective_pairing | eassumption].
+Qed.
+
+(** A name applied to arguments is bisimilar to the body of its definition, with the
+arguments substituted for the parameters.*)
+Lemma app_bisim_def n vs body l : def n = (vs, body) ->
+  n $( l )$ ~p~ subProcTerm (listsToSub vs l) body.
+Proof.
+  intro D. eapply bisim_trans; [apply app_bisim | ].
+  unfold unfoldApp. rewrite D. apply bisim_refl.
+Qed.
+
+(** A name without parameters is bisimilar to the body of its definition.*)
+Lemma app_bisim_nil n body : def n = ([], body) -> n $( [] )$ ~p~ body.
+Proof.
+  intro D. eapply bisim_trans; [apply (app_bisim_def n [] body [] D) | ].
+  simpl. rewrite subProc_id_eq. apply bisim_refl.
+Qed.
+
+(** Bisimilarity is a congruence for the output prefix.*)
+Lemma outPrefix_bisim_context c l p q : p ~p~ q -> c $< l >$ ! p ~p~ c $< l >$ ! q.
+Proof.
+  revert p q. cofix CIH. intros p q B. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. exists q. split; [ | exact B].
+      apply stepPDisc. constructor. assumption.
+    + inversion S0; subst. exists (c $< l >$ ! q). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. exists p. split; [ | exact B].
+      apply stepPDisc. constructor. assumption.
+    + inversion S0; subst. exists (c $< l >$ ! p). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+Qed.
+
+(** Bisimilarity is a congruence for the input prefix, when the bodies are bisimilar for
+every input.*)
+Lemma inPrefix_bisim_context c xs p q :
+  (forall v, length v = length xs ->
+    subProcTerm (listsToSub xs (listBaselistExp v)) p ~p~
+    subProcTerm (listsToSub xs (listBaselistExp v)) q) ->
+  c $< xs >$ ? p ~p~ c $< xs >$ ? q.
+Proof.
+  revert p q. cofix CIH. intros p q B. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. eexists. split.
+      * apply stepPDisc. constructor. eassumption.
+      * apply B. assumption.
+    + inversion S0; subst. exists (c $< xs >$ ? q). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. eexists. split.
+      * apply stepPDisc. constructor. eassumption.
+      * apply B. assumption.
+    + inversion S0; subst. exists (c $< xs >$ ? p). split.
+      * apply stepPTimed. constructor.
+      * apply CIH. exact B.
+Qed.
+
+(** Bisimilarity is a congruence for the delay guard.*)
+Lemma del_bisim_context e p q : p ~p~ q -> $< e >$ p ~p~ $< e >$ q.
+Proof.
+  revert e p q. cofix CIH. intros e p q B.
+  destruct B as [B1 B2]. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst.
+      match goal with H : p -PA- _ -PA> _ |- _ =>
+        apply stepPDisc in H; apply B1 in H; destruct H as [q' [Sq Bq]] end.
+      inversion Sq; subst.
+      exists q'. split; [ | exact Bq].
+      apply stepPDisc. apply stepDpTimeOut; assumption.
+    + inversion S0; subst.
+      * match goal with H : p -PD- _ -PD> _ |- _ =>
+          apply stepPTimed in H; apply B1 in H; destruct H as [q' [Sq Bq]] end.
+        inversion Sq; subst.
+        exists q'. split; [ | exact Bq].
+        apply stepPTimed. apply stepTpDelAdd; assumption.
+      * eexists. split.
+        -- apply stepPTimed. eapply stepTpDelSub. eassumption.
+        -- apply CIH. constructor; assumption.
+      * exists ($< e >$ q). split.
+        -- apply stepPTimed. apply stepTpDelIll. assumption.
+        -- apply CIH. constructor; assumption.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst.
+      match goal with H : q -PA- _ -PA> _ |- _ =>
+        apply stepPDisc in H; apply B2 in H; destruct H as [p' [Sp Bp]] end.
+      inversion Sp; subst.
+      exists p'. split; [ | exact Bp].
+      apply stepPDisc. apply stepDpTimeOut; assumption.
+    + inversion S0; subst.
+      * match goal with H : q -PD- _ -PD> _ |- _ =>
+          apply stepPTimed in H; apply B2 in H; destruct H as [p' [Sp Bp]] end.
+        inversion Sp; subst.
+        exists p'. split; [ | exact Bp].
+        apply stepPTimed. apply stepTpDelAdd; assumption.
+      * eexists. split.
+        -- apply stepPTimed. eapply stepTpDelSub. eassumption.
+        -- apply CIH. constructor; assumption.
+      * exists ($< e >$ p). split.
+        -- apply stepPTimed. apply stepTpDelIll. assumption.
+        -- apply CIH. constructor; assumption.
+Qed.
+
+(** A delay guard matters only through its value.*)
+Lemma del_bisim_guard e1 e2 p : evalExpFunTime e1 = evalExpFunTime e2 ->
+  $< e1 >$ p ~p~ $< e2 >$ p.
+Proof.
+  revert e1 e2. cofix CIH. intros e1 e2 E. constructor.
+  - intros a x S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. eexists. split; [ | apply bisim_refl].
+      apply stepPDisc. apply stepDpTimeOut; [assumption | congruence].
+    + inversion S0; subst.
+      * eexists. split; [ | apply bisim_refl].
+        apply stepPTimed. apply stepTpDelAdd; [assumption | congruence].
+      * eexists. split; [ | apply bisim_refl].
+        apply stepPTimed. apply stepTpDelSub. congruence.
+      * exists ($< e2 >$ p). split.
+        -- apply stepPTimed. apply stepTpDelIll. congruence.
+        -- apply CIH. assumption.
+  - intros a x S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. eexists. split; [ | apply bisim_refl].
+      apply stepPDisc. apply stepDpTimeOut; [assumption | congruence].
+    + inversion S0; subst.
+      * eexists. split; [ | apply bisim_refl].
+        apply stepPTimed. apply stepTpDelAdd; [assumption | congruence].
+      * eexists. split; [ | apply bisim_refl].
+        apply stepPTimed. apply stepTpDelSub. congruence.
+      * exists ($< e1 >$ p). split.
+        -- apply stepPTimed. apply stepTpDelIll. congruence.
+        -- apply CIH. assumption.
+Qed.
+
 (*** Slightly more Specific ***)
 
 (*TIDY*)

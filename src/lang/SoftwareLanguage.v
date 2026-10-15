@@ -361,6 +361,21 @@ Lemma unfoldApp_body (h : Name) (l : list Exp) :
   unfoldApp h l = subProcTerm (listsToSub (fst (def h)) l) (snd (def h)).
 Proof. unfold unfoldApp. destruct (def h). reflexivity. Qed.
 
+(** The identity substitution leaves a process term unchanged.*)
+Lemma subProc_id_eq p : subProcTerm idSubst p = p.
+  induction p; try simpl; try rewrite resetPreservesId;
+  try rewrite idSubBoolExp;
+  try rewrite IHp; try rewrite IHp1; try rewrite IHp2;
+  try rewrite idSubList; try rewrite idSubExp; try reflexivity.
+  Qed.
+
+(** An application can do whatever the body of its definition can do, with the
+arguments substituted for the parameters.*)
+Lemma stepDpApp_alt : forall (n : Name) (l2 : list Exp) (p' : ProcTerm) (a : DiscAct),
+  stepDiscProc (subProcTerm (listsToSub (fst (def n)) l2) (snd (def n))) a p' ->
+  stepDiscProc (app n l2) a p'. intros. remember (def n). destruct p. eapply stepDpApp.
+  rewrite <- Heqp. reflexivity. apply H. Qed.
+
 (** Helper for guarded_rect: induction on a bound for the ranks of the names a term
 applies outside a prefix, then on the term.*)
 Local Lemma guarded_rect_aux (P : ProcTerm -> Type)
@@ -419,6 +434,16 @@ Lemma daeSumL : forall (a : DiscAct) (p1 p2 : ProcTerm),
 Lemma daeSumR : forall (a : DiscAct) (p1 p2 : ProcTerm),
   discActEnabled p2 a -> discActEnabled (p1 $+$ p2) a. intros.
   invertClear H. eapply dae. apply stepDpChoiceR. apply H0. Qed.
+
+(** An output prefix is enabled on its channel for the values its expressions evaluate to.*)
+Lemma dae_outPfx c l v p :
+  evalExpLists l v -> discActEnabled (c $<l>$! p) (c;! v). intro X.
+  econstructor. constructor. assumption. Qed.
+
+(** An input prefix is enabled on its channel for any values as many as its variables.*)
+Lemma dae_inPfx c l v p :
+  length l = length v -> discActEnabled (c $<l>$? p) (c;? v).
+  intro W. econstructor. constructor. symmetry. assumption. Qed.
 
 (** If the left component of a sum is dae, then so is the entire sum.*)
 Lemma daeParL : forall (a : DiscAct) (p1 p2 : ProcTerm),
@@ -1898,7 +1923,292 @@ Lemma parTriple_dae_intro3 p1 p2 p3 a :
 
 (*-LOCAL TIDY*)
 
+(*********Delays to self and inversion of parallel steps*********)
+
+(** The nil process delays only to itself.*)
+Lemma del_self_nil : forall d q, nilProc -PD- d -PD> q -> q = nilProc.
+Proof. intros d q H. inversion H. reflexivity. Qed.
+
+(** An output prefix delays only to itself.*)
+Lemma del_self_outPrefix c l p : forall d q, c $< l >$ ! p -PD- d -PD> q -> q = c $< l >$ ! p.
+Proof. intros d q H. inversion H. reflexivity. Qed.
+
+(** An input prefix delays only to itself.*)
+Lemma del_self_inPrefix c xs p : forall d q, c $< xs >$ ? p -PD- d -PD> q -> q = c $< xs >$ ? p.
+Proof. intros d q H. inversion H. reflexivity. Qed.
+
+(** A sum of processes that delay only to themselves delays only to itself.*)
+Lemma del_self_sum p1 p2 :
+  (forall d q, p1 -PD- d -PD> q -> q = p1) -> (forall d q, p2 -PD- d -PD> q -> q = p2) ->
+  forall d q, p1 $+$ p2 -PD- d -PD> q -> q = p1 $+$ p2.
+Proof.
+  intros H1 H2 d q H. inversion H; subst.
+  f_equal; [eapply H1 | eapply H2]; eassumption.
+Qed.
+
+(** A discrete step of a parallel pair is a step of one component, or the two
+synchronising on complementary actions.*)
+Lemma par_disc_inv p q a r : p $||$ q -PA- a -PA> r -> exists p' q', r = p' $||$ q' /\
+  ((p -PA- a -PA> p' /\ q = q') \/ (q -PA- a -PA> q' /\ p = p') \/
+   (a = tauAct /\ exists c v,
+     (p -PA- c ;! v -PA> p' /\ q -PA- c ;? v -PA> q') \/
+     (p -PA- c ;? v -PA> p' /\ q -PA- c ;! v -PA> q'))).
+Proof.
+  intro H. inversion H; subst; do 2 eexists; (split; [reflexivity | ]).
+  - left. split; [eassumption | reflexivity].
+  - right. left. split; [eassumption | reflexivity].
+  - right. right. split; [reflexivity | ]. do 2 eexists. left. split; eassumption.
+  - right. right. split; [reflexivity | ]. do 2 eexists. right. split; eassumption.
+Qed.
+
+(** A parallel pair delays by both components delaying.*)
+Lemma par_del_inv p q d r : p $||$ q -PD- d -PD> r ->
+  exists p' q', r = p' $||$ q' /\ p -PD- d -PD> p' /\ q -PD- d -PD> q'.
+Proof.
+  intro H. inversion H; subst. do 2 eexists.
+  split; [reflexivity | split; eassumption].
+Qed.
+
+(** A discrete step of a parallel triple is a step of one component, or two of them
+synchronising on complementary actions.*)
+Lemma parTriple_disc_inv p1 p2 p3 a r : p1 $||$ p2 $||$ p3 -PA- a -PA> r ->
+  exists p1' p2' p3', r = p1' $||$ p2' $||$ p3' /\
+  ((p1 -PA- a -PA> p1' /\ p2 = p2' /\ p3 = p3') \/
+   (p2 -PA- a -PA> p2' /\ p1 = p1' /\ p3 = p3') \/
+   (p3 -PA- a -PA> p3' /\ p1 = p1' /\ p2 = p2') \/
+   (a = tauAct /\ exists c v,
+     (p1 -PA- c ;! v -PA> p1' /\ p2 -PA- c ;? v -PA> p2' /\ p3 = p3') \/
+     (p1 -PA- c ;? v -PA> p1' /\ p2 -PA- c ;! v -PA> p2' /\ p3 = p3') \/
+     (p1 -PA- c ;! v -PA> p1' /\ p3 -PA- c ;? v -PA> p3' /\ p2 = p2') \/
+     (p1 -PA- c ;? v -PA> p1' /\ p3 -PA- c ;! v -PA> p3' /\ p2 = p2') \/
+     (p2 -PA- c ;! v -PA> p2' /\ p3 -PA- c ;? v -PA> p3' /\ p1 = p1') \/
+     (p2 -PA- c ;? v -PA> p2' /\ p3 -PA- c ;! v -PA> p3' /\ p1 = p1'))).
+Proof.
+  intro H. apply par_disc_inv in H.
+  destruct H as [p1' [q' [E [[S1 Eq] | [[S2 Ep] | [Et [c [v [[S1 S2] | [S1 S2]]]]]]]]]];
+    subst.
+  - do 3 eexists. split; [reflexivity | ]. left. eauto.
+  - apply par_disc_inv in S2.
+    destruct S2 as [p2' [p3' [E [[S2 Eq] | [[S3 Ep] | [Et [c [v [[S2 S3] | [S2 S3]]]]]]]]]];
+      subst; do 3 eexists; (split; [reflexivity | ]).
+    + right. left. eauto.
+    + right. right. left. eauto.
+    + right. right. right. split; [reflexivity | ]. do 2 eexists.
+      right. right. right. right. left. eauto.
+    + right. right. right. split; [reflexivity | ]. do 2 eexists.
+      right. right. right. right. right. eauto.
+  - apply par_disc_inv in S2.
+    destruct S2 as [p2' [p3' [E [[S2 Eq] | [[S3 Ep] | [Et [c' [v' _]]]]]]]];
+      subst; try discriminate; do 3 eexists; (split; [reflexivity | ]);
+      right; right; right; (split; [reflexivity | ]); do 2 eexists.
+    + left. eauto.
+    + right. right. left. eauto.
+  - apply par_disc_inv in S2.
+    destruct S2 as [p2' [p3' [E [[S2 Eq] | [[S3 Ep] | [Et [c' [v' _]]]]]]]];
+      subst; try discriminate; do 3 eexists; (split; [reflexivity | ]);
+      right; right; right; (split; [reflexivity | ]); do 2 eexists.
+    + right. left. eauto.
+    + right. right. right. left. eauto.
+Qed.
+
+(** A parallel triple delays by all three components delaying.*)
+Lemma parTriple_del_inv p1 p2 p3 d r : p1 $||$ p2 $||$ p3 -PD- d -PD> r ->
+  exists p1' p2' p3', r = p1' $||$ p2' $||$ p3' /\
+  p1 -PD- d -PD> p1' /\ p2 -PD- d -PD> p2' /\ p3 -PD- d -PD> p3'.
+Proof.
+  intro H. apply par_del_inv in H. destruct H as [p1' [q' [E [S1 S2]]]].
+  apply par_del_inv in S2. destruct S2 as [p2' [p3' [E' [S2 S3]]]]. subst.
+  do 3 eexists. split; [reflexivity | ]. eauto.
+Qed.
+
+(** A parallel pair cannot delay while its components can synchronise.*)
+Lemma par_del_sync_not p q a d r : discActEnabled p a -> discActEnabled q (a^) ->
+  a <> tauAct -> p $||$ q -PD- d -PD> r -> False.
+Proof.
+  intros D1 D2 N H. inversion H; subst.
+  match goal with [K : forall a, sort a d p -> ~sort (a^) d q |- _] =>
+    eapply K; apply enabledInSort; try eassumption end.
+  apply complementNotTau. assumption.
+Qed.
+
+(** A parallel triple cannot delay while its first two components can synchronise.*)
+Lemma parTriple_del_sync_not_12 p1 p2 p3 a d r : discActEnabled p1 a -> discActEnabled p2 (a^) ->
+  a <> tauAct -> p1 $||$ p2 $||$ p3 -PD- d -PD> r -> False.
+Proof.
+  intros D1 D2 N H. apply del_triple_sort in H. destruct H as [K _].
+  eapply K; apply enabledInSort; try eassumption. apply complementNotTau. assumption.
+Qed.
+
+(** A parallel triple cannot delay while its first and third components can synchronise.*)
+Lemma parTriple_del_sync_not_13 p1 p2 p3 a d r : discActEnabled p1 a -> discActEnabled p3 (a^) ->
+  a <> tauAct -> p1 $||$ p2 $||$ p3 -PD- d -PD> r -> False.
+Proof.
+  intros D1 D2 N H. apply del_triple_sort in H. destruct H as [_ [K _]].
+  eapply K; apply enabledInSort; try eassumption. apply complementNotTau. assumption.
+Qed.
+
+(** A parallel triple cannot delay while its last two components can synchronise.*)
+Lemma parTriple_del_sync_not_23 p1 p2 p3 a d r : discActEnabled p2 a -> discActEnabled p3 (a^) ->
+  a <> tauAct -> p1 $||$ p2 $||$ p3 -PD- d -PD> r -> False.
+Proof.
+  intros D1 D2 N H. apply del_triple_sort in H. destruct H as [_ [_ K]].
+  eapply K; apply enabledInSort; try eassumption. apply complementNotTau. assumption.
+Qed.
+
+(** Inverts a step of a parallel triple whose target is a parallel triple, splitting
+it into its cases.*)
+Ltac par_triple_inv_cases :=
+  let H := fresh "H" in intro H;
+  let x1 := fresh "x" in let x2 := fresh "x" in let x3 := fresh "x" in
+  let E := fresh "E" in
+  first [apply parTriple_disc_inv in H | apply parTriple_del_inv in H];
+  destruct H as [x1 [x2 [x3 [E H]]]];
+  injection E as ? ? ?; subst x1 x2 x3;
+  repeat match goal with
+  | [K : _ /\ _ |- _] => destruct K
+  | [K : _ \/ _ |- _] => destruct K
+  | [K : exists _, _ |- _] => destruct K
+  end.
+
+(** Closes a case left by par_triple_inv_cases: an output or input that would have to
+be tau, a component that both changes and stays the same, or a goal that follows
+from the hypotheses.*)
+Ltac par_triple_close :=
+  first
+  [ match goal with [K : _ = tauAct |- _] => solve [discriminate K] end
+  | match goal with [N : ?x <> ?y, K : ?x = ?y |- _] => solve [exfalso; exact (N K)] end
+  | solve [eauto 7] ].
+
+(** If a parallel triple does a discrete action, it becomes a parallel triple.*)
+Lemma link_par_triple_discEx (p1 p2 p3 p' : ProcTerm) (a : DiscAct) :
+  p1 $||$ p2 $||$ p3 -PA- a -PA> p' -> exists p1' p2' p3',
+  p' = p1' $||$ p2' $||$ p3'.
+Proof.
+  intro H. apply parTriple_disc_inv in H. destruct H as [p1' [p2' [p3' [E _]]]].
+  eauto.
+Qed.
+
+(** If a parallel triple delays, it becomes a parallel triple.*)
+Lemma link_par_triple_delEx (p1 p2 p3 p' : ProcTerm) (d : Delay) :
+  p1 $||$ p2 $||$ p3 -PD- d -PD> p' -> exists p1' p2' p3',
+  p' = p1' $||$ p2' $||$ p3'.
+Proof.
+  intro H. apply parTriple_del_inv in H. destruct H as [p1' [p2' [p3' [E _]]]].
+  eauto.
+Qed.
+
+(** An output of a parallel triple is an output of one of its components.*)
+Lemma link_par_triple_out (p1 p2 p3 p1' p2' p3' : ProcTerm)
+  (c : Channel) (v : list BaseType) :
+  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
+  (p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
+  p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
+  p3 -PA- c ;! v -PA> p3' /\ p1 = p1' /\ p2 = p2').
+Proof. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An input of a parallel triple is an input of one of its components.*)
+Lemma link_par_triple_in (p1 p2 p3 p1' p2' p3' : ProcTerm)
+  (c : Channel) (v : list BaseType) :
+  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
+  (p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
+  p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
+  p3 -PA- c ;? v -PA> p3' /\ p1 = p1' /\ p2 = p2').
+Proof. par_triple_inv_cases; par_triple_close. Qed.
+
+(** A delay of a parallel triple is a delay of each of its components.*)
+Lemma link_par_triple_del (p1 p2 p3 p1' p2' p3' : ProcTerm)
+  (d : Delay) :
+  p1 $||$ p2 $||$ p3 -PD- d -PD> p1' $||$ p2' $||$ p3' ->
+  (p1 -PD- d -PD> p1' /\ p2 -PD- d-PD> p2' /\ p3 -PD- d -PD> p3').
+Proof. par_triple_inv_cases; par_triple_close. Qed.
+
+(** If a parallel triple does a discrete action, its first component either stays the
+same or does some action.*)
+Lemma link_par_triple_discW_1 p1 p1' p2 p2' p3 p3' a :
+  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+  p1 = p1' \/ exists a', p1 -PA- a' -PA> p1'.
+Proof. par_triple_inv_cases; par_triple_close. Qed.
+
+(** If a parallel triple does a discrete action, its second component either stays the
+same or does some action.*)
+Lemma link_par_triple_discW_2 p1 p1' p2 p2' p3 p3' a :
+  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+  p2 = p2' \/ exists a', p2 -PA- a' -PA> p2'.
+Proof. par_triple_inv_cases; par_triple_close. Qed.
+
+(** If a parallel triple does a discrete action, its third component either stays the
+same or does some action.*)
+Lemma link_par_triple_discW_3 p1 p1' p2 p2' p3 p3' a :
+  p1 $||$ p2 $||$ p3 -PA- a -PA> p1' $||$ p2' $||$ p3' ->
+  p3 = p3' \/ exists a', p3 -PA- a' -PA> p3'.
+Proof. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An output of a parallel triple that changes the first component is an output of
+that component alone.*)
+Lemma link_par_triple_out_neq1 p1 p1' p2 p2' p3 p3' c v :
+  p1 <> p1' ->
+  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
+  p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3'.
+Proof. intro. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An output of a parallel triple that changes the second component is an output of
+that component alone.*)
+Lemma link_par_triple_out_neq2 p1 p1' p2 p2' p3 p3' c v :
+  p2 <> p2' ->
+  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
+  p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3'.
+Proof. intro. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An output of a parallel triple that changes the third component is an output of
+that component alone.*)
+Lemma link_par_triple_out_neq3 p1 p1' p2 p2' p3 p3' c v :
+  p3 <> p3' ->
+  p1 $||$ p2 $||$ p3 -PA- c ;! v -PA> p1' $||$ p2' $||$ p3' ->
+  p3 -PA- c ;! v -PA> p3' /\ p1 = p1' /\ p2 = p2'.
+Proof. intro. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An input of a parallel triple that changes the first component is an input of that
+component alone.*)
+Lemma link_par_triple_in_neq1 p1 p1' p2 p2' p3 p3' c v :
+  p1 <> p1' ->
+  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
+  p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3'.
+Proof. intro. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An input of a parallel triple that changes the second component is an input of that
+component alone.*)
+Lemma link_par_triple_in_neq2 p1 p1' p2 p2' p3 p3' c v :
+  p2 <> p2' ->
+  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
+  p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3'.
+Proof. intro. par_triple_inv_cases; par_triple_close. Qed.
+
+(** An input of a parallel triple that changes the third component is an input of that
+component alone.*)
+Lemma link_par_triple_in_neq3 p1 p1' p2 p2' p3 p3' c v :
+  p3 <> p3' ->
+  p1 $||$ p2 $||$ p3 -PA- c ;? v -PA> p1' $||$ p2' $||$ p3' ->
+  p3 -PA- c ;?v -PA> p3' /\ p1 = p1' /\ p2 = p2'.
+Proof. intro. par_triple_inv_cases; par_triple_close. Qed.
+
 End Results.
 
 Notation "p1 -P=> p2" := (stepProcRefl p1 p2) (at level 50).
 Notation "d %; p" := (minGuard d p).
+
+(** Repeatedly inverts a discrete step from nilProc, an output or input prefix, a sum, a
+delay guard or a conditional, clearing it and substituting. The impossible branches
+close.*)
+Ltac invert_disc_prefixes := repeat match goal with
+  | [H : nilProc -PA- _ -PA> _ |- _] => inversion H
+  | [H : outPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion H; clear H; subst
+  | [H : inPrefix _ _ _ -PA- _ -PA> _ |- _] => inversion H; clear H; subst
+  | [H : sum _ _ -PA- _ -PA> _ |- _] => inversion H; clear H; subst
+  | [H : del _ _ -PA- _ -PA> _ |- _] => inversion H; clear H; subst
+  | [H : ifThen _ _ -PA- _ -PA> _ |- _] => inversion H; clear H; subst
+  end.
+
+(** Solves a goal [forall d q, X -PD- d -PD> q -> q = X] for X built from nilProc,
+prefixes and sums.*)
+Ltac del_self_tac := first [ apply del_self_nil | apply del_self_outPrefix
+  | apply del_self_inPrefix | (apply del_self_sum; del_self_tac) ].

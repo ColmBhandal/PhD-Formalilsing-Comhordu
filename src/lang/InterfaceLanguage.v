@@ -125,6 +125,38 @@ Proof.
 Qed.
 
 
+(** No element of a timed list that delays by d has a timestamp below d.*)
+Lemma timedList_del_ge l l' d v t :
+  l -tl- atlDel d -tl> l' -> <( v, t )> _: l -> d <= t.
+Proof.
+  intros H. remember (atlDel d) as a eqn:Ea. revert Ea.
+  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
+    intros Ea Hin; try discriminate.
+  - destruct Hin.
+  - injection Ea as Ed. subst d1.
+    destruct Hin as [Heq | Hin].
+    + injection Heq as Hv Ht1. subst v1. rewrite Ht1 in Ht.
+      destruct t1' as [[tr tp]]. destruct d as [[dr dp]]. simpl in *. 
+      apply (f_equal (fun x : Time => nonneg (time x))) in Ht. simpl in Ht. lra.
+    + eapply IH; [reflexivity | assumption].
+Qed.
+
+(** Outputting from a timed list keeps every element with a positive timestamp.*)
+Lemma timedList_out_pres_pos l l' w v t :
+  l -tl- w !! -tl> l' -> <( v, t )> _: l -> 0 < t -> <( v, t )> _: l'.
+Proof.
+  intros H. remember (w !!) as a eqn:Ea. revert Ea.
+  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
+    intros Ea Hin Hpos; try discriminate.
+  - destruct Hin as [Heq | Hin].
+    + injection Heq as Hv Hz. subst t. simpl in Hpos. lra.
+    + assumption.
+  - destruct Hin as [Heq | Hin].
+    + left. assumption.
+    + right. eapply IH; [exact Ea | eassumption | assumption].
+Qed.
+
+
 (***************** Input, Output & Notification lists *****************)
 (*These will be syntactically the same as timed lists, with the exception of
 a wrapper. Each will then diverege in their extension of the semantics of timed lists:
@@ -253,6 +285,33 @@ Lemma notifList_del_le ln ln' d v t q :
   (*Finally we have the lifting case, in which case we lift a similar
   (analogous) result for timed lists.*)
   eapply timedList_del_le; eassumption. Qed.
+
+(** Inputting into a notification list keeps its elements.*)
+Lemma notifList_in_pres ln ln' w x :
+  ln -nl- w ?? -nl> ln' -> x _: notifList ln -> x _: notifList ln'.
+Proof.
+  intros H Hin. inversion H; subst.
+  - simpl. right. assumption.
+  - match goal with [Ht : _ -tl- _ -tl> _ |- _] => inversion Ht end.
+Qed.
+
+(** Outputting from a notification list keeps every element with a positive timestamp.*)
+Lemma notifList_out_pres_pos ln ln' w v t :
+  ln -nl- w !! -nl> ln' -> <( v, t )> _: notifList ln -> 0 < t ->
+  <( v, t )> _: notifList ln'.
+Proof.
+  intros H Hin Ht. inversion H; subst. simpl in *.
+  eapply timedList_out_pres_pos; eassumption.
+Qed.
+
+(** A notification just input sits in the list with timestamp adaptNotif.*)
+Lemma notifList_in_hd ln ln' v :
+  ln -nl- v ?? -nl> ln' -> <( v, adaptNotif )> _: notifList ln'.
+Proof.
+  intros H. inversion H; subst.
+  - simpl. left. reflexivity.
+  - match goal with [Ht : _ -tl- _ -tl> _ |- _] => inversion Ht end.
+Qed.
 
 (* begin helpers for timeSplit_inputList *)
 From Stdlib Require Import Lra.

@@ -5,6 +5,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (***************************** Standard Imports *****************************)
 
 From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Lra.
 Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
@@ -15,6 +16,8 @@ Require Import ComhCoq.lib.GenBasics.
 Require Import ComhCoq.model.ComhBasics.
 Require Import ComhCoq.lang.LanguageFoundations.
 Require Import ComhCoq.lang.SoftwareLanguage.
+Require ComhCoq.lang.InterfaceLanguage.
+Require ComhCoq.lang.ModeStateLanguage.
 Require Export ComhCoq.lang.EntityLanguage.
 Reserved Notation "e @ i .: n" (at level 50).
 Reserved Notation "n1 -NA- a -NA> n2" (left associativity, at level 50).
@@ -594,6 +597,122 @@ Proof.
     exists (e1 :: n1). split; constructor; assumption.
   Qed.
 (**Proof: Straightforward. Lift time split property for entities. Maybe induction on struct of n.*)
+
+(** A network step that is not silent keeps every entity's software component. *)
+Lemma stepDiscNet_nonTau_pres_proc (n n' : Network) (a : ActDiscNet) :
+  n -NA- a -NA> n' -> a <> anTau ->
+  forall (i : nat) (e e' : Entity), e @ i .: n -> e' @ i .: n' -> procEnt e = procEnt e'.
+Proof.
+  intro STEP. induction STEP; intros NT i0 e0 e0' E0 E0';
+  try (exfalso; apply NT; reflexivity);
+  try solve [inversion E0];
+  try solve [eapply IHSTEP; [discriminate | eassumption | eassumption]];
+  inversion E0; subst; inversion E0'; subst;
+  try solve [eapply IHSTEP; [discriminate | eassumption | eassumption]];
+  match goal with [H : _ -EA- _ ->> _ |- _] => inversion H; subst; reflexivity end.
+Qed.
+
+(** A change in an entity's software component across a network step forces the step to be silent. *)
+Lemma procNeq_tau_net p p' l l' h h' k k' n n' a i :
+  [|p, l, h, k|] @ i .: n -> [|p', l', h', k'|] @ i .: n' ->
+  n -NA- a -NA> n' -> p <> p' -> a = anTau.
+Proof.
+  intros E E' S NE.
+  destruct a; try reflexivity; exfalso; apply NE;
+  assert (procEnt ([|p, l, h, k|]) = procEnt ([|p', l', h', k'|])) as Q
+    by (eapply stepDiscNet_nonTau_pres_proc; [eassumption | discriminate | eassumption | eassumption]);
+  simpl in Q; exact Q.
+Qed.
+
+(** An index occupied before a discrete step is occupied after it. *)
+Lemma link_net_ent_disc_fwd_ex : forall (n n' : Network) (a : ActDiscNet),
+  n -NA- a -NA> n' -> forall (e : Entity) (i : nat), e @ i .: n ->
+  exists e', e' @ i .: n'.
+Proof.
+  intros n n' a H e i E.
+  destruct (link_net_ent_disc_fwd n n' e i a H E) as [e' [E' _]].
+  exists e'. exact E'.
+Qed.
+
+(** Across a discrete network step, an entity is either unchanged or steps to its derivative. *)
+Lemma link_net_ent_disc :
+  forall (n n' : Network) (e e' : Entity) (i : nat) (a : ActDiscNet),
+  n -NA- a -NA> n' -> e @ i .: n -> e' @ i .: n'->
+  (e = e' \/ (exists a', e -EA- a' ->> e')).
+Proof.
+  intros n n' e e' i a H H0 H1.
+  destruct (link_net_ent_disc_bkwd n n' e' i a H H1) as [e0 [He0 Hor]].
+  assert (e0 = e) as Eq by (eapply entInNetUnique; eassumption).
+  subst e0. exact Hor.
+Qed.
+
+(** A network that delays gives each of its entities a delay. *)
+Lemma del_net_ent (e : Entity) (i : nat) (n n' : Network) (d : Delay) :
+  e @ i .: n -> n -ND- d -ND> n' -> exists e', e -ED- d ->> e'.
+Proof.
+  intros E ND.
+  destruct (link_net_ent_del_fwd n n' e i d ND E) as [e' [_ S]].
+  exists e'. exact S.
+Qed.
+
+(** An entity within range of an accepted message inputs it. *)
+Lemma inRange_acc_input (n n' : Network) (v : list BaseType) (l : Position)
+  (r : Distance) (i : nat) (e : Entity) :
+  n -NA- ([-v, l, r-]) /?: -NA> n' -> e @ i .: n -> dist2d l (posEnt e) <= r ->
+  exists e', e -EA- ([-v, l, r-]) #? ->> e' /\ e' @ i .: n'.
+Proof.
+  intros ACC EI DR.
+  destruct (link_net_ent_disc_fwd_ex n n' _ ACC e i EI) as [e' EI'].
+  destruct (acceptLink n n' e' i ([-v, l, r-]) ACC EI') as [e0 [E0 ST]].
+  assert (EQ : e0 = e) by (eapply entInNetUnique; eassumption). subst e0.
+  destruct ST as [ST | ST].
+  - exfalso. inversion ST; subst. cbn [posEnt] in DR.
+    rewrite distSymmetric in DR. lra.
+  - exists e'. split; assumption.
+Qed.
+
+(** An entity whose current mode changes across a network step has done a silent step. *)
+Lemma curr_switch_ent_tau (n n' : Network) (a : ActDiscNet)
+  (e e' : Entity) (i : nat) (m m' : Mode) :
+  n -NA- a -NA> n' -> e @ i .: n -> e' @ i .: n' ->
+  currModeEnt e = m -> currModeEnt e' = m' -> m <> m' ->
+  e -EA- aeTau ->> e'.
+Proof.
+  intros N E E' C C' NE.
+  destruct (link_net_ent_disc_bkwd n n' e' i a N E') as [e0 [E0 OR]].
+  assert (e0 = e) as EQ0 by (eapply entInNetUnique; eassumption).
+  subst e0.
+  destruct OR as [EQ | [a' S]].
+  - subst. exfalso. apply NE. reflexivity.
+  - destruct a'; [ inversion S; subst; simpl in *; exfalso; apply NE; reflexivity .. | exact S ].
+Qed.
+
+Import ComhCoq.lang.InterfaceLanguage.
+Import ComhCoq.lang.ModeStateLanguage.
+
+(** When a network delays, an entity whose software is a triple of parallel processes becomes
+one whose software is again such a triple, each component delaying along with the interface,
+the mode state and the position.*)
+Lemma net_del_elim q q0 q1 l h k i n n' d :
+  [|q $||$ q0 $||$ q1, l, h, k|] @ i .: n ->
+  n -ND- d -ND> n' ->
+  exists q' q0' q1' l' h' k',
+  [|q' $||$ q0' $||$ q1', l', h', k'|] @ i .: n' /\
+  q -PD- d -PD> q' /\ q0 -PD- d -PD> q0' /\ q1 -PD- d -PD> q1' /\
+  h -i- d -i> h' /\ k -ms- d -ms> k' /\
+  dist2d l l' <= speedMax * d.
+Proof.
+  intros E ND.
+  destruct (link_net_ent_del_fwd n n' _ i d ND E) as [e' [E' S]].
+  lets BM : boundedMovement S.
+  inversion S; subst.
+  match goal with [PD : _ $||$ _ $||$ _ -PD- d -PD> _ |- _] => inversion PD; subst end.
+  match goal with [PD : _ $||$ _ -PD- d -PD> _ |- _] => inversion PD; subst end.
+  do 6 eexists. split; [eassumption | ].
+  split; [eassumption | ]. split; [eassumption | ]. split; [eassumption | ].
+  split; [eassumption | ]. split; [eassumption | ].
+  simpl in BM. rewrite Rmult_comm. exact BM.
+Qed.
 
 End NetworkLanguage.
 

@@ -310,6 +310,104 @@ Lemma link_ent_mState_del p p' l l' h h' k k' d :
   [|p, l, h, k|] -ED- d ->> [|p', l', h', k'|] ->
   k -ms- d -ms> k'. intros. inversion H. assumption. Qed.
 
+(** If the software components of an entity transition are not equal, then
+the transition is necessarily a tau action, and either the process performs a tau,
+synchs with the interface, synchs with the mode state or reads the current position.*)
+Lemma link_ent_proc_neq_disc p p' h h' l l' k k' a :
+  p <> p' -> [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
+  a = aeTau /\ ( 
+  p -PA- tauAct -PA> p' \/
+  (exists h' c v, p -PA- c ;! v -PA> p' /\ h -i- c {? v -i> h') \/
+  (exists h' c v, p -PA- c ;? v -PA> p' /\ h -i- c {! v -i> h') \/
+  (exists k' c m, p -PA- c ;! [baseMode m] -PA> p' /\ k -ms- c .? m -ms> k') \/
+  (exists k' c m, p -PA- c ;? [baseMode m] -PA> p' /\ k -ms- c .! m -ms> k') \/
+  (exists k' c, p -PA- c *! -PA> p' /\ k -ms- c @? -ms> k') \/
+  (exists k' c, p -PA- c *? -PA> p' /\ k -ms- c @! -ms> k') \/
+  p -PA- chanPos ;? [basePosition l] -PA> p').
+  intros. inversion H0; (split;[ try reflexivity | ]);
+  try (subst; contradict H; reflexivity).
+  left; repeat eexists; eassumption.
+  right; left; repeat eexists; eassumption.
+  right. right. left. repeat eexists; eassumption.
+  right. right. left. repeat eexists; eassumption.
+  do 6 right. left. repeat eexists; eassumption.
+  do 5 right. left. repeat eexists; eassumption.
+  do 4 right. left. repeat eexists; eassumption.
+  do 3 right. left. repeat eexists; eassumption.
+  do 4 right. left. repeat eexists; eassumption.
+  repeat right. repeat eexists; eassumption.
+  Qed.
+
+(** A discrete entity transition either leaves the software unchanged or the software takes a step.*)
+Lemma link_ent_soft_disc p p' l l' h h' k k' a :
+  [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
+  p = p' \/ exists b, p -PA- b -PA> p'.
+Proof.
+  intro H. inversion H; subst;
+  first [left; reflexivity | right; eexists; eassumption].
+Qed.
+
+(** A delaying entity has no synchronisation on offer between its components.*)
+Lemma ent_del_noSyncNow p l h k d e' :
+  [|p, l, h, k|] -ED- d ->> e' -> forall a, noSyncNow a p h k.
+Proof.
+  intros DEL a. inversion DEL; subst.
+  match goal with [B : noSync _ _ _ _ |- _] => apply B end.
+Qed.
+
+(** No delay while the software can synchronise with the mode state.*)
+Lemma ent_del_sync_mState_not p l h k d e' a : discActEnabled p a ->
+  discActEnabledMState (a^) k -> [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DA DM DEL. destruct (ent_del_noSyncNow _ _ _ _ _ _ DEL a DA) as [_ NM].
+  apply NM. assumption.
+Qed.
+
+(** No delay while the software can synchronise with the interface.*)
+Lemma ent_del_sync_inter_not p l h k d e' a : discActEnabled p a ->
+  discActEnabledInter (a^) h -> [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DA DI DEL. destruct (ent_del_noSyncNow _ _ _ _ _ _ DEL a DA) as [NI _].
+  apply NI. assumption.
+Qed.
+
+(** Software that reads any current mode cannot let time pass: the mode state always
+offers its current mode.*)
+Lemma ent_del_mCurr_in_not p l h k d e' :
+  (forall m, discActEnabled p (chanMCurr ;? [baseMode m])) ->
+  [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DA DEL. eapply ent_del_sync_mState_not;
+  [apply (DA (currModeMState k)) | | exact DEL].
+  simpl. apply modeState_curr_enabled.
+Qed.
+
+(** Software that reads stability and any next mode cannot let time pass: a stable mode
+state offers mStable and an unstable one offers its next mode on mNext.*)
+Lemma ent_del_mStable_mNext_in_not p l h k d e' :
+  discActEnabled p (chanMStable *?) ->
+  (forall m, discActEnabled p (chanMNext ;? [baseMode m])) ->
+  [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DS DN DEL. destruct k as [m1 | m1 m2 t].
+  - eapply ent_del_sync_mState_not; [exact DS | | exact DEL].
+    simpl. econstructor. apply stepMsOutStable.
+  - eapply ent_del_sync_mState_not; [apply (DN m2) | | exact DEL].
+    simpl. econstructor. apply stepMsOutNext.
+Qed.
+
+(** A discrete entity step keeps every notification with a positive timestamp.*)
+Lemma stepEnt_disc_pres_notif_pos p p' l l' k k' li li' lo lo' ln ln' b v t :
+  [|p, l, {| li := li; lo := lo; ln := ln |}, k|] -EA- b ->>
+  [|p', l', {| li := li'; lo := lo'; ln := ln' |}, k'|] ->
+  <( v, t )> _: notifList ln -> 0 < t -> <( v, t )> _: notifList ln'.
+Proof.
+  intros H Hin Ht. inversion H; subst; try assumption;
+  match goal with [Hi : _ -i- _ -i> _ |- _] => inversion Hi; subst; try assumption end.
+  - eapply notifList_out_pres_pos; eassumption.
+  - eapply notifList_in_pres; eassumption.
+Qed.
+
 
 Lemma timeSplit_ent e e'' d d' d'' :
   e -ED- d'' ->> e'' -> d'' = d +d+ d' ->
