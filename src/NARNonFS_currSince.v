@@ -22,6 +22,7 @@ Require Import ComhCoq.EntAuxResults.
 Require Import ComhCoq.NetAuxBasics.
 Require Import ComhCoq.NetAuxDefs.
 Require Import ComhCoq.NARMisc.
+Require Import ComhCoq.ProtocolBridge.
 
 Lemma ovWait_nextSinceState_net m t x y i n : 
   ovWaitStateNet m t x y i n -> nextSinceStateNet i n.

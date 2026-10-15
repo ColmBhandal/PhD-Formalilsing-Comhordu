@@ -22,6 +22,7 @@ Require Import ComhCoq.NetworkLanguage.
 (*Require Import ComhCoq.EntAux.*)
 Require Import ComhCoq.NetAuxBasics.
 Require Import ComhCoq.NetAuxDefs.
+Require Import ComhCoq.ProtocolBridge.
 
 
 (*If an entity is pending then it cannot delay.*)

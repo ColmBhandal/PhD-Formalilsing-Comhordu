@@ -61,7 +61,7 @@ The top-level safety condition is proved in [Main.v](https://github.com/ColmBhan
 
 ### Software Language & Protocol
 
-The software component of the language is the language in which the protocol itself is written. It is a language with a flavour similar to [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems#:~:text=The%20calculus%20of%20communicating%20systems,communications%20between%20exactly%20two%20participants.) or [CBS](https://link.springer.com/content/pdf/10.1007%2F3-540-53982-4_19.pdf). The language and protocol are defined in [SoftwareLanguage.v](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/SoftwareLanguage.v). The language gives a discrete semantics - to represent computations, as well as a "delay" semantics - to capture the behaviour of terms in the presence of continuous time.
+The software component of the language is the language in which the protocol itself is written. It is a language with a flavour similar to [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems#:~:text=The%20calculus%20of%20communicating%20systems,communications%20between%20exactly%20two%20participants.) or [CBS](https://link.springer.com/content/pdf/10.1007%2F3-540-53982-4_19.pdf). The language is defined in [SoftwareLanguage.v](src/SoftwareLanguage.v), generic in its process names and their definitions. The protocol's processes are defined in [Protocol.v](src/Protocol.v), and [ProtocolBridge.v](src/ProtocolBridge.v) proves that they meet the conditions some language results need. The language gives a discrete semantics - to represent computations, as well as a "delay" semantics - to capture the behaviour of terms in the presence of continuous time.
 
 ### Other Modules
 

@@ -28,6 +28,7 @@ Require Import ComhCoq.ModeStateLanguage.
 Require Import ComhCoq.InterfaceLanguage.
 Require Import ComhCoq.SoftwareLanguage.
 Require Import ComhCoq.ProtAuxResults.
+Require Import ComhCoq.ProtocolBridge.
  
 (*TIDY*)
 

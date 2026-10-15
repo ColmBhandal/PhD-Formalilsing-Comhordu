@@ -16,6 +16,7 @@ Require Import ComhCoq.ProtAuxDefs.
 From Stdlib Require Import Bool.
 Require Import ComhCoq.EntityLanguage.
 Require Import ComhCoq.ProcEquiv.
+Require Import ComhCoq.ProtocolBridge.
 
 (****************** (TIDY?) General Stuff ******************)
 
@@ -805,7 +806,7 @@ Qed.
 substitution computed away. *)
 Ltac currOK_next_unfold_app :=
   eapply bisim_trans; [apply currOK_next_app_bisim | ];
-  cbn [def fst snd listsToSub liftVarList liftExpList subProcTerm subExp subBoolExp
+  cbn [def protocolDefs protocolDef fst snd listsToSub liftVarList liftExpList subProcTerm subExp subBoolExp
     listSub map liftNameProc listBaselistExp
     bcWait sleeping bcReady dormant init ovWait ovReady switchBc switchCurr
     switchListen tfsStart tfsNext tfsCurr tfsBc tfsListen ovAbort listening
@@ -816,7 +817,7 @@ Ltac currOK_next_unfold_app :=
 (** Closes a goal [listeningN $( [] )$ ~p~ listening]. *)
 Ltac currOK_next_listening_app :=
   eapply bisim_trans; [apply currOK_next_app_bisim | ];
-  cbn [def fst snd listsToSub]; rewrite subProc_id_eq; apply bisim_refl.
+  cbn [def protocolDefs protocolDef fst snd listsToSub]; rewrite subProc_id_eq; apply bisim_refl.
 
 (** Pre-processing for forward tracking: from [TR : p -PA- a -PA> p'] and a simple
 state predicate [p ~p~ X] in the context, generates all transitions of [X]

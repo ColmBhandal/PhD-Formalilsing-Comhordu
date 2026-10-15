@@ -1,28 +1,31 @@
 (** This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
-(** The software component of the language is here defined.*)
+(** The software component of the language is here defined. The language is generic in its
+process names and their definitions: a protocol supplies them as instances of the classes
+ProcNames and ProcDefs below. Some results also need the definitions to be guarded, which a
+protocol shows with an instance of GuardedDefs. For the Comhordú protocol, see Protocol.v and
+ProtocolBridge.v.*)
 
+Require ComhCoq.Extras.LibTactics.
 Require Import ComhCoq.GenTacs.
 Require Import ComhCoq.StandardResults.
 From Stdlib Require Import Logic.Decidable.
 From Stdlib Require Import Lists.ListSet.
+From Stdlib Require Import Lia.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.ComhBasics.
 
 (******************Syntax*******************)
 
-(**Names for defining parametrised processes.*)
-Inductive Name := bcWaitN | sleepingN | bcReadyN | dormantN | initN | 
-  ovWaitN | ovReadyN | switchBcN | switchCurrN | switchListenN | ovAbortN | 
-  tfsStartN | tfsNextN | tfsCurrN | tfsBcN | tfsListenN | listeningN | checkRangeN | 
-  rangeBadN | currEqN | badOvlpN | currOKN | nextEqN | abortOvlpN | gotMsgN |
-  gotRangeN | currPincCheckN | currCompN | nextPincCheckN | pausedN.
+(**Names for defining parametrised processes. A protocol supplies them, and equality on
+them must be decidable.*)
+Class ProcNames := {
+  Name : Type;
+  eqDecName : eqDec Name }.
 
-(** Equality is decidable on names.*)
-Lemma eqDecName : eqDec Name. unfold eqDec.
-  destruct x1, x2; try solve [right; unfold not; intro; inversion H];
-  left; reflexivity. Qed.
+Section Syntax.
+Context {PNames : ProcNames}.
 
 (**The set of process terms, which may have free variables in them.*)
 Inductive ProcTerm : Type :=
@@ -34,21 +37,6 @@ Inductive ProcTerm : Type :=
   | parComp : ProcTerm -> ProcTerm -> ProcTerm
   | app : Name -> list Exp -> ProcTerm
   | del : Exp -> ProcTerm -> ProcTerm.
-
-(** Process language syntactic sugar.*)
-Notation "c $< l >$ ? P" := (inPrefix c l P) (at level 41, right associativity).
-Notation "c $< l >$ ! P" := (outPrefix c l P) (at level 41, right associativity).
-Notation "c ? P" := (inPrefix c [] P) (at level 41, right associativity).
-Notation "c ! P" := (outPrefix c [] P) (at level 41, right associativity).
-Notation "B $> P" := (ifThen B P) (at level 41, right associativity).
-Notation "P $+$ Q" := (sum P Q) (at level 50).
-Notation "P $||$ Q" := (parComp P Q) (at level 45, right associativity).
-Notation "h $( l )$" := (app h l) (at level 41, right associativity).
-Notation " $< E >$ P " := (del E P) (at level 41, right associativity).
-
-(** A name applied to the empty list is a process term, which can just be
-specified using the name.*)
-Coercion liftNameProc (n : Name) : ProcTerm := n $([])$.
 
 (** Equality is decidable on ProcTerms.*)
 Lemma eqDecProcTerm : eqDec ProcTerm. unfold eqDec.
@@ -98,199 +86,30 @@ Lemma eqDecProcTerm : eqDec ProcTerm. unfold eqDec.
 
 
 
+End Syntax.
 
-
-
-(******************Protocol*******************)
-
-
-(**Note that the specification of the protocol ideally should be left separate to the
-language specification. Specifying the protocol here entangles it with the language.
-A more general language definition would be in terms of a def relation that is left
-unspecified. However, specifying the protocol and the def relation here has the advantage
-that we can prove certain desirable language properties based on the finiteness of the
-def relation that would otherwise be unprovable. These properties are of significant
-practical use and so we choose to specify the language and protocol in this way despite its
-conceptual messiness.*)
-
-(**Aliases for variables to decrease verbosity*)
-Definition vM := (var 0).
-Definition vMF := (var 1).
-Definition vM' := (var 2).
-Definition vM'' := (var 3).
-Definition vL := (var 4).
-Definition vL' := (var 5).
-Definition vT := (var 6).
-Definition vT' := (var 7).
-Definition vR := (var 8).
-Definition vX := (var 9).
-Definition vY := (var 10).
-
-
-
-(******************Broadcast Process*******************)
-
-Definition bcWait (m x : Exp) := chanTrans? sleepingN $+$ $<x>$chanPos$<vL>$? bcReadyN $([m, eVar vL])$ $+$ chanWake$<vM>$? bcWaitN $([eVar vM, liftTimeExp zeroTime])$.
-
-Definition sleeping := chanWake$<vM>$? bcWaitN $([eVar vM, liftTimeExp zeroTime])$ $+$ chanTrans? sleepingN.
-
-Definition bcReady (m l : Exp) := chanOutProc$<[m, l]>$!bcWaitN $([m, (ePeriod m)])$.
-
-(******************Overlap Process*******************)
-
-Definition dormant := chanMNext$<vM'>$? initN $(eVar vM')$ $+$ chanAbort? dormantN $+$ chanBad? tfsStartN.
-
-Definition init (m' : Exp) := chanMCurr$<vM>$? ovWaitN $([m', (eAdd (eWaitTime vM m') (ePeriod m')), liftTimeExp zeroTime])$.
-
-Definition ovWait (m' t x y : Exp) := chanAbort? ovAbortN $+$ chanBad? tfsStartN $+$ $<y>$chanPos$<vL>$? ovReadyN $([m', t, eVar vL])$ $+$ $<x>$chanPause!switchBcN $(m')$.
-
-Definition ovReady (m' t l : Exp) := chanOutProc$<[m', l]>$!ovWaitN $([m', (eSubtract t (ePeriod m')), (ePeriod m')])$.
-
-Definition switchBc (m' : Exp) := chanWake$<m'>$!switchCurrN.
-
-Definition switchCurr := chanMCurr!switchListenN.
-
-Definition switchListen := chanUnpause!dormantN.
-
-Definition tfsStart := chanMCurr$<vM>$? tfsNextN $(eVar vM)$.
-
-Definition tfsNext (m : Exp) := chanMNext$<eFailSafeSucc m>$!tfsCurrN $+$ chanMStable!tfsNextN $(m)$.
-
-Definition tfsCurr := chanAbort? tfsCurrN $+$ chanBad? tfsCurrN $+$ chanMCurr!tfsBcN.
-
-Definition tfsBc := chanTrans!tfsListenN.
-
-Definition tfsListen := chanAbort? tfsListenN $+$ chanBad? tfsListenN $+$ chanUnpause!dormantN.
-
-Definition ovAbort := chanMStable!dormantN.
-
-(******************Listener Process*******************)
-
-(** Notifications arrive as [r, m'', l'], so the listener inputs all three fields and
-ignores the position. The thesis inputs only [r, m''] here (p.122), which can never
-match a notification: see doc/thesis/thesis-corrections.md.*)
-Definition listening := chanAN$<[vR, vM'', vL']>$? checkRangeN $([eVar vM'', eVar vR])$ $+$ chanInProc$<[vM'', vL']>$? gotMsgN $([eVar vM'', eVar vL'])$ $+$ chanPause? pausedN $+$ chanUnpause? listeningN.
-
-(** States for handling notification *)
-
-Definition checkRange (m'' r : Exp) := (bSufficient m'' r $> listeningN) $+$ !~(bSufficient (m'') (r)) $> rangeBadN $(m'')$.
-
-Definition rangeBad (m'' : Exp) := chanMCurr$<vM>$? currEqN $([eVar vM, m''])$.
-
-Definition currEq (m m'' : Exp) := (m =b= m'') $> badOvlpN $+$ !~(m =b= m'') $> currOKN $(m'')$.
-
-Definition badOvlp := chanBad!listeningN.
-
-Definition currOK (m'' : Exp) := chanMStable? listeningN $+$ chanMNext$<vM'>$? nextEqN $([eVar vM', m''])$.
-
-Definition nextEq (m' m'' : Exp) := (m' =b= m'') $> abortOvlpN $+$ !~(m' =b= m'') $> listeningN.
-
-Definition abortOvlp := chanAbort!listeningN.
-
-(** States for handling messages *)
-
-Definition gotMsg (m'' l' : Exp) := chanPos$<vL>$? gotRangeN $([m'', (|vL , l'| (-) speedMax (.) msgLatency)])$.
-
-Definition gotRange (m'' r : Exp) := chanMCurr$<vM>$? currPincCheckN $([eVar vM, m'', r])$.
-
-Definition currPincCheck (m m'' r  : Exp) := !~bPossInc m m'' r $> currCompN $([m'', r])$ $+$ bPossInc m m'' r $> badOvlpN.
-
-Definition currComp (m'' r : Exp) := chanMStable? listeningN $+$ chanMNext$<vM'>$? nextPincCheckN $([eVar vM', m'', r])$.
-
-Definition nextPincCheck (m' m'' r : Exp) :=  !~bPossInc m' m'' r $> listeningN $+$ bPossInc m' m'' r $> abortOvlpN.
-
-Definition paused := chanUnpause? listeningN.
-
+(** Process language syntactic sugar.*)
+Notation "c $< l >$ ? P" := (inPrefix c l P) (at level 41, right associativity).
+Notation "c $< l >$ ! P" := (outPrefix c l P) (at level 41, right associativity).
+Notation "c ? P" := (inPrefix c [] P) (at level 41, right associativity).
+Notation "c ! P" := (outPrefix c [] P) (at level 41, right associativity).
+Notation "B $> P" := (ifThen B P) (at level 41, right associativity).
+Notation "P $+$ Q" := (sum P Q) (at level 50).
+Notation "P $||$ Q" := (parComp P Q) (at level 45, right associativity).
+Notation "h $( l )$" := (app h l) (at level 41, right associativity).
+Notation " $< E >$ P " := (del E P) (at level 41, right associativity).
 
 (**Redefining pair notation as it was overwritten by interval notation for real numbers.*)
 Notation "( a , b )" := (pair a b).
 
-(*The definition relation is assumed. It maps every name to a list of variables and
-a process term. The meaning of def n = (xs, p) is that n applied to xs is defined
-to be p.*)
-Definition def (n : Name) : (list Var * ProcTerm) :=
-  match n with
-  | bcWaitN => ([vM, vX], bcWait (eVar vM) (eVar vX))
-  | sleepingN => ([], sleeping)
-  | bcReadyN => ([vM,  vL ], bcReady (eVar vM)  (eVar vL) )
-  | dormantN => ([], dormant)
-  | initN => ([vM'], init (eVar vM'))
-  (*Only case of any interest. Doubling up on vT in the
-    parameter passing. Only process that "passes on" the time parameter.*)
-  | ovWaitN => ([vM', vT, vY], ovWait (eVar vM') (eVar vT) (eVar vT) (eVar vY))
-  | ovReadyN => ([vM', vT,  vL], ovReady (eVar vM') (eVar vT) (eVar vL))
-  | switchBcN => ([vM'], switchBc (eVar vM'))
-  | switchCurrN => ([], switchCurr)
-  | switchListenN => ([], switchListen)
-  | ovAbortN => ([], ovAbort)
-  | tfsStartN => ([], tfsStart)
-  | tfsNextN => ([vM], tfsNext (eVar vM))
-  | tfsCurrN => ([], tfsCurr)
-  | tfsBcN => ([], tfsBc)
-  | tfsListenN => ([], tfsListen)
-  | listeningN => ([], listening)
-  | checkRangeN => ([vM'', vR], checkRange (eVar vM'') (eVar vR))
-  | rangeBadN => ([vM''], rangeBad (eVar vM''))
-  | currEqN => ([vM, vM''], currEq (eVar vM) (eVar vM''))
-  | badOvlpN => ([], badOvlp)
-  | currOKN => ([vM''], currOK (eVar vM''))
-  | nextEqN => ([vM', vM''], nextEq (eVar vM') (eVar vM''))
-  | abortOvlpN => ([], abortOvlp)
-  | gotMsgN => ([vM'',  vL'], gotMsg (eVar vM'') (eVar vL'))
-  | gotRangeN => ([vM'', vR], gotRange (eVar vM'') (eVar vR))
-  | currPincCheckN => ([vM, vM'', vR], currPincCheck (eVar vM) (eVar vM'') (eVar vR))
-  | currCompN => ([vM'', vR], currComp (eVar vM'') (eVar vR))
-  | nextPincCheckN => ([vM', vM'', vR], nextPincCheck (eVar vM') (eVar vM'') (eVar vR))
-  | pausedN => ([], paused)
-  end.
+(**The definition relation. It maps every name to a list of variables and a process
+term. The meaning of def n = (xs, p) is that n applied to xs is defined to be p.
+A protocol supplies it.*)
+Class ProcDefs {PNames : ProcNames} := {
+  def : Name -> (list Var * ProcTerm) }.
 
-(** The protocol process is the parallel composition of the three processes below.
-Notice that we could have defined this process via the def relation. However,
-the def relation is only necessary for recursive references, of which there are
-none here i.e. procProtocol is not on the right hand side of any of the def
-equations. Hence there is no need to use the def relation, which in any case would
-have made for more cumbersome developments later on.*)
-Definition procProtocol := sleeping $||$ dormant $||$ listening.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Section Semantics.
+Context {PNames : ProcNames} {PDefs : ProcDefs}.
 
 (*******************Discrete Semantics*******************)
 
@@ -468,10 +287,47 @@ Inductive stepProc (t : ProcTerm) : Act -> ProcTerm -> Prop :=
   | stepPTimed : forall (d : Delay) (t' : ProcTerm),
     stepTimedProc t d t' -> stepProc t d t'.
 
+(** Returns p [x -> l] where def h = x, p.*)
+Definition unfoldApp (h : Name) (l : list Exp) :=
+  let (x, p) := def h in (subProcTerm (listsToSub x l) p).
+
+(**The names applied in a term outside any input or output prefix. Unfolding a term
+reaches these names without first doing an action.*)
+Fixpoint unguardedNames (t : ProcTerm) : list Name :=
+  match t with
+  | nilProc => []
+  | outPrefix _ _ _ => []
+  | inPrefix _ _ _ => []
+  | ifThen _ t' => unguardedNames t'
+  | sum t1 t2 => unguardedNames t1 ++ unguardedNames t2
+  | parComp t1 t2 => unguardedNames t1 ++ unguardedNames t2
+  | app n _ => [n]
+  | del _ t' => unguardedNames t'
+  end.
+
+End Semantics.
+
+Open Scope R_scope.
+
 Notation "p1 -PA- a -PA> p2" := (stepDiscProc p1 a p2) (left associativity, at level 50).
 Notation "p1 -PD- d -PD> p2" := (stepTimedProc p1 d p2) (left associativity, at level 50).
 Notation "p1 -P- a -P> p2" := (stepProc p1 a p2) (left associativity, at level 50).
 
+(**The definitions are guarded: every cycle of names calling each other passes through an
+input or output prefix. Equivalently, the names can be ranked so that a definition only
+calls lower-ranked names outside a prefix. This generalises the guardedness of Remark 4.2
+in the thesis, which asks that every name in a definition sit under a prefix.*)
+Class GuardedDefs {PNames : ProcNames} {PDefs : ProcDefs} := {
+  rank : Name -> nat;
+  rank_unguarded : forall h h', In h' (unguardedNames (snd (def h))) ->
+    (rank h' < rank h)%nat }.
+
+Reserved Notation "t %; p" (at level 50).
+
+Section Results.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
+Open Scope R_scope.
 
 (** Two processes are related if either they are equal or if there is a transition
 linking them.*)
@@ -486,6 +342,66 @@ Notation "p1 -P=> p2" := (stepProcRefl p1 p2) (at level 50).
 there is some process p' such that p transitions to p' via d.*)
 Inductive timedActEnabled (p : ProcTerm) (d : Delay) : Prop :=
   tae : forall p' : ProcTerm, stepTimedProc p d p' -> timedActEnabled p d.
+
+
+(*********Guarded definitions*********)
+
+(** Substitution doesn't change which names a term applies outside a prefix.*)
+Lemma unguardedNames_sub (s : Subst) (p : ProcTerm) :
+  unguardedNames (subProcTerm s p) = unguardedNames p.
+Proof.
+  revert s. induction p; intro s; simpl;
+    try rewrite IHp; try rewrite IHp1, IHp2; reflexivity.
+Qed.
+
+(** Unfolding an application gives the body of its definition, with the arguments
+substituted for the parameters.*)
+Lemma unfoldApp_body (h : Name) (l : list Exp) :
+  unfoldApp h l = subProcTerm (listsToSub (fst (def h)) l) (snd (def h)).
+Proof. unfold unfoldApp. destruct (def h). reflexivity. Qed.
+
+(** Helper for guarded_rect: induction on a bound for the ranks of the names a term
+applies outside a prefix, then on the term.*)
+Local Lemma guarded_rect_aux (P : ProcTerm -> Type)
+  (Hnil : P nilProc)
+  (Hout : forall c l p, P (outPrefix c l p))
+  (Hin : forall c l p, P (inPrefix c l p))
+  (Hif : forall b p, P p -> P (ifThen b p))
+  (Hsum : forall p q, P p -> P q -> P (sum p q))
+  (Hpar : forall p q, P p -> P q -> P (parComp p q))
+  (Happ : forall h l, P (unfoldApp h l) -> P (app h l))
+  (Hdel : forall e p, P p -> P (del e p)) :
+  forall n p, (forall h, In h (unguardedNames p) -> (rank h < n)%nat) -> P p.
+Proof.
+  induction n as [|n IHn]; intro p;
+    induction p as [| | | b p IHp | p1 IHp1 p2 IHp2 | p1 IHp1 p2 IHp2 | h l | e p IHp];
+    simpl; intro B; auto;
+    try solve [apply Hsum || apply Hpar;
+      [apply IHp1 | apply IHp2]; intros h I; apply B, in_or_app; auto].
+  - exfalso. specialize (B h (or_introl eq_refl)). lia.
+  - apply Happ, IHn. intros h' I. rewrite unfoldApp_body, unguardedNames_sub in I.
+    apply rank_unguarded in I. specialize (B h (or_introl eq_refl)). lia.
+Qed.
+
+(** Induction over process terms that unfolds the applications outside a prefix. It
+holds because the definitions are guarded, so such unfolding always stops.*)
+Lemma guarded_rect (P : ProcTerm -> Type)
+  (Hnil : P nilProc)
+  (Hout : forall c l p, P (outPrefix c l p))
+  (Hin : forall c l p, P (inPrefix c l p))
+  (Hif : forall b p, P p -> P (ifThen b p))
+  (Hsum : forall p q, P p -> P q -> P (sum p q))
+  (Hpar : forall p q, P p -> P q -> P (parComp p q))
+  (Happ : forall h l, P (unfoldApp h l) -> P (app h l))
+  (Hdel : forall e p, P p -> P (del e p)) :
+  forall p, P p.
+Proof.
+  intro p. apply (guarded_rect_aux P Hnil Hout Hin Hif Hsum Hpar Happ Hdel
+    (S (list_max (map rank (unguardedNames p))))).
+  intros h I. assert (M : Forall (fun k => (k <= list_max (map rank (unguardedNames p)))%nat)
+    (map rank (unguardedNames p))) by (apply list_max_le; lia).
+  rewrite Forall_forall in M. specialize (M (rank h) (in_map rank _ _ I)). lia.
+Qed.
 
 
 (*********Results*********)
@@ -736,7 +652,7 @@ Corollary sortDerivEquiv (a : DiscAct) (d d' : Delay) (p p' : ProcTerm) :
   Qed.
 
 
-Require Import ComhCoq.Extras.LibTactics.
+Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
 
 (**Sort captures at least all the actions that are available within the delay d. The converse
@@ -990,43 +906,6 @@ Theorem taeDel : forall (d : Delay) (e : Exp) (p : ProcTerm),
   rewrite H3. eapply stepTpDelAdd. apply H2. assumption.
   econstructor. eapply stepTpDelIll. symmetry. assumption. Qed.
 
-(** A single step of the full automation tactic for "eventually discrete guarded sum" terms.*)
-Ltac taeAutoSing := match goal with
-  | [ |- timedActEnabled ?P _ ] =>
-    match P with
-    | _ $< _ >$ ? _  => apply taeIn
-    | _ $< _ >$ ! _  => apply taeOut
-    | _ $> _  => apply taeThenBranch
-    | _ $+$ _  => apply taeSum
-    | _ $(_)$  => apply taeAppAuto; simpl
-    | $< _ >$ _  => apply taeDel
-    end
-  end.
-
-(** A tactic that will automatically prove that certain processes are time
-action enabled. It does this by repeatedly drilling into the process until it finds
-either input or output prefixed terms, at which point the delay proof is simple.
-Obviously, this will only work for a certain class of processes that are, let's say
-"eventually discrete guarded sums" i.e. if they were put in some sort of normal form,
-with all the applications expanded to their definitions, then they would be sums of
-input or output prefixed terms.*)
-Ltac taeAuto := repeat taeAutoSing.
-
-(** Every application of a name to a vector can progress by a delay. To prove this
-we need to use heavy automation tactics rather than step through all 30 names
-individually. The automation tactic we use is taeAuto.*)
-Theorem delApp : forall (h : Name) (l : list Exp),
-  exists d, timedActEnabled (h $(l)$) d.  intros.
-  exists (mkDelay onePos). remember (def h) as e.
-  symmetry in Heqe. destruct e as [x p]. destruct h;
-  (** This next block of code replaces the application of a name to a generic list of
-  expressions with the body instantiated with a normalised generic list of expressions.
-  By normalisation what is meant here is that the length of the target list matches the
-  length of the parameter list in the definition. This is possible due to previous results.*)
-  (eapply taeApp; [apply Heqe|]; addHyp (listSubNormal x l); rename X into H;
-  invertClear H; invertClear H0; rename x0 into l'; rewrite H1;
-  inversion Heqe; rewrite <- H2 in H; listGen H l'; simpl);
-  taeAuto. Qed.
   
 
 
@@ -1065,8 +944,6 @@ a certain threshold of delay. Hence we reduce the problem to ensuring that
 the actions available now can't synchronise. Towards this end, we define machinery
 that will calculate in a finite and somewhat symbolic way the input and output
 actions available to a process.*)
-
-Reserved Notation "t %; p" (at level 50).
 
 (** minGuard t P roughly says that t is less than or equal to the smallest delay
 guard encountered in an expansion of P- by expansion of P what is meant is a recursive
@@ -1219,55 +1096,27 @@ Lemma mgDelEx : forall (e : Exp) (p : ProcTerm),
   constructor. symmetry. assumption. Qed.
   
 
-(** A single step of the full automation tactic for "eventually discrete guarded sum" terms.
-This should prove that any such term has some minGuard.*)
-Ltac mgAutoSing := match goal with
-  | [ |- exists _, _ %; ?P] =>
-    match P with
-    | _ $< _ >$ ? _  => apply mgInEx
-    | _ $< _ >$ ! _  => apply mgOutEx
-    | _ $> _  => apply mgThenBranchEx
-    | _ $+$ _  => apply mgSumEx
-    | _ $(_)$  => apply mgAppAutoEx; simpl
-    | $< _ >$ _  => apply mgDelEx
-    end
-  end.
-
-Ltac mgAuto := repeat mgAutoSing.
+(**For every process there is some delay that is a minGuard of it.*)
+Theorem minGuardExists (p : ProcTerm) :
+  exists d, d %; p.
+Proof.
+  revert p. apply guarded_rect.
+  - exists (mkDelay onePos). constructor.
+  - apply mgOutEx.
+  - apply mgInEx.
+  - intros. apply mgThenBranchEx. assumption.
+  - intros. apply mgSumEx; assumption.
+  - intros p q [d1 H1] [d2 H2]. destruct (Rle_or_lt d1 d2).
+    + exists d1. eapply mgParL; eassumption.
+    + exists d2. eapply mgParR; eassumption.
+  - intros h l H. apply mgAppAutoEx. rewrite <- unfoldApp_body. assumption.
+  - intros. apply mgDelEx. assumption.
+Qed.
 
 (** For every application there is some delay that is a minGuard of that application.*)
 Theorem minGuardExistsBody (h : Name) (l : list Exp) :
-  exists d, d %; (h $(l)$). remember (def h) as e.
-  symmetry in Heqe. destruct e as [x p]. destruct h;
-  (** This next block of code replaces the application of a name to a generic list of
-  expressions with the body instantiated with a normalised generic list of expressions.
-  By normalisation what is meant here is that the length of the target list matches the
-  length of the parameter list in the definition. This is possible due to previous results.*)
-  (eapply mgAppEx; [apply Heqe|]; addHyp (listSubNormal x l);
-  rename X into H; invertClear H; invertClear H0; rename x0 into l'; rewrite H1;
-  inversion Heqe; rewrite <- H2 in H; listGen H l'; simpl); mgAuto. Qed.
-
-(** For every application there is some delay that is a minGuard of that application.*)
-Theorem minGuardExists (p : ProcTerm) :
-  exists d, d %; p. induction p; try invertClear IHp;
-  try solve [exists (mkDelay onePos); constructor].
-  remember (evalBoolExpFunTot b). destruct b0. exists x. constructor.
-  assumption. apply evalBoolExpFunRel. unfold evalBoolExpFunTot in Heqb0.
-  destruct (evalBoolExpFun b); inversion Heqb0. reflexivity.
-  exists (mkDelay onePos); apply mgIfFalse. symmetry; assumption.
-  invertClear IHp1. invertClear IHp2. addHyp (Rle_or_lt x x0).
-  invertClear H1. exists x. eapply mgSumL. assumption. apply H0.
-  assumption. exists x0. eapply mgSumR. apply H. assumption.
-  assumption. invertClear IHp1. invertClear IHp2. addHyp (Rle_or_lt x x0).
-  invertClear H1. exists x. eapply mgParL. assumption. apply H0.
-  assumption. exists x0. eapply mgParR. apply H. assumption.
-  assumption. apply minGuardExistsBody. remember (evalExpFunTime e).
-  destruct o. addHyp (Rle_lt_or_eq_dec 0 t (cond_nonneg t)).
-  invertClear H0. exists (mkDelay (mkposreal t H1)).
-  eapply mgDelEval. symmetry. apply Heqo. simpl. apply Rle_refl.
-  exists x. apply mgDelTimeout. symmetry. symmetry in H1.
-  apply timeZero in H1. rewrite H1 in Heqo. assumption. assumption.
-  exists (mkDelay onePos); constructor. symmetry. assumption. Qed.
+  exists d, d %; (h $(l)$).
+Proof. apply minGuardExists. Qed.
 
 (** An action that is involved in the sort relation is not the tau action.*)
 Lemma sortNotTau (a : DiscAct) (p : ProcTerm) (d : Delay) :
@@ -1293,10 +1142,6 @@ Open Scope nat_scope.
 (** This is a the set of channels stamped with natural numbers. The natural number
 indicates the number of arguments that will be output on that channel.*)
 Definition ChanStamped := (Channel * nat)%type.
-
-(** Returns p [x -> l] where def h = x, p.*)
-Definition unfoldApp (h : Name) (l : list Exp) :=
-  let (x, p) := def h in (subProcTerm (listsToSub x l) p).
 
 (** We want a way to symbolically collect all the output actions a process can do.
 For each output, we just record the channel on which it occurs and the number
@@ -1447,54 +1292,24 @@ Lemma outListDelEx : forall (e : Exp) (p : ProcTerm),
   rewrite <- Heqo in H0. inversion H0. Qed.
 
 
-(** A single step of the full automation tactic for "eventually discrete guarded sum" terms.
-This should prove that any such term has some minGuard.*)
-Ltac outListAutoSing := match goal with
-  | [ |- {_ | outListProc ?P _}] =>
-    match P with
-    | _ $< _ >$ ? _  => apply outListInEx
-    | _ $< _ >$ ! _  => apply outListOutEx
-    | _ $> _  => apply outListThenBranchEx
-    | _ $+$ _  => apply outListSumEx
-    | _ $(_)$  => apply outListAppAutoEx; simpl
-    | $< _ >$ _  => apply outListDelEx
-    end
-  end.
-
-Ltac outListAuto := repeat outListAutoSing.
-
-(**Every application term has a list of output actions. This result relies on the
-specifics of the definition relation we have defined.*)
-Theorem outListAppEx (h : Name) (l : list Exp) :
-  {l' : list ChanStamped | outListProc (h $(l)$) l'}. remember (def h) as e.
-  symmetry in Heqe. destruct e as [x p]. destruct h;
-  (** This next block of code replaces the application of a name to a generic list of
-  expressions with the body instantiated with a normalised generic list of expressions.
-  By normalisation what is meant here is that the length of the target list matches the
-  length of the parameter list in the definition. This is possible due to previous results.*)
-  (eapply outListAppIndEx; [apply Heqe|]; addHyp (listSubNormal x l);
-  rename X into H; invertClear H; invertClear H0; rename x0 into l'; rewrite H1;
-  inversion Heqe; rewrite <- H2 in H; listGen H l'; simpl); outListAuto. Qed.
-
 (**For every process there is a list of output actions for that process.*)
 Theorem outListEx (p : ProcTerm) : {l : list ChanStamped | outListProc p l}.
-  induction p; try solve [exists chanStampedNil; constructor]. addHyp (evalExpListsExDec l).
-  invertClear X. invertClear X0. exists [(c, length l)]. eapply outlOutEval.
-  apply H. exists chanStampedNil. apply outlOutIll. unfold not. intros. apply H. exists l'.
-  assumption. remember (evalBoolExpFunTot b). destruct b0. invertClear IHp.
-  exists x. constructor. apply evalBoolExpFunRel. unfold evalBoolExpFunTot in Heqb0.
-  destruct (evalBoolExpFun b); inversion Heqb0. reflexivity. assumption.
-  exists chanStampedNil. apply outlIfFalse. symmetry. assumption.
-  invertClear IHp1. invertClear IHp2. exists (x ++ x0).
-  constructor; assumption.
-  invertClear IHp1. invertClear IHp2. exists (x ++ x0).
-  constructor; assumption. apply outListAppEx.
-  remember (evalExpFunTime e). destruct o. addHyp (eqDecTime t zeroTime).
-  invertClear H. invertClear IHp. exists x. constructor. symmetry.
-  rewrite <- H0. assumption. assumption. exists chanStampedNil. apply outlDelGuard.
-  unfold not. intro. apply H0. rewrite <- Heqo in H. inversion H.
-  reflexivity. exists chanStampedNil. apply outlDelGuard. unfold not; intro.
-  rewrite <- Heqo in H. inversion H. Qed.
+Proof.
+  revert p. apply guarded_rect.
+  - exists chanStampedNil. constructor.
+  - apply outListOutEx.
+  - apply outListInEx.
+  - intros. apply outListThenBranchEx. assumption.
+  - intros. apply outListSumEx; assumption.
+  - intros p q [l1 H1] [l2 H2]. exists (l1 ++ l2). constructor; assumption.
+  - intros h l [l' H]. exists l'. constructor. assumption.
+  - intros. apply outListDelEx. assumption.
+Qed.
+
+(**Every application term has a list of output actions.*)
+Theorem outListAppEx (h : Name) (l : list Exp) :
+  {l' : list ChanStamped | outListProc (h $(l)$) l'}.
+Proof. apply outListEx. Qed.
 
 (** All input prefixed terms have an associated input list.*)
 Lemma inListInEx : forall (c : Channel) (l : list Var) (p : ProcTerm),
@@ -1549,52 +1364,24 @@ Lemma inListDelEx : forall (e : Exp) (p : ProcTerm),
   rewrite <- Heqo in H0. inversion H0. Qed.
 
 
-(** A single step of the full automation tactic for "eventually discrete guarded sum" terms.
-This should prove that any such term has some minGuard.*)
-Ltac inListAutoSing := match goal with
-  | [ |- {_ | inListProc ?P _}] =>
-    match P with
-    | _ $< _ >$ ? _  => apply inListInEx
-    | _ $< _ >$ ! _  => apply inListOutEx
-    | _ $> _  => apply inListThenBranchEx
-    | _ $+$ _  => apply inListSumEx
-    | _ $(_)$  => apply inListAppAutoEx; simpl
-    | $< _ >$ _  => apply inListDelEx
-    end
-  end.
-
-Ltac inListAuto := repeat inListAutoSing.
-
-(**Every application term has a list of input actions. This result relies on the
-specifics of the definition relation we have defined.*)
-Theorem inListAppEx (h : Name) (l : list Exp) :
-  {l' : list ChanStamped | inListProc (h $(l)$) l'}. remember (def h) as e.
-  symmetry in Heqe. destruct e as [x p]. destruct h;
-  (** This next block of code replaces the application of a name to a generic list of
-  expressions with the body instantiated with a normalised generic list of expressions.
-  By normalisation what is meant here is that the length of the target list matches the
-  length of the parameter list in the definition. This is possible due to previous results.*)
-  (eapply inListAppIndEx; [apply Heqe|]; addHyp (listSubNormal x l);
-  rename X into H; invertClear H; invertClear H0; rename x0 into l'; rewrite H1;
-  inversion Heqe; rewrite <- H2 in H; listGen H l'; simpl); inListAuto. Qed.
-
 (**For every process there is a list of input actions for that process.*)
 Theorem inListEx (p : ProcTerm) : {l : list ChanStamped | inListProc p l}.
-  induction p; try solve [exists chanStampedNil; constructor]. exists [(c, length l)].
-  constructor. remember (evalBoolExpFunTot b). destruct b0. invertClear IHp.
-  exists x. constructor. apply evalBoolExpFunRel. unfold evalBoolExpFunTot in Heqb0.
-  destruct (evalBoolExpFun b); inversion Heqb0. reflexivity. assumption.
-  exists chanStampedNil. apply inlIfFalse. symmetry. assumption.
-  invertClear IHp1. invertClear IHp2. exists (x ++ x0).
-  constructor; assumption.
-  invertClear IHp1. invertClear IHp2. exists (x ++ x0).
-  constructor; assumption. apply inListAppEx.
-  remember (evalExpFunTime e). destruct o. addHyp (eqDecTime t zeroTime).
-  invertClear H. invertClear IHp. exists x. constructor. symmetry.
-  rewrite <- H0. assumption. assumption. exists chanStampedNil. apply inlDelGuard.
-  unfold not. intro. apply H0. rewrite <- Heqo in H. inversion H.
-  reflexivity. exists chanStampedNil. apply inlDelGuard. unfold not; intro.
-  rewrite <- Heqo in H. inversion H. Qed.
+Proof.
+  revert p. apply guarded_rect.
+  - exists chanStampedNil. constructor.
+  - apply inListOutEx.
+  - apply inListInEx.
+  - intros. apply inListThenBranchEx. assumption.
+  - intros. apply inListSumEx; assumption.
+  - intros p q [l1 H1] [l2 H2]. exists (l1 ++ l2). constructor; assumption.
+  - intros h l [l' H]. exists l'. constructor. assumption.
+  - intros. apply inListDelEx. assumption.
+Qed.
+
+(**Every application term has a list of input actions.*)
+Theorem inListAppEx (h : Name) (l : list Exp) :
+  {l' : list ChanStamped | inListProc (h $(l)$) l'}.
+Proof. apply inListEx. Qed.
 
 (**Equality is decidable on stamped channels.*)
 Lemma eqDecChanStamped (c1 c2 : ChanStamped) :
@@ -1952,44 +1739,19 @@ Lemma progressDel : forall (e : Exp) (p : ProcTerm),
   symmetry. apply Heqo. right. exists (mkDelay onePos). eapply tae. eapply stepTpDelIll.
   symmetry. assumption. Qed.
 
-(** A single step of the full automation tactic for "eventually discrete guarded sum" terms.
-This should prove that any such term can progress.*)
-Ltac progressAutoSing := match goal with
-  | [ |- progress ?P] =>
-    match P with
-    | _ $< _ >$ ? _  => apply progressIn
-    | _ $< _ >$ ! _  => apply progressOut
-    | _ $> _  => apply progressThenBranch
-    | _ $+$ _  => apply progressSum
-    | _ $(_)$  => apply progressAppAuto; simpl
-    | $< _ >$ _  => apply progressDel
-    end
-  end.
-
-Ltac progressAuto := repeat progressAutoSing.
-
-(**Every application term can progress. This result relies on the
-specifics of the definition relation we have defined, using a cheeky automation tactic.*)
-Theorem progressApp (h : Name) (l : list Exp) :
-  progress (h $(l)$). remember (def h) as e.
-  symmetry in Heqe. destruct e as [x p]. destruct h;
-  (** This next block of code replaces the application of a name to a generic list of
-  expressions with the body instantiated with a normalised generic list of expressions.
-  By normalisation what is meant here is that the length of the target list matches the
-  length of the parameter list in the definition. This is possible due to previous results.*)
-  (eapply progressAppInd; [apply Heqe|]; addHyp (listSubNormal x l);
-  rename X into H; invertClear H; invertClear H0; rename x0 into l'; rewrite H1;
-  inversion Heqe; rewrite <- H2 in H; listGen H l'; simpl); progressAuto. Qed.
-
 (** A software process can always do either a tau action or it can delay by some amount
 d.*)
 Theorem progressSoft : forall (p : ProcTerm),
-  progress p. unfold progress.
-  induction p; try solve [right; exists (mkDelay onePos); eapply tae; constructor].
-  apply progressThenBranch; assumption.
-  (*Case: sum*)
-  apply progressSum; [apply IHp1 | apply IHp2].
+  progress p.
+Proof.
+  apply guarded_rect.
+  - right. exists (mkDelay onePos). eapply tae. constructor.
+  - apply progressOut.
+  - apply progressIn.
+  - apply progressThenBranch.
+  - apply progressSum.
   (*Case: par*)
+  - intros p1 p2 IHp1 IHp2. unfold progress in *.
   invertClear IHp1. left. invertClear H. eapply dae. constructor. apply H0.
   invertClear IHp2. left. invertClear H0. eapply dae. apply stepDpParR. apply H1.
   (**Special case: par- both can delay. We now do case analysis on whether or not
@@ -2006,9 +1768,15 @@ Theorem progressSoft : forall (p : ProcTerm),
   eapply stepDpSyncLR. apply H1. apply H2.
   eapply stepDpParL. apply H1.
   (*Case: app*)
-  apply progressApp.
+  - intros h l H. apply progressAppAuto. rewrite <- unfoldApp_body. assumption.
   (*Case: del*)
-  apply progressDel. assumption. Qed.
+  - apply progressDel.
+Qed.
+
+(**Every application term can progress.*)
+Theorem progressApp (h : Name) (l : list Exp) :
+  progress (h $(l)$).
+Proof. apply progressSoft. Qed.
 
 (** If a process cannot perform a tau action, then it can delay by some amount. This is
 a direct corollary of progress.*)
@@ -2018,7 +1786,8 @@ Corollary patienceSoft (p : ProcTerm) : ~discActEnabled p tauAct -> exists d,
 
 Lemma delProc_minus_guard t d d' H p p' e :
   $< minusTime t (delay d) H >$ p -PD- d' -PD> p' ->
-  $< e >$ p -PD- d +d+ d' -PD> p'. Admitted.
+  $< e >$ p -PD- d +d+ d' -PD> p'.
+Proof using PNames PDefs. Admitted.
 
 (** If p can delay to p' and p' can delay to p'',
  then p can delay to p'' by the sum of the two original delays.*)
@@ -2127,3 +1896,8 @@ Lemma parTriple_dae_intro3 p1 p2 p3 a :
   apply parTriple_disc_intro3. apply H. Qed.
 
 (*-LOCAL TIDY*)
+
+End Results.
+
+Notation "p1 -P=> p2" := (stepProcRefl p1 p2) (at level 50).
+Notation "d %; p" := (minGuard d p).

@@ -11,6 +11,10 @@ Require Import ComhCoq.ComhBasics.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.SoftwareLanguage.
 Require Import ComhCoq.GenTacs.
+Require ComhCoq.Extras.LibTactics.
+
+Section ProcEquiv.
+Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (********************** Bisimulation **********************)
 
@@ -58,7 +62,7 @@ Ltac plus_le_left_red := match goal with [Q : ?a + ?b = ?a + ?c |-
   ?b = ?c] => replace b with (a + b - a);[ | ring];
   rewrite Q; ring end.
 
-Require Import ComhCoq.Extras.LibTactics.
+Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
 
 (*TOGO: Wherever the sort shit is.*)
@@ -476,6 +480,7 @@ Lemma cond_bisim_true p b : evalBoolExp b true ->
 
 Theorem evalBoolExpFalseTot : forall (e : BoolExp),
   evalBoolExp e false <-> evalBoolExpFunTot e = false.
+Proof using.
   split; intros. apply evalBoolExpRelFun in H.
   unfold evalBoolExpFunTot. rewrite H. reflexivity.
   unfold evalBoolExpFunTot in H.
@@ -521,3 +526,8 @@ Lemma if_then_bisim_false b p q :
   unfold evalBoolExpFunTot. rewrite U. simpl.
   reflexivity. Qed.
 
+End ProcEquiv.
+
+(** A section's notations and tactics end with it. So that later files can use them, the
+notations are declared again here.*)
+Notation "p ~p~ q" := (bisimulation p q) (at level 70).

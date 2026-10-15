@@ -11,6 +11,7 @@ Require Import ComhCoq.ComhBasics.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.SoftwareLanguage.
 Require Import ComhCoq.ProcEquiv.
+Require Import ComhCoq.ProtocolBridge.
 
 (********************** Single ProcTerm State Predicates **********************)
 

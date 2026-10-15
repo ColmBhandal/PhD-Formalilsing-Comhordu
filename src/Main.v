@@ -28,6 +28,7 @@ Require Import ComhCoq.NARNonFS_currSince.
 Require Import ComhCoq.NARMisc.
 Require Import ComhCoq.NARIncomp.
 Require Import ComhCoq.NARTop.
+Require Import ComhCoq.ProtocolBridge.
 
 (**Used to exploit a symmetry in the following proof, essentially continues on the proof
 from where it is applied*)
