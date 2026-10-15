@@ -9,6 +9,13 @@
 - **`Parameter` stubs** (`reachableEnt`, `nextModeEnt`, `inPosEnt`, `currModeNet`, `nextModeNet`) are unfinished definitions. Propose completions in a report; don't fill them in.
 - **Extra logical axioms:** the stdlib's classical logic, functional extensionality and proof irrelevance (already in the trust base) are allowed. Any newly used one must be listed in the PR and the report.
 
+## The language and the protocol
+
+- The language files (`LanguageFoundations`, `SoftwareLanguage`, `InterfaceLanguage`, `ModeStateLanguage`, `EntityLanguage`, `NetworkLanguage`, `ProcEquiv`) are generic in the process names and their definitions. They never import a protocol file.
+- The protocol plugs in through `Protocol.v`, which defines its processes as instances of `ProcNames` and `ProcDefs`, and `ProtocolBridge.v`, which proves that they meet the language's conditions, such as `GuardedDefs`, and holds facts true only of this protocol. Protocol files import `ProtocolBridge`.
+- Generic code sits in `Section`s whose `Context` takes the class instances. Rocq drops a section's `Notation`, `Ltac` and `Open Scope` when the section ends, so put those between sections.
+- Give an `Admitted` lemma inside a section a `Proof using` line. Without one it depends on every instance in the section, including `GuardedDefs`.
+
 ## Markers and conventions
 
 - `Admitted (* UPGRADE-BROKEN *)` marks a proof that broke in a toolchain upgrade and couldn't be fixed on the spot.
