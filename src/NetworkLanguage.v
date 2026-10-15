@@ -15,22 +15,20 @@ Require Import ComhCoq.ComhBasics.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.SoftwareLanguage.
 Require Export EntityLanguage.
-
-(***************Network syntax stuff*********************)
+Reserved Notation "e @ i .: n" (at level 50).
+Reserved Notation "n1 -NA- a -NA> n2" (left associativity, at level 50).
+Reserved Notation "n1 -ND- d -ND> n2" (left associativity, at level 50).
 
 Section NetworkLanguage.
 Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
+
+(***************Network syntax stuff*********************)
 
 (**A network of entities is a list of entities.*)
 Definition Network : Type := list Entity.
 
 Coercion singNet (e : Entity) : Network := [e].
-End NetworkLanguage.
-
-
-Reserved Notation "e @ i .: n" (at level 50).
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** e @ i :: n says that e is at position i in the network n.
 The first position is position 0.*)
@@ -51,24 +49,8 @@ Theorem entInNet_inList : forall (e : Entity) (n : Network) (i : nat),
 Theorem entInNetUnique : forall (e e' : Entity) (i : nat) (n : Network),
   e @ i .: n -> e' @ i .: n -> e = e'. intros. induction H.
   inversion H0. reflexivity. inversion H0. apply IHentInNet. assumption. Qed.
-End NetworkLanguage.
-Notation "e @ i .: n" := (entInNet e i n).
 
 
-Ltac entnetuniq U e1 e2 :=
-  match goal with
-  [H1 : e1 @ ?i .: ?n, H2 : e2 @ ?i .: ?n |- _ ] =>
-  let U1 := fresh U in lets U1 : entInNetUnique H1 H2
-  end.
-
-Ltac entnetuniq2 U n :=
-  match goal with
-  [H1 : _ @ _ .: n, H2 : _ @ _ .: n |- _ ] =>
-  let U1 := fresh U in lets U1 : entInNetUnique H1 H2
-  end.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** There either exists an entity at position i or there doesn't.*)
 Theorem decEntInNet : forall (i : nat) (n : Network),
@@ -80,13 +62,8 @@ Theorem decEntInNet : forall (i : nat) (n : Network),
   exists e. apply einConsRight. assumption. right. intro.
   inversion H as [e He]. clear H. inversion He. apply H0. exists e.
   assumption. Qed.
-End NetworkLanguage.
-
 
 Open Scope nat_scope.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** We define what it means for a network to be safe.*)
 Definition safe (n : Network) : Prop := 
@@ -113,12 +90,7 @@ Definition safeSing (e : Entity) (i : nat) (n : Network) :=
   e @ i .: n /\
   forall (j : nat) (e' : Entity), j <> i -> e' @ j .: n ->
   e ~~ e'.
-End NetworkLanguage.
-
 Notation "e .! i .: n" := (safeSing e i n) (at level 50, left associativity).
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** A network n is safe iff every entity in the network is singularly
 safe.*)
@@ -191,17 +163,12 @@ Inductive ActDiscNet : Type :=
   (** The accept relation is essentially the union of the input and output relations. Its purpose is purely to simplify the expression of the semantics.*)
   | anAcc : Message -> ActDiscNet
   | anTau : ActDiscNet.
-End NetworkLanguage.
-
 Notation "b /! i" := (anOut b i) (at level 30).
 Notation "b /?" := (anIn b) (at level 30).
 Notation "b /:" := (anIg b) (at level 30).
 Notation "b /?:" := (anAcc b) (at level 30).
 
 
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** Convert an entity action to a network action*)
 Coercion entToNetAct (a : ActDiscEnt) : ActDiscNet :=
@@ -211,17 +178,10 @@ Coercion entToNetAct (a : ActDiscEnt) : ActDiscNet :=
   | aeTagIg m => anIg m
   | aeTau => anTau 
   end.
-End NetworkLanguage.
-
-
-Reserved Notation "n1 -NA- a -NA> n2" (left associativity, at level 50).
-Reserved Notation "n1 -ND- d -ND> n2" (left associativity, at level 50).
 
 
 
 
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** The discrete labelled transition relation on networks.*)
 Inductive stepDiscNet : Network -> ActDiscNet -> Network -> Prop :=
@@ -285,14 +245,7 @@ Lemma accInOrIg : forall (n n' : Network) (m : Message),
   intros. inversion H. left; assumption. right. assumption. Qed.
 
 Definition emptyNet : Network := [].
-End NetworkLanguage.
-Notation "n1 -NA- a -NA> n2" := (stepDiscNet n1 a n2).
-Notation "n1 -ND- d -ND> n2" := (stepTimedNet n1 d n2).
-
 Notation "[\]" := emptyNet.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** Every non-null network is able to accept any message.*)
 Theorem accNet : forall (n : Network) (m : Message),
@@ -432,13 +385,8 @@ Lemma tauLink : forall (n n' : Network),
   assumption. intros. destruct i'. inversion H9. constructor.
   constructor. apply H8. unfold not. intros. apply H7.
   f_equal. assumption. inversion H9. assumption. Qed.
-End NetworkLanguage.
-
 
 Open Scope R_scope.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** If an entity evolves by time delay d, then the change in its
 position is bounded by d times the assumed maximum speed.*)
@@ -510,32 +458,9 @@ Proof.
     + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepDiscNet _ _ Hx) as [e1 [He1 Hor]] end.
       exists e1. split. constructor. assumption. assumption.
   Qed.
-End NetworkLanguage.
-
 (**Proof: Case analyse the network transition and this follows from the semantics*)
 
-Ltac link_netentdiscfwd_tac0 e' U :=
-  match goal with
-  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e @ ?i .: ?n |- _] =>
-    let H1 := fresh in lets H1 : link_net_ent_disc_fwd H H0;
-    let H2 := fresh in destruct H1 as [e' H2];
-    let U1 := fresh U in let H3 := fresh in
-    decompAnd2 H2 U1 H3
-  end.
 
-Ltac link_netentdiscfwd_tac e' b U :=
-  match goal with
-  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e @ ?i .: ?n |- _] =>
-    let H1 := fresh in lets H1 : link_net_ent_disc_fwd H H0;
-    let H2 := fresh in destruct H1 as [e' H2];
-    let U1 := fresh U in let H3 := fresh in
-    decompAnd2 H2 U1 H3; let U2 := fresh U in let H4 := fresh in
-    elim_intro H3 U2 H4; 
-    [ | let U3 := fresh U in invertClearAs2 H4 b U3]
-  end.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** If a network performs a discrete step to another network, then for all entities
 e' in the derivative network, there is an entity e in the original at the same position
@@ -572,31 +497,8 @@ Lemma link_net_ent_disc_bkwd : forall (n n' : Network) (e' : Entity) (i : nat) (
   assumption. eapply entInNetUnique. apply H2. rewrite H5. assumption.
   invertClear H4. addHyp (H6 i e' H5 H0). exists e'. split.
   assumption. left. reflexivity. Qed.
-End NetworkLanguage.
 
 
-Ltac link_netentdiscbkwd_tac0 e b U :=
-  match goal with
-  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e' @ ?i .: ?n' |- _] =>
-    let H1 := fresh in lets H1 : link_net_ent_disc_bkwd H H0;
-    let H2 := fresh in destruct H1 as [e H2];
-    let U1 := fresh U in let H3 := fresh in
-    decompAnd2 H2 U1 H3
-  end.
-
-Ltac link_netentdiscbkwd_tac e b U :=
-  match goal with
-  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e' @ ?i .: ?n' |- _] =>
-    let H1 := fresh in lets H1 : link_net_ent_disc_bkwd H H0;
-    let H2 := fresh in destruct H1 as [e H2];
-    let U1 := fresh U in let H3 := fresh in
-    decompAnd2 H2 U1 H3; let U2 := fresh U in let H4 := fresh in
-    elim_intro H3 U2 H4; 
-    [ | let U3 := fresh U in invertClearAs2 H4 b U3]
-  end.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (*Weakend linking theorem*)
 Lemma link_net_ent_disc_bkwdW (n n' : Network) (e' : Entity) (i : nat) (a : ActDiscNet) :
@@ -614,26 +516,16 @@ Lemma link_net_ent_del_bkwd : forall (n n' : Network) (e' : Entity) (i : nat) (d
   addHyp (IHn n' e' i0 d H7 H10). invertClear H12. exists x.
   invertClear H13. split. constructor. assumption. assumption.
   Qed.
-End NetworkLanguage.
 
-
-Ltac link_netentdelbkwd_tac e U :=
-  match goal with
-  | [ H : ?n -ND- ?d -ND> ?n', H0 : ?e' @ ?i .: ?n' |- _] =>
-    let H1 := fresh in lets H1 : link_net_ent_del_bkwd H H0;
-    let H2 := fresh in destruct H1 as [e H2];
-    let U1 := fresh U in let U2 := fresh U in
-    decompAnd2 H2 U1 U2
-  end.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** A weakened, but easier to use version of the timed linking theorem.*)
 Lemma link_net_ent_delW : forall (n n' : Network) (e e' : Entity) (i : nat) (d : Delay),
-  n -ND- d -ND> n' -> e' @ i .: n' -> e @ i .: n -> e -ED- d ->> e'. intros.
-  link_netentdelbkwd_tac e0 Y. my_applys_eq Y0. entnetuniq U e0 e. assumption. 
-  Qed.
+  n -ND- d -ND> n' -> e' @ i .: n' -> e @ i .: n -> e -ED- d ->> e'.
+Proof.
+  intros n n' e e' i d D H' H.
+  destruct (link_net_ent_del_bkwd n n' e' i d D H') as [e0 [H0 D0]].
+  rewrite (entInNetUnique e e0 i n H H0). assumption.
+Qed.
 
 (** If a network performs a timed step to another network, then for all entities
 e' in the derivative network, there is an entity e in the original at the same position
@@ -648,46 +540,12 @@ Proof.
     + match goal with Hx : e0 @ _ .: _ |- _ => destruct (IHstepTimedNet _ _ Hx) as [e1 [He1 Hd]] end.
       exists e1. split. constructor. assumption. assumption.
   Qed.
-End NetworkLanguage.
-
 (**Proof: Straightforward from the semantics. Could do induction on the structure of n for the actual proof. Similar to
 link_net_ent_disc_fwd but probably simpler.*)
 
-Ltac link_netentdelfwd_tac e' U :=
-  match goal with
-  | [ H : ?n -ND- ?d -ND> ?n', H0 : ?e @ ?i .: ?n |- _] =>
-    let H1 := fresh in lets H1 : link_net_ent_del_fwd H H0;
-    let H2 := fresh in destruct H1 as [e' H2];
-    let U1 := fresh U in let U2 := fresh U in
-    decompAnd2 H2 U1 U2
-  end.
 
-Ltac link_netsoftdel_tac U :=
-  match goal with
-  | [ H : ?n -ND- ?d -ND> ?n', H0 : [|?p, ?l, ?h, ?k|] @ ?i .: ?n,
-    H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
-    let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
-    apply link_ent_soft_del in U1
-  end.
 
-Ltac link_netmstatedel_tac U :=
-  match goal with
-  | [ H : ?n -ND- ?d -ND> ?n', H0 : [|?p, ?l, ?h, ?k|] @ ?i .: ?n,
-    H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
-    let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
-    apply link_ent_mState_del in U1
-  end.
 
-Ltac link_netinterdel_tac U :=
-  match goal with
-  | [ H : ?n -ND- ?d -ND> ?n', H0 : [|?p, ?l, ?h, ?k|] @ ?i .: ?n,
-    H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
-    let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
-    apply link_ent_inter_del in U1
-  end.
-
-Section NetworkLanguage.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** If a network n delays by d to n', and e1 e2 are separated by x in n,
 then e1' e2' are separated by at least x - 2*smax*d in n'. Where e1' e2'
@@ -734,6 +592,112 @@ Proof.
     destruct (timeSplit_ent e e' d d' d0 H Hd) as [e1 [He1 He2]].
     exists (e1 :: n1). split; constructor; assumption.
   Qed.
+(**Proof: Straightforward. Lift time split property for entities. Maybe induction on struct of n.*)
+
 End NetworkLanguage.
 
-(**Proof: Straightforward. Lift time split property for entities. Maybe induction on struct of n.*)
+(** A section's notations and tactics end with it. So that later files can use them, the
+notations are declared again here, and the tactics are declared here.*)
+Notation "e @ i .: n" := (entInNet e i n).
+Notation "e .! i .: n" := (safeSing e i n) (at level 50, left associativity).
+Notation "b /! i" := (anOut b i) (at level 30).
+Notation "b /?" := (anIn b) (at level 30).
+Notation "b /:" := (anIg b) (at level 30).
+Notation "b /?:" := (anAcc b) (at level 30).
+Notation "n1 -NA- a -NA> n2" := (stepDiscNet n1 a n2).
+Notation "n1 -ND- d -ND> n2" := (stepTimedNet n1 d n2).
+Notation "[\]" := emptyNet.
+
+Ltac entnetuniq U e1 e2 :=
+  match goal with
+  [H1 : e1 @ ?i .: ?n, H2 : e2 @ ?i .: ?n |- _ ] =>
+  let U1 := fresh U in lets U1 : entInNetUnique H1 H2
+  end.
+
+Ltac entnetuniq2 U n :=
+  match goal with
+  [H1 : _ @ _ .: n, H2 : _ @ _ .: n |- _ ] =>
+  let U1 := fresh U in lets U1 : entInNetUnique H1 H2
+  end.
+
+Ltac link_netentdiscfwd_tac0 e' U :=
+  match goal with
+  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e @ ?i .: ?n |- _] =>
+    let H1 := fresh in lets H1 : link_net_ent_disc_fwd H H0;
+    let H2 := fresh in destruct H1 as [e' H2];
+    let U1 := fresh U in let H3 := fresh in
+    decompAnd2 H2 U1 H3
+  end.
+
+Ltac link_netentdiscfwd_tac e' b U :=
+  match goal with
+  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e @ ?i .: ?n |- _] =>
+    let H1 := fresh in lets H1 : link_net_ent_disc_fwd H H0;
+    let H2 := fresh in destruct H1 as [e' H2];
+    let U1 := fresh U in let H3 := fresh in
+    decompAnd2 H2 U1 H3; let U2 := fresh U in let H4 := fresh in
+    elim_intro H3 U2 H4; 
+    [ | let U3 := fresh U in invertClearAs2 H4 b U3]
+  end.
+
+Ltac link_netentdiscbkwd_tac0 e b U :=
+  match goal with
+  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e' @ ?i .: ?n' |- _] =>
+    let H1 := fresh in lets H1 : link_net_ent_disc_bkwd H H0;
+    let H2 := fresh in destruct H1 as [e H2];
+    let U1 := fresh U in let H3 := fresh in
+    decompAnd2 H2 U1 H3
+  end.
+
+Ltac link_netentdiscbkwd_tac e b U :=
+  match goal with
+  | [ H : ?n -NA- ?a -NA> ?n', H0 : ?e' @ ?i .: ?n' |- _] =>
+    let H1 := fresh in lets H1 : link_net_ent_disc_bkwd H H0;
+    let H2 := fresh in destruct H1 as [e H2];
+    let U1 := fresh U in let H3 := fresh in
+    decompAnd2 H2 U1 H3; let U2 := fresh U in let H4 := fresh in
+    elim_intro H3 U2 H4; 
+    [ | let U3 := fresh U in invertClearAs2 H4 b U3]
+  end.
+
+Ltac link_netentdelbkwd_tac e U :=
+  match goal with
+  | [ H : ?n -ND- ?d -ND> ?n', H0 : ?e' @ ?i .: ?n' |- _] =>
+    let H1 := fresh in lets H1 : link_net_ent_del_bkwd H H0;
+    let H2 := fresh in destruct H1 as [e H2];
+    let U1 := fresh U in let U2 := fresh U in
+    decompAnd2 H2 U1 U2
+  end.
+
+Ltac link_netentdelfwd_tac e' U :=
+  match goal with
+  | [ H : ?n -ND- ?d -ND> ?n', H0 : ?e @ ?i .: ?n |- _] =>
+    let H1 := fresh in lets H1 : link_net_ent_del_fwd H H0;
+    let H2 := fresh in destruct H1 as [e' H2];
+    let U1 := fresh U in let U2 := fresh U in
+    decompAnd2 H2 U1 U2
+  end.
+
+Ltac link_netsoftdel_tac U :=
+  match goal with
+  | [ H : ?n -ND- ?d -ND> ?n', H0 : [|?p, ?l, ?h, ?k|] @ ?i .: ?n,
+    H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
+    let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
+    apply link_ent_soft_del in U1
+  end.
+
+Ltac link_netmstatedel_tac U :=
+  match goal with
+  | [ H : ?n -ND- ?d -ND> ?n', H0 : [|?p, ?l, ?h, ?k|] @ ?i .: ?n,
+    H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
+    let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
+    apply link_ent_mState_del in U1
+  end.
+
+Ltac link_netinterdel_tac U :=
+  match goal with
+  | [ H : ?n -ND- ?d -ND> ?n', H0 : [|?p, ?l, ?h, ?k|] @ ?i .: ?n,
+    H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
+    let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
+    apply link_ent_inter_del in U1
+  end.

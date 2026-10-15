@@ -11,11 +11,12 @@ Require Import ComhCoq.ComhBasics.
 Require Import ComhCoq.LanguageFoundations.
 Require Import ComhCoq.SoftwareLanguage.
 Require Import ComhCoq.GenTacs.
-
-(********************** Bisimulation **********************)
+Require ComhCoq.Extras.LibTactics.
 
 Section ProcEquiv.
 Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
+
+(********************** Bisimulation **********************)
 
 (** Single step equivlance on process terms is defined as a bisimulation.*)
 CoInductive bisimulation p q : Prop :=
@@ -25,14 +26,9 @@ CoInductive bisimulation p q : Prop :=
   (forall a q', q -P- a -P> q' ->
   exists p', p -P- a -P> p' /\ bisimulation p' q') ->
   bisimulation p q.
-End ProcEquiv.
-
 Notation "p ~p~ q" := (bisimulation p q) (at level 70).
 
 (*** Generic Properties of the Relation ***)
-
-Section ProcEquiv.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** The siumlation relation is reflexive.*)
 CoFixpoint bisim_refl p : p ~p~ p. constructor.
@@ -56,8 +52,6 @@ CoFixpoint bisim_symm p q : p ~p~ q -> q ~p~ p.
   intros. apply H0 in H2. ex_flat. and_flat.
   apply bisim_symm in AND0. exists x. split; assumption.
   Qed.
-End ProcEquiv.
-
 
 (*** Slightly more Specific ***)
 
@@ -68,13 +62,10 @@ Ltac plus_le_left_red := match goal with [Q : ?a + ?b = ?a + ?c |-
   ?b = ?c] => replace b with (a + b - a);[ | ring];
   rewrite Q; ring end.
 
-Require Import ComhCoq.Extras.LibTactics.
+Import ComhCoq.Extras.LibTactics.
 Open Scope R_scope.
 
 (*TOGO: Wherever the sort shit is.*)
-
-Section ProcEquiv.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 (** If a is in the sort relation for d, p, and p is capable of doing a delay
 of d, then there is some d' < d and p' such that p can delay to this p' by
@@ -334,8 +325,6 @@ CoFixpoint choice_bisim_context p1 p2 p1' p2' :
   split. apply stepPTimed. constructor; assumption.
   apply choice_bisim_context; assumption.
   Qed.
-End ProcEquiv.
-
 
 (*LOCAL TIDY*)
 
@@ -368,9 +357,6 @@ Ltac bisim_timed_tac :=
   end.
 
 (*-LOCAL TIDY*)
-
-Section ProcEquiv.
-Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
 
 Lemma cond_bisim_lift_true p q b : p ~p~ q -> evalBoolExp b true ->
   b $> p ~p~ b $> q. intros. constructor.
@@ -539,4 +525,9 @@ Lemma if_then_bisim_false b p q :
   apply cond_bisim_false. apply evalBoolExpRelFun in U.
   unfold evalBoolExpFunTot. rewrite U. simpl.
   reflexivity. Qed.
+
 End ProcEquiv.
+
+(** A section's notations and tactics end with it. So that later files can use them, the
+notations are declared again here.*)
+Notation "p ~p~ q" := (bisimulation p q) (at level 70).
