@@ -5,6 +5,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 From Stdlib Require Import Reals Arith.
 From Stdlib Require Import List.
+From Stdlib Require Import Lra.
 Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
@@ -18,6 +19,7 @@ Require Import ComhCoq.lang.InterfaceLanguage.
 Require Import ComhCoq.lang.ModeStateLanguage.
 Require Import ComhCoq.lang.EntityLanguage.
 Require Import ComhCoq.lang.NetworkLanguage.
+Require Import ComhCoq.lang.ProcEquiv.
 Require Import ComhCoq.protocol.ProtAuxDefs.
 Require Import ComhCoq.protocol.ProtAuxResults.
 Require Import ComhCoq.protocol.EntAuxDefs.
@@ -43,13 +45,12 @@ Inductive reachableNet : Network -> Type :=
   | reachNetDel (n n' : Network) (d : Delay) : reachableNet n ->
     n -ND- d -ND> n' -> reachableNet n'.
 
-(* begin helpers for link_net_prot_reach *)
-Lemma link_net_prot_reach_aux1 n e i :
-  initialNet n -> e @ i .: n -> initialEnt e.
-Proof.
-  intros H E. induction E; inversion H; subst; auto.
-Qed.
-(* end helpers *)
+(** An entity in an initial network is itself initial.*)
+Lemma initialNet_ent e i n : initialNet n -> e @ i .: n ->
+  initialEnt e. intro. generalize dependent i.
+  induction H; intro i. intro. inversion H.
+  intro. inversion H1. assumption. eapply IHinitialNet.
+  eassumption. Qed.
 
 Lemma link_net_prot_reach n p l h k i :
   reachableNet n ->  [|p, l, h, k|] @ i .: n -> reachableProt p.
@@ -59,7 +60,7 @@ Proof.
     intros p l h k i E.
   - (* initial network *)
     assert (initialEnt ([|p, l, h, k|])) as IE
-      by (eapply link_net_prot_reach_aux1; eassumption).
+      by (eapply initialNet_ent; eassumption).
     inversion IE; subst.
     match goal with [V : initialProc _ |- _] => inversion V end.
     apply reachprBase.
@@ -246,44 +247,6 @@ Lemma switch_states_mState : forall (n n' : Network) (i : nat) (a : ActDiscNet)
 (**Proof: Tracking shows us that the action must be tau, composed of an output from the software process on mCurr and an input
 on the same by the mode state. Then it can be shown separately that an input on the mode state that is nextMode m yields a mode
 state that it currMode m. Which can be lifted to currModeNet.*)
-
-(** A network transition which sees a software component of some entity
-transform to a different software term is necessarily a tau transition.*)
-(* begin helpers for procNeq_tau_net *)
-Lemma procNeq_tau_net_aux1 (e e' : Entity) (m : Message) :
-  (e -EA- m#! ->> e' \/ e -EA- m#? ->> e' \/ e -EA- m#: ->> e') ->
-  procEnt e = procEnt e'.
-Proof.
-  intros [H | [H | H]]; inversion H; subst; reflexivity.
-Qed.
-
-Lemma procNeq_tau_net_aux2 (n n' : Network) (a : ActDiscNet) :
-  n -NA- a -NA> n' -> a <> anTau ->
-  forall (i : nat) (e e' : Entity), e @ i .: n -> e' @ i .: n' ->
-  procEnt e = procEnt e'.
-Proof.
-  induction 1; intros NT i0 e0 e0' E E';
-  try (exfalso; apply NT; reflexivity);
-  try solve [inversion E];
-  try solve [eapply IHstepDiscNet; [discriminate | eassumption | eassumption]];
-  inversion E; subst; inversion E'; subst;
-  first [ solve [eapply procNeq_tau_net_aux1; left; eassumption]
-        | solve [eapply procNeq_tau_net_aux1; right; left; eassumption]
-        | solve [eapply procNeq_tau_net_aux1; right; right; eassumption]
-        | solve [eapply IHstepDiscNet; [discriminate | eassumption | eassumption]] ].
-Qed.
-(* end helpers *)
-
-Lemma procNeq_tau_net p p' l l' h h' k k' n n' a i :
-  [|p, l, h, k|] @ i .: n -> [|p', l', h', k'|] @ i .: n' ->
-  n -NA- a -NA> n' -> p <> p' -> a = anTau.
-Proof.
-  intros E E' S NE.
-  destruct a; try reflexivity; exfalso; apply NE;
-  assert (procEnt ([|p, l, h, k|]) = procEnt ([|p', l', h', k'|])) as Q
-    by (eapply procNeq_tau_net_aux2; [eassumption | discriminate | eassumption | eassumption]);
-  simpl in Q; exact Q.
-Qed.
 
 (** The action linking a change from switchCurr to switchListen is always a tau.*)
 Lemma switchCurr_listen_trans_tau (n n' : Network) (a : ActDiscNet) (i : nat) :
@@ -500,13 +463,6 @@ Lemma bcWaitNet_del_bkwd (n n' : Network) (m : Mode) (x : Time)
 (**Proof: Well, a backwards delay preservation would give us bcWaitState m x' i n for some x'. But forward tracking would then give us that
 in the derivative state the second parameter is x' - d. So x = x' - d and so x' = x + d, as required.*)
 
-(** An entity in an initial network is itself initial.*)
-Lemma initialNet_ent e i n : initialNet n -> e @ i .: n ->
-  initialEnt e. intro. generalize dependent i.
-  induction H; intro i. intro. inversion H.
-  intro. inversion H1. assumption. eapply IHinitialNet.
-  eassumption. Qed.
-
 (** Looks for an initial network in the hypotheses and also an entity in
 that network and adds the hypothesis that the entity in question is initial.*)
 Ltac initNet_ent_tac := let U0 := fresh in
@@ -538,21 +494,15 @@ not bisimilar to any process that can.*)
 Local Lemma initial_not_bcWait_net_aux1 q q' v :
   ComhCoq.lang.ProcEquiv.bisimulation sleeping q -> q -PA- chanPos ;? v -PA> q' -> False.
 Proof.
-  intros S T. destruct S as [_ S2]. apply stepPDisc in T. apply S2 in T.
-  destruct T as [p' [Sp _]]. inversion Sp; subst.
-  match goal with H : sleeping -PA- _ -PA> _ |- _ =>
-    unfold sleeping in H; inversion H; subst; clear H end;
-  match goal with H : _ -PA- _ -PA> _ |- _ => inversion H end.
+  intros S T. destruct (bisim_step_disc _ _ _ _ (bisim_symm _ _ S) T) as [p' [Sp _]].
+  unfold sleeping in Sp. invert_disc_prefixes.
 Qed.
 
 (** The sleeping process delays only to itself.*)
 Local Lemma initial_not_bcWait_net_aux2 d s :
   sleeping -PD- d -PD> s -> s = sleeping.
 Proof.
-  intro H. unfold sleeping in *. invertClear H.
-  match goal with H1 : inPrefix chanWake _ _ -PD- _ -PD> _ |- _ => invertClear H1 end.
-  match goal with H1 : inPrefix chanTrans _ _ -PD- _ -PD> _ |- _ => invertClear H1 end.
-  reflexivity.
+  revert d s. unfold sleeping. del_self_tac.
 Qed.
 
 (** The sleeping process is not bisimilar to any bcWait process: the latter
@@ -611,22 +561,6 @@ delay by d' - d.*)
 (*This particular state combo means that the action must be tau & the interfaces of
 the entity in question being preserved.*)
 (* begin helpers for switchCurr_switchListen_net_link *)
-(** A non-silent network action preserves the software component of every entity:
-each entity only inputs, outputs or ignores a message, none of which touch the
-software component.*)
-Lemma switchCurr_switchListen_net_link_aux1 (n n' : Network) (a : ActDiscNet) :
-  n -NA- a -NA> n' -> a <> anTau ->
-  forall (i : nat) (e e' : Entity), e @ i .: n -> e' @ i .: n' -> procEnt e = procEnt e'.
-Proof.
-  intro STEP. induction STEP; intros NT i0 e0 e0' E0 E0';
-  try (exfalso; apply NT; reflexivity);
-  try solve [inversion E0];
-  try solve [eapply IHSTEP; [discriminate | eassumption | eassumption]];
-  inversion E0; subst; inversion E0'; subst;
-  try solve [eapply IHSTEP; [discriminate | eassumption | eassumption]];
-  match goal with [H : _ -EA- _ ->> _ |- _] => inversion H; subst; reflexivity end.
-Qed.
-
 (** No process is bisimilar to both switchCurr and switchListen.*)
 Lemma switchCurr_switchListen_net_link_aux2 (p : ProcTerm) :
   switchCurrState p -> switchListenState p -> False.
@@ -665,7 +599,7 @@ Proof.
   intros S1 S2 T. inversion T; subst; try reflexivity; exfalso;
   (eapply switchCurr_switchListen_net_link_aux3;
     [ apply S1 | apply S2 | eassumption | discriminate
-    | intros q TQ; unfold switchCurr in TQ; inversion TQ ]).
+    | intros q TQ; unfold switchCurr in TQ; invert_disc_prefixes ]).
 Qed.
 (* end helpers *)
 
@@ -684,7 +618,7 @@ Proof.
   destruct a.
   (*Non-silent actions preserve the software component: contradiction.*)
   1-4: exfalso;
-    lets PE : switchCurr_switchListen_net_link_aux1 STEP E E';
+    lets PE : stepDiscNet_nonTau_pres_proc STEP E E';
     [ discriminate | ];
     simpl in PE; inversion PE; subst;
     eapply switchCurr_switchListen_net_link_aux2; eassumption.
@@ -860,23 +794,6 @@ entities are preserved forwards in a network.*)
 (*If v is outgoing with timestamp t, and the network can delay, then in
 the derivative network v is outgoing with timestamp t - d.
 A useful corollary of this is that if t = 0, then delay is impossible.*)
-(* begin helpers for outgoing_del *)
-From Stdlib Require Import Lra.
-
-(*A timed list that delays by d cannot contain an element whose timestamp is less than d.*)
-Lemma outgoing_del_aux1 (l l' : TimedList) (a : ActTimedList) :
-  l -tl- a -tl> l' -> forall (d : Delay) (v : list BaseType) (t : Time),
-  a = atlDel d -> <( v, t )> _: l -> d <= t.
-Proof.
-  induction 1; intros d0 v0 t0 Ha Hin; try discriminate.
-  - inversion Hin.
-  - injection Ha as Ha. subst d0. destruct Hin as [Heq | Hin].
-    + injection Heq as Hv Ht. subst. destruct t' as [[tr tp]]. destruct d as [[dr dp]].
-      simpl. lra.
-    + eapply IHstepTimedList; [reflexivity | eassumption].
-Qed.
-(* end helpers *)
-
 Theorem outgoing_del (n n' : Network) (d : Delay) (v : list BaseType) (t : Time) (i : nat) : 
   n -ND- d -ND> n' -> outgoing v t i n ->
   {p : d <= t | outgoing v (minusTime t d p) i n'}.
@@ -885,8 +802,7 @@ Proof.
   link_netentdelfwd_tac e' Y. destr_ent_inter e' p' l' k' li' lo' ln'.
   link_entinterdel_tac Y. inversion Y1 as [? ? ? ? ? ? ? IL OL NL | | | | | ]; subst.
   inversion OL as [ | ? ? ? TL]; subst.
-  assert (d <= t) as DT. eapply outgoing_del_aux1; [apply TL | reflexivity | apply INO].
-  exists DT. econstructor. apply Y. simpl.
+  exists (timedList_del_ge _ _ _ _ _ TL INO). econstructor. apply Y. simpl.
   eapply timedList_del_le; [apply TL | apply INO].
 Qed.
 (**Proof: Idea is to invert/destruct outgoing to [p, l, {li, lo, ln}, k] @ i.: n & v, t : lo
@@ -1002,54 +918,6 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
 
 (*If v is incomingNetNotif with non-zero timestamp t, and the network performs a discrete
 action, then v is still incomingNetNotif in the derivative network.*)
-(* begin helpers for incomingNetNotif_disc_pres *)
-(*Outputting from a timed list preserves every element with a non-zero timestamp.*)
-Lemma incomingNetNotif_disc_pres_aux1 (l l' : TimedList) (a : ActTimedList) :
-  l -tl- a -tl> l' -> forall (w v : list BaseType) (t : Time),
-  a = atlOut w -> <( v, t )> _: l -> 0 < t -> <( v, t )> _: l'.
-Proof.
-  induction 1; intros w0 v0 t0 Ha Hin Ht; try discriminate.
-  - destruct Hin as [Heq | Hin].
-    + injection Heq as Hv Hz. subst t0. simpl in Ht.
-      apply Rlt_irrefl in Ht. contradiction.
-    + assumption.
-  - destruct Hin as [Heq | Hin].
-    + left. assumption.
-    + right. eapply IHstepTimedList; eassumption.
-Qed.
-
-(*Inputting into a notification list preserves its elements.*)
-Lemma incomingNetNotif_disc_pres_aux2 (ln ln' : NotifList) (w : list BaseType) (x : TimedEl) :
-  ln -nl- atlIn w -nl> ln' -> x _: notifList ln -> x _: notifList ln'.
-Proof.
-  intros H Hin. inversion H; subst.
-  - simpl. right. assumption.
-  - match goal with [Ht : _ -tl- _ -tl> _ |- _] => inversion Ht end.
-Qed.
-
-(*Outputting from a notification list preserves elements with a non-zero timestamp.*)
-Lemma incomingNetNotif_disc_pres_aux3 (ln ln' : NotifList) (w v : list BaseType) (t : Time) :
-  ln -nl- atlOut w -nl> ln' -> <( v, t )> _: notifList ln -> 0 < t ->
-  <( v, t )> _: notifList ln'.
-Proof.
-  intros H Hin Ht. inversion H; subst. simpl in *.
-  eapply incomingNetNotif_disc_pres_aux1; [eassumption | reflexivity | eassumption | eassumption].
-Qed.
-
-(*A discrete entity transition preserves notification list elements with a
-non-zero timestamp.*)
-Lemma incomingNetNotif_disc_pres_aux4 p p' l l' k k' li li' lo lo' ln ln' b v t :
-  [|p, l, {| li := li; lo := lo; ln := ln |}, k|] -EA- b ->>
-  [|p', l', {| li := li'; lo := lo'; ln := ln' |}, k'|] ->
-  <( v, t )> _: notifList ln -> 0 < t -> <( v, t )> _: notifList ln'.
-Proof.
-  intros H Hin Ht. inversion H; subst; try assumption;
-  match goal with [Hi : _ -i- _ -i> _ |- _] => inversion Hi; subst; try assumption end.
-  - eapply incomingNetNotif_disc_pres_aux3; eassumption.
-  - eapply incomingNetNotif_disc_pres_aux2; eassumption.
-Qed.
-(* end helpers *)
-
 Theorem incomingNetNotif_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time) (i : nat) :
   n -NA- a -NA> n' -> incomingNetNotif v t i n -> 0 < t ->
   incomingNetNotif v t i n'.
@@ -1059,7 +927,7 @@ Proof.
   - subst. econstructor; eassumption.
   - destr_ent_inter e' p' l' k' li' lo' ln'.
     econstructor. eassumption.
-    eapply incomingNetNotif_disc_pres_aux4; eassumption.
+    eapply stepEnt_disc_pres_notif_pos; eassumption.
 Qed.
 (**Proof: Analogous to (outgoing_disc_pres).*)
 
@@ -1124,10 +992,6 @@ Qed.
 (**Proof: Obvious- Lift other proofs which say essentially the same thing and apply constructor for distNet*)
 
 (*There are already proofs like this about distance in networks, just not using distNet*)
-(* begin helpers for del_link_distNet_bkwd *)
-From Stdlib Require Import Lra.
-(* end helpers *)
-
 Lemma del_link_distNet_bkwd : forall (n n' : Network) (d : Delay)
   (i j : nat) (x' : Distance),
   n -ND- d -ND> n' -> distNet i j n' x' ->
@@ -1156,54 +1020,7 @@ Proof.
   split; [assumption | split; [assumption | reflexivity]].
 Qed. 
 
-(*Delay link from network to entity.*)
-Lemma del_net_ent (e : Entity) (i : nat) (n n' : Network) (d : Delay) :
-  e @ i .: n -> n -ND- d -ND> n' -> exists e', e -ED- d ->> e'.
-  intros. genDep2 i n'. induction n; intros n' H0 i H.
-  inversion H. inversion H0. inversion H.
-  eexists. eassumption. eapply IHn. eassumption.
-  eassumption. Qed.
-
-(*If a network accepts some value*)
-(* begin helpers for inRange_acc_input *)
-From Stdlib Require Import Lra.
-
-(** Forward existence link for discrete network steps: an index occupied in the
-source network is occupied in the derivative network. *)
-Lemma inRange_acc_input_fwd_ex : forall (n n' : Network) (a : ActDiscNet),
-  n -NA- a -NA> n' -> forall (e : Entity) (i : nat), e @ i .: n ->
-  exists e', e' @ i .: n'.
-Proof.
-  intros n n' a H. induction H; intros e0 i0 EI;
-  try solve [inversion EI];
-  try solve [eapply IHstepDiscNet; eassumption];
-  (destruct i0 as [ | i0]; [eexists; apply einConsLeft | inversion EI; subst]);
-  first [ edestruct IHstepDiscNet as [e1 E1];
-          [eassumption | exists e1; apply einConsRight; exact E1]
-        | eexists; apply einConsRight; eassumption ].
-Qed.
-(* end helpers *)
-
-Lemma inRange_acc_input (n n' : Network) (v : list BaseType) (l : Position)
-  (r : Distance) (i : nat) (e : Entity) :
-  n -NA- ([-v, l, r-]) /?: -NA> n' -> e @ i .: n -> dist2d l (posEnt e) <= r ->
-  exists e', e -EA- ([-v, l, r-]) #? ->> e' /\ e' @ i .: n'.
-Proof.
-  intros ACC EI DR.
-  destruct (inRange_acc_input_fwd_ex n n' _ ACC e i EI) as [e' EI'].
-  destruct (acceptLink n n' e' i ([-v, l, r-]) ACC EI') as [e0 [E0 ST]].
-  assert (EQ : e0 = e) by (eapply entInNetUnique; eassumption). subst e0.
-  destruct ST as [ST | ST].
-  - exfalso. inversion ST; subst. cbn [posEnt] in DR.
-    rewrite distSymmetric in DR. lra.
-  - exists e'. split; assumption.
-Qed.
-
 (*Any entity within range of a broadcast inputs that broadcast.*)
-(* begin helpers for inRange_out_input *)
-From Stdlib Require Import Lra.
-(* end helpers *)
-
 Lemma inRange_out_input (n n' : Network) (v : list BaseType) (l : Position)
   (r x: Distance) (i j : nat) (e : Entity) :
   n -NA- ([-v, l, r-]) /! i -NA> n' -> e @ j .: n -> i <> j -> distNet i j n' x ->
@@ -1255,7 +1072,7 @@ Lemma mState_disc_pres : forall (n n' : Network) (i : nat)
   exists k', mState_in_net k' i n'.
 Proof.
   intros n n' i a k STEP MS. destruct MS as [p l h E].
-  destruct (inRange_acc_input_fwd_ex n n' a STEP _ i E) as [e' E'].
+  destruct (link_net_ent_disc_fwd_ex n n' a STEP _ i E) as [e' E'].
   destruct e' as [p' l' h' k']. exists k'. econstructor. exact E'.
 Qed.
 (**Proof: Obvious- inversion on mState_in_net, get that there's an entity, apply linking tactic to get entity in derivative,
@@ -1290,23 +1107,6 @@ Lemma initial_failSafe (n : Network) (e : Entity) (i : nat) :
   inversion U0. inversion U. subst. inversion U0. subst.
   inversion H1. assumption. eapply IHn; eassumption. Qed.
 
-Lemma curr_switch_ent_tau (n n' : Network) (a : ActDiscNet)
-  (e e' : Entity) (i : nat) (m m' : Mode) :
-  n -NA- a -NA> n' -> e @ i .: n -> e' @ i .: n' ->
-  currModeEnt e = m -> currModeEnt e' = m' -> m <> m' ->
-  e -EA- aeTau ->> e'.
-Proof.
-  intros N E E' C C' NE.
-  destruct (link_net_ent_disc_bkwd n n' e' i a N E') as [e0 [E0 OR]].
-  assert (e0 = e) as EQ0 by (eapply entInNetUnique; eassumption).
-  subst e0.
-  destruct OR as [EQ | [a' S]].
-  - subst. exfalso. apply NE. reflexivity.
-  - destruct a'; [ inversion S; subst; simpl in *; exfalso; apply NE; reflexivity .. | exact S ].
-Qed.
-(**Proof: EXISITNG THEOREMS OF A SIMILAR NATURE TO HELP YOU SOLVE THIS? LOOK FOR M <> M'
-Case analyse the action a and in all cases where the action isn't tau, the mode states are equal, giving a contradiction. This leaves only the case where a is a tau. In this case, we apply a linking theorem to get that the tau was done by some entity while the rest of the entities were preserved. Well, then, the entity that did the tau must be our entity e, because otherwise its preservation would imply the equality of the modes, which is a contradiction.*)
-
 (**Broadly speaking, a linking theorem.*)
 Lemma reachable_net_prot : forall (n : Network) (i : nat)
   (p : ProcTerm) (l : Position) (h : Interface) (k : ModeState),
@@ -1339,16 +1139,6 @@ Qed.
 
 (*An output by entity i from the network n means that the message is now pending
 notification with timestamp AN.*)
-(* begin helpers for outNet_incomingNetNotif *)
-Lemma outNet_incomingNetNotif_aux (l3 l3' : NotifList) (v : list BaseType) :
-  l3 -nl- v ?? -nl> l3' -> In (<( v, adaptNotif )>) (notifList l3').
-Proof.
-  intros H. inversion H; subst.
-  - simpl. left. reflexivity.
-  - match goal with [H0 : _ -tl- _ -tl> _ |- _] => inversion H0 end.
-Qed.
-(* end helpers *)
-
 Lemma outNet_incomingNetNotif (n n' : Network) (v : list BaseType) (r : Distance)
   (l : Position) (i : nat) : n -NA- ([-v, l, r-]) /! i -NA> n' ->
   incomingNetNotif ((baseDistance r)::v) adaptNotif i n'.
@@ -1358,7 +1148,7 @@ Proof.
   inversion S; subst.
   match goal with [HI : _ -i- chanIOEnv _! _ !_ _ -i> _ |- _] => inversion HI; subst end.
   econstructor; [eassumption | ].
-  eapply outNet_incomingNetNotif_aux. eassumption.
+  eapply notifList_in_hd. eassumption.
 Qed.
 (**Proof: Follows from interface semantics.*)
 
@@ -1380,36 +1170,6 @@ Ltac inposdp :=
   [ w : ?n -NA- _ -NA> ?n', H : inPosNet ?l ?i ?n' |- inPosNet ?l ?i ?n] =>
   eapply inPos_pres_disc; [apply w | assumption]
   end.
-
-(**Can be used directly for this particular protocol with 3 software components. Constructs the derivative triple and all the
-delays between the corresponding components, as well as the position bound. Specification is somewhat crude, but easy to manipulate,
-particularly with a tactic.*)
-Lemma net_del_elim q q0 q1 l h k i n n' d :
-  [|q $||$ q0 $||$ q1, l, h, k|] @ i .: n ->
-  n -ND- d -ND> n' ->
-  exists q' q0' q1' l' h' k',
-  [|q' $||$ q0' $||$ q1', l', h', k'|] @ i .: n' /\
-  q -PD- d -PD> q' /\ q0 -PD- d -PD> q0' /\ q1 -PD- d -PD> q1' /\
-  h -i- d -i> h' /\ k -ms- d -ms> k' /\
-  dist2d l l' <= speedMax * d.
-Proof.
-  intros E ND.
-  destruct (link_net_ent_del_fwd n n' _ i d ND E) as [e' [E' S]].
-  lets BM : boundedMovement S.
-  inversion S; subst.
-  match goal with [PD : _ $||$ _ $||$ _ -PD- d -PD> ?p' |- _] =>
-    destruct (link_par_triple_delEx _ _ _ _ _ PD) as [q' [q0' [q1' EQ]]]; subst p' end.
-  match goal with [PD : _ $||$ _ $||$ _ -PD- d -PD> _ $||$ _ $||$ _ |- _] =>
-    destruct (link_par_triple_del _ _ _ _ _ _ _ PD) as [D1 [D2 D3]] end.
-  do 6 eexists. split; [eassumption | ].
-  split; [eassumption | ]. split; [eassumption | ]. split; [eassumption | ].
-  split; [eassumption | ]. split; [eassumption | ].
-  simpl in BM. rewrite Rmult_comm. exact BM.
-Qed.
-(**Proof: First apply linking theorem for the entity. Then destruct the derivative entity. Then show that the delay between the entities
-can only happen when the interface and mode state components also delay, and the distance inequality condition holds, giving the final three goals.
-The first four goals then follow from an application of a result for software components: triples of processes always delay to triples, with each
-individual component delaying to the corresponding component*)
 
 Conjecture currMode_ent_ex : forall (m : Mode) (i : nat) (n : Network),
   currModeNet m i n <-> exists e, e @ i .: n /\ currModeEnt e = m.
@@ -1468,18 +1228,6 @@ Proof.
   right. right. left. eexists. netState_auto_tac.
   right. right. right. netState_auto_tac.
 Qed.
-
-Lemma link_net_ent_disc :
-  forall (n n' : Network) (e e' : Entity) (i : nat) (a : ActDiscNet),
-  n -NA- a -NA> n' -> e @ i .: n -> e' @ i .: n'->
-  (e = e' \/ (exists a', e -EA- a' ->> e')).
-Proof.
-  intros n n' e e' i a H H0 H1.
-  destruct (link_net_ent_disc_bkwd n n' e' i a H H1) as [e0 [He0 Hor]].
-  assert (e0 = e) as Eq by (eapply entInNetUnique; eassumption).
-  subst e0. exact Hor.
-Qed.
-(**Proof: Case analyse the network transition and this follows from the semantics*)
 
 Ltac link_netentdisc_tac b :=
   match goal with
@@ -1564,50 +1312,36 @@ Lemma del_pres_bkwd_tfsStart i n n' d :
   n -ND- d -ND> n' -> tfsStartStateNet i n' -> tfsStartStateNet i n.
   Admitted. (*4*)
 
-Lemma tfsNext_urgent_net m i n n' d : 
+Lemma tfsNext_urgent_net m i n n' d :
   tfsNextStateNet m i n -> n -ND- d -ND> n' -> False.
 Proof.
-  intros U V.
-  inversion U as [e SE EIN].
+  intros U V. inversion U as [e SE EIN].
   destruct (del_net_ent e i n n' d EIN V) as [e' ED].
   inversion SE as [p l h k TP Hpe]. subst e.
   inversion TP as [p1 p2 p3 TS Hp]. subst p.
-  inversion ED as [d0 q q' l0 delta h0 h' k0 k' PD ID KD DISP NS]; subst.
-  assert (currModeNet (currModeEnt ([|p1 $||$ p2 $||$ p3, l, h, k|])) i n) as CM.
-  { eapply currMode_intro; [reflexivity | exact EIN]. }
-  lets EQ : tfsNext_currModeNet_eq CM U.
-  assert (currModeMState k -mtr-> failSafeSucc m) as FS2.
-  { simpl in EQ. rewrite EQ. apply failSafeSucc_successor. }
-  lets MS : mState_stable_next_enabled FS2.
-  destruct MS as [MS1 | MS2].
-  - lets DA : tfsNext_mStable_out TS.
-    assert (discActEnabled (p1 $||$ p2 $||$ p3) (chanMStable *!)) as DA2.
-    { apply parTriple_dae_intro2. exact DA. }
-    destruct (NS (chanMStable *!)) as [NSN _].
-    destruct (NSN DA2) as [_ NM]. apply NM. exact MS1.
-  - lets DA : tfsNext_mNext_out TS.
-    assert (discActEnabled (p1 $||$ p2 $||$ p3)
-      (chanMNext ;! ([baseMode (failSafeSucc m)]))) as DA2.
-    { apply parTriple_dae_intro2. exact DA. }
-    destruct (NS (chanMNext ;! ([baseMode (failSafeSucc m)]))) as [NSN _].
-    destruct (NSN DA2) as [_ NM]. apply NM. exact MS2.
+  assert (currModeNet (currModeEnt ([|p1 $||$ p2 $||$ p3, l, h, k|])) i n) as CM
+    by (eapply currMode_intro; [reflexivity | exact EIN]).
+  lets EQ : tfsNext_currModeNet_eq CM U. simpl in EQ.
+  assert (currModeMState k -mtr-> failSafeSucc m) as FS
+    by (rewrite EQ; apply failSafeSucc_successor).
+  destruct (mState_stable_next_enabled _ _ FS) as [MS | MS].
+  - eapply ent_del_sync_mState_not with (a := chanMStable *!); [ | exact MS | exact ED].
+    apply parTriple_dae_intro2. eapply tfsNext_mStable_out. exact TS.
+  - eapply ent_del_sync_mState_not with (a := chanMNext ;! [baseMode (failSafeSucc m)]);
+      [ | exact MS | exact ED].
+    apply parTriple_dae_intro2. apply tfsNext_mNext_out. exact TS.
 Qed.
 
-Lemma tfsStart_urgent_net i n n' d : 
+Lemma tfsStart_urgent_net i n n' d :
   tfsStartStateNet i n -> n -ND- d -ND> n' -> False.
 Proof.
-  intros U V.
-  inversion U as [e SE EIN].
+  intros U V. inversion U as [e SE EIN].
   destruct (del_net_ent e i n n' d EIN V) as [e' ED].
   inversion SE as [p l h k TP Hpe]. subst e.
   inversion TP as [p1 p2 p3 TS Hp]. subst p.
-  inversion ED as [d0 q q' l0 delta h0 h' k0 k' PD ID KD DISP NS]; subst.
-  lets DA : tfsStart_mCurr_in (currModeMState k) TS.
-  assert (discActEnabled (p1 $||$ p2 $||$ p3)
-    (chanMCurr ;? [baseMode (currModeMState k)])) as DA2.
-  { apply parTriple_dae_intro2. exact DA. }
-  destruct (NS (chanMCurr ;? [baseMode (currModeMState k)])) as [NSN _].
-  destruct (NSN DA2) as [_ NM]. apply NM. apply modeState_curr_enabled.
+  eapply ent_del_sync_mState_not with (a := chanMCurr ;? [baseMode (currModeMState k)]);
+    [ | apply modeState_curr_enabled | exact ED].
+  apply parTriple_dae_intro2. apply tfsStart_mCurr_in. exact TS.
 Qed.
 
 Lemma ovReady_wait_track_net m t l i m' t' x y n n' a :
