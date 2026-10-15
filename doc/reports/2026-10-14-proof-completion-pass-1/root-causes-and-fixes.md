@@ -140,7 +140,7 @@ The "Affected lemmas" lists come from the 93 audited write-ups. The 15 unaudited
 
 **Fix.** Prefer adding a `~ failSafe m` hypothesis to the affected lemmas. Where these lemmas have callers, the callers already have it in scope. For the `modeTransTime` case, either add `0 < modeTransTime m m' p` as an axiom, or add the `currSince` hypothesis that the only caller already has.
 
-**A caution on the axiom route.** An axiom `failSafeSucc m <> m` would also fix the first case. But it forces at least two distinct fail-safe modes, and the non-degenerate model in [`src/ModelConsistency.v`](../../../src/ModelConsistency.v) doesn't satisfy it, because there `failSafeSucc Safe = Safe`. `0 < modeTransTime` is fine, since that model sets every transition time to 1.
+**A caution on the axiom route.** An axiom `failSafeSucc m <> m` would also fix the first case. But it forces at least two distinct fail-safe modes, and the non-degenerate model in [`src/ModelConsistency.v`](../../../src/model/ModelConsistency.v) doesn't satisfy it, because there `failSafeSucc Safe = Safe`. `0 < modeTransTime` is fine, since that model sets every transition time to 1.
 
 <details><summary>Affected lemmas (3, 0 in the cone)</summary>
 

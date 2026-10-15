@@ -1,24 +1,15 @@
 # src/: rules for the Rocq development
 
+## Layout
+
+- The code is in four folders: [`lib/`](lib/README.md), [`model/`](model/README.md), [`lang/`](lang/README.md) and [`protocol/`](protocol/README.md). A file may import only from its own folder and the folders listed before it.
+
 ## Statements are frozen; proofs are not
 
 - **Never change the statement** of an existing `Lemma`, `Theorem`, `Conjecture`, `Definition`, `Inductive`, `Record` or `Fixpoint`, and never delete one, without human approval. If one is false or mis-stated, leave it `Admitted` and write it up in a report (see `doc/reports/AGENTS.md`).
 - **Prove as stated.** Replace `Admitted.` with a complete proof ending in `Qed.`. Turn a `Conjecture` into a `Lemma` with the same name and statement.
 - **Don't add** `Axiom`, `Parameter`, `Conjecture`, `Hypothesis`/`Variable` outside a section, `Admitted`, `admit`, or the LibTactics `skip`.
-- **Model axioms** in `ComhBasics.v` (`Mode`, `msgLatency`, `period`, `minDistComp`, …) are deliberately abstract and are not to be proved or instantiated in place.
-- **`Parameter` stubs** (`reachableEnt`, `nextModeEnt`, `inPosEnt`, `currModeNet`, `nextModeNet`) are unfinished definitions. Propose completions in a report; don't fill them in.
 - **Extra logical axioms:** the stdlib's classical logic, functional extensionality and proof irrelevance (already in the trust base) are allowed. Any newly used one must be listed in the PR and the report.
-
-## The language and the protocol
-
-- The language files (`LanguageFoundations`, `SoftwareLanguage`, `InterfaceLanguage`, `ModeStateLanguage`, `EntityLanguage`, `NetworkLanguage`, `ProcEquiv`) are generic in the process names and their definitions. They never import a protocol file.
-- The protocol plugs in through `Protocol.v`, which defines its processes as instances of `ProcNames` and `ProcDefs`, and `ProtocolBridge.v`, which proves that they meet the language's conditions, such as `GuardedDefs`, and holds facts true only of this protocol. Protocol files import `ProtocolBridge`.
-- Put a language file's generic code in one `Section` whose `Context` takes the class instances. Rocq drops a section's notations, tactics and `Open Scope` when it ends, so put `Reserved Notation` above the section and declare each notation again after it.
-- Place tactics by where they are used, so that the section never has to close and reopen. Each extra `Section`/`End` pair is clutter.
-  - A tactic that needs nothing from the section goes above it.
-  - A tactic that needs the section's lemmas or notations goes inside the section if more than one proof there uses it, and after the section if more than one proof in later files uses it. Both is fine, and the two copies may differ, because uses outside the section may need a slightly different tactic.
-  - A tactic with only one use isn't worth defining. Write that proof without it.
-- Give an `Admitted` lemma inside a section a `Proof using` line. Without one it depends on every instance in the section, including `GuardedDefs`.
 
 ## Markers and conventions
 
@@ -30,9 +21,8 @@
 ## Libraries and tactics
 
 - Import the stdlib explicitly: `From Stdlib Require Import …`.
-- Import project modules as `Require Import ComhCoq.<Module>.` (existing style) or `From ComhCoq Require Import <Module>.`.
-- For real-number goals, prefer `lra`/`nra`/`lia` over the hand-rolled lemmas in `RInequalities.v`/`StandardResults.v`. Reach for mathcomp-analysis's `Rstruct` bridge only when the stdlib lacks a lemma (see `doc/adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md`).
-- `Extras/LibTactics.v` is vendored third-party code. Change it only for toolchain compatibility.
+- Import project modules by their full path, as `Require Import ComhCoq.<folder>.<Module>.` (existing style) or `From ComhCoq.<folder> Require Import <Module>.`.
+- For real-number goals, prefer `lra`/`nra`/`lia` over the hand-rolled lemmas in `lib/RInequalities.v`/`lib/StandardResults.v`. Reach for mathcomp-analysis's `Rstruct` bridge only when the stdlib lacks a lemma (see `doc/adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md`).
 
 ## Checks before committing
 
