@@ -15,8 +15,8 @@
 
 ## Decisions
 
-1. **Generic network notions.** `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard` and `liftEntNet` are defined in `protocol/NetAuxBasics.v`, so the results about them stay there, although nothing in them is about Comhordú. Step 15 keeps every definition where it is. **Decided:** they move to `lang/NetworkLanguage.v` with the results about them, as step 16 of the workstream, in a PR of its own.
-2. **`goMsg_gotRange_track_tot`** in `ProtAuxResults.v` has a language-only statement, but it exists only to show that the range `gotMsg` computes by subtraction can never be tested by `bPossInc` ([root cause 5](../2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#5-range-typing-esubtract-vs-bpossinc)). It stays next to its one use until step 22 fixes the typing. **Decided:** it stays.
+1. **Generic network notions.** `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard` and `liftEntNet` are defined in `protocol/NetAuxBasics.v`, so the results about them stay there, although nothing in them is about Comhordú. Step 15 keeps every definition where it is. **Decided:** they move to `lang/NetworkLanguage.v` with the results about them, as step 17 of the workstream, in a PR of its own.
+2. **`goMsg_gotRange_track_tot`** in `ProtAuxResults.v` has a language-only statement, but it exists only to show that the range `gotMsg` computes by subtraction can never be tested by `bPossInc` ([root cause 5](../2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#5-range-typing-esubtract-vs-bpossinc)). It stays next to its one use until step 23 fixes the typing. **Decided:** it stays.
 
 ## The general results
 
@@ -41,6 +41,8 @@ Each row is one new result and what it stands in for. Moves keep their statement
 | Moves | `SoftwareLanguage.v`, `EntityLanguage.v`, `ModeStateLanguage.v`, `NetworkLanguage.v` | `subProc_id_eq`, `dae_outPfx`, `dae_inPfx`, `stepDpApp_alt`, `link_ent_soft_disc`, `link_ent_proc_neq_disc`, `mst_tout_mCurr_in`, `procNeq_tau_net`, `link_net_ent_disc`, `del_net_ent`, `inRange_acc_input`, `curr_switch_ent_tau`, `net_del_elim`. | Their protocol copies, and two more copies of `link_ent_soft_disc`. |
 
 ## What stays in the protocol
+
+The triple-shaped results, `parTriple_*` and `link_par_triple_*` in `lang/` and the protocol's `net_del_elim` and `link_reach_triple_tau`, are about the protocol's shape rather than the language. Step 16 of the workstream replaces them with results about an n-ary parallel composition.
 
 Three proved results have language-only statements and stay: `goMsg_gotRange_track_tot` (above), `delApp` in `ProtocolBridge.v`, which holds only for this protocol's definitions, and `maxAnTrans_positive` in `NARTop.v`, a fact about the model's constants. Everything else that stays mentions a protocol definition.
 
