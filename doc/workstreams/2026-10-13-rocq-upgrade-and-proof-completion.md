@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Started** | 2026-10-13 |
-| **Status** | 🧑 Phase 5: step 14 in review |
+| **Status** | 🧑 Phase 5: step 15 in review |
 | **Branch** | One per PR |
 | **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
 | **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
@@ -70,7 +70,7 @@ This phase runs as a loop: pick an item, agree the fix, open a PR, review and me
 - [x] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). ✅ 2026-10-14. The listener now reads all 3 notification fields, a [thesis correction](../thesis/thesis-corrections.md#1-the-listener-reads-too-few-fields-from-a-notification). `listening_AN_prot` is proved. `incomingNetNotif_del` gains a length hypothesis. [#2](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/2).
 - [x] 🤖 **13. Make the language generic.** ✅ 2026-10-15. The code built the protocol's process names and their definitions into the language. Now the language takes them as parameters, and its results hold for any guarded definitions, a weaker form of Remark 4.2 (p.69) and a [thesis correction](../thesis/thesis-corrections.md#2-patience-needs-guarded-definitions). `ProtocolBridge.v` proves that the protocol's definitions are guarded. The statement of `safety` and its 84 assumptions are unchanged. The protocol-only channels are left for step 27. [#3](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/3).
 - [x] 🤖 **14. Split `src/` into `lib/`, `model/`, `lang/` and `protocol/`.** ✅ 2026-10-15. Each folder depends only on the ones before it, and has a README and its own `AGENTS.md`. `ComhBasics.v` keeps the model, and its general helpers move to `lib/GenBasics.v`. Only code moves: printing every statement and definition before and after shows no change, and `safety` still rests on the same 84 assumptions. [#4](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/4).
-- [ ] 🤖 **15. Extract language results from the proved results.** Go through every fully proved result, pull as much as possible out into general results in `lang/`, and re-prove the protocol results from them. Keep every definition and the statement of `safety` unchanged. A protocol lemma whose job a general result now does can be removed, and each removal is called out in its PR. Heavy, so likely several PRs.
+- [x] 🤖 **15. Extract language results from the proved results.** ✅ 2026-10-15. Every proved protocol result about the language now rests on a general result in `lang/`: 63 language results added, 63 protocol lemmas removed, each called out in the [report](../reports/2026-10-15-extract-language-results/README.md). A few abstractions did most of the work, such as the inversion of a parallel triple's step and the entity's no-synchronisation principle. Every definition and statement that stays is unchanged, checked by `helper-scripts/print_statements.py`, and `safety` still rests on 84 assumptions. Done in one PR. Whether the generic network notions defined in `NetAuxBasics.v` should move to `lang/` is a new 🧑 decision below.
 - [ ] 🧑 **16. Component-state predicates** ([root cause 1](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#1-incomplete-component-state-predicates)). Fixes `reachableProt_triple`, the most structural problem.
 - [ ] 🧑 **17. Quick fixes in the cone:** `link_ent_outList` and `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
 - [ ] 🧑 **18. Reachability hypotheses and `noSyncNow`** ([root causes 2](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#2-missing-reachability-hypotheses) and [6](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#6-nosyncnow-is-missing-the-thesiss-position-read-clause)).
@@ -86,10 +86,12 @@ Step 12 and steps 16–19 cover every known reason `safety` is vacuous today. Af
 - [ ] 🧑 **25. Non-triviality.** Decide whether to prove that, without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
 - [ ] 🧑 **26. Initial interfaces.** Decide whether `initialEnt` should constrain an entity's interface, for example to start empty. Today it allows any contents, which is why step 12 needed a length hypothesis.
 - [ ] 🧑 **27. Protocol-only channels.** Decide whether the 5 channels that only the protocol uses (`chanTrans`, `chanWake`, `chanPause`, `chanUnpause` and `chanBad`) should be supplied by the protocol instead of built into the language. The expression operators stay: they wrap the model's functions, so they belong with the model.
+- [ ] 🧑 **28. Generic network notions.** Decide whether `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard` and `liftEntNet`, defined in `protocol/NetAuxBasics.v` but not about Comhordú, should move to `lang/NetworkLanguage.v` with the results about them. Raised by step 15's [report](../reports/2026-10-15-extract-language-results/README.md#decisions-needed-from-a-human).
 - [ ] 🧑 _Placeholder: anything else the first pass couldn't decide._
 
 ## Log
 
+- **2026-10-15:** Step 15 done: the proved protocol results rest on general language results, 63 protocol lemmas removed for 63 language results, nothing claimed has changed, 84 assumptions as before.
 - **2026-10-15:** Step 14 done: `src/` is split into `lib/`, `model/`, `lang/` and `protocol/`, and nothing it claims has changed.
 - **2026-10-15:** Step 13 done: the language is generic in its process names and definitions, and `safety` still rests on 84 assumptions.
 - **2026-10-15:** Step 14 settled: four folders, adding `lib/` and `model/` to `lang/` and `protocol/`.
