@@ -39,7 +39,7 @@ def print_assumptions():
     with tempfile.TemporaryDirectory() as d:
         v = os.path.join(d, "PrintSafety.v")
         with open(v, "w") as f:
-            f.write("From ComhCoq Require Import Main.\nPrint Assumptions safety.\n")
+            f.write("From ComhCoq.protocol Require Import Main.\nPrint Assumptions safety.\n")
         r = subprocess.run(["rocq", "compile", "-R", SRC, "ComhCoq", v],
                            capture_output=True, text=True)
     if r.returncode != 0:

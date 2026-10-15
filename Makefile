@@ -19,8 +19,8 @@ assumptions: all
 # Pretty-printed docs: CoqDoc/verbose (with proofs) and CoqDoc/light (proofs hidden).
 coqdoc:
 	mkdir -p CoqDoc/light CoqDoc/verbose
-	rocq doc --html -R src ComhCoq -d CoqDoc/verbose src/*.v --no-index --toc
-	rocq doc --html -g -R src ComhCoq -d CoqDoc/light src/*.v --no-index --toc
+	rocq doc --html -R src ComhCoq -d CoqDoc/verbose src/*/*.v --no-index --toc
+	rocq doc --html -g -R src ComhCoq -d CoqDoc/light src/*/*.v --no-index --toc
 
 force _CoqProject Makefile: ;
 

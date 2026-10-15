@@ -11,9 +11,9 @@
 ## Project
 
 - This is a Rocq formalisation of the Comhordú real-time coordination protocol and its safety proof, based on a [2014 PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf).
-- The top-level theorem is `safety` in `src/Main.v`.
+- The top-level theorem is `safety` in `src/protocol/Main.v`.
 - Layout:
-  - `src/`: the Rocq development. Logical path `ComhCoq`. See `src/AGENTS.md`.
+  - `src/`: the Rocq development, in four folders: `lib/`, `model/`, `lang/` and `protocol/`. Logical path `ComhCoq`. See `src/AGENTS.md`.
   - `doc/`: workstreams, reports, ADRs, archive, and the thesis with its corrections. See `doc/AGENTS.md`.
   - `helper-scripts/`: scripts the build doesn't need, such as reporting tools. See `helper-scripts/AGENTS.md`.
   - `scripts/`: reserved for scripts the build does need. There are none yet.

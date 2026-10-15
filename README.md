@@ -51,17 +51,22 @@ CI runs both on every pull request: when it's opened, and again whenever new com
 
 ## Repo Roadmap
 
-All source ``.v`` files can be found in the repo ``src``. The folder ``Extras`` contains content which I did not write but needed to include - this was not available through standard import.
+All source ``.v`` files can be found in [`src/`](src), in four folders. Each builds only on the ones before it:
+
+ - [`lib/`](src/lib/README.md): general tools that know nothing about Comhordú. The folder ``lib/Extras`` contains content which I did not write but needed to include - this was not available through standard import.
+ - [`model/`](src/model/README.md): the Comhordú model.
+ - [`lang/`](src/lang/README.md): the language, built on the model.
+ - [`protocol/`](src/protocol/README.md): the protocol and its safety proof.
 
 ### Top-Level Result
 
-The top-level safety condition is proved in [Main.v](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/Main.v). The top-level Theorem is called ``safety``:
+The top-level safety condition is proved in [Main.v](src/protocol/Main.v). The top-level Theorem is called ``safety``:
 
 ``Theorem safety (n : Network) : reachableNet n -> safe n.``
 
 ### Software Language & Protocol
 
-The software component of the language is the language in which the protocol itself is written. It is a language with a flavour similar to [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems#:~:text=The%20calculus%20of%20communicating%20systems,communications%20between%20exactly%20two%20participants.) or [CBS](https://link.springer.com/content/pdf/10.1007%2F3-540-53982-4_19.pdf). The language is defined in [SoftwareLanguage.v](src/SoftwareLanguage.v), generic in its process names and their definitions. The protocol's processes are defined in [Protocol.v](src/Protocol.v), and [ProtocolBridge.v](src/ProtocolBridge.v) proves that they meet the conditions some language results need. The language gives a discrete semantics - to represent computations, as well as a "delay" semantics - to capture the behaviour of terms in the presence of continuous time.
+The software component of the language is the language in which the protocol itself is written. It is a language with a flavour similar to [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems#:~:text=The%20calculus%20of%20communicating%20systems,communications%20between%20exactly%20two%20participants.) or [CBS](https://link.springer.com/content/pdf/10.1007%2F3-540-53982-4_19.pdf). The language is defined in [SoftwareLanguage.v](src/lang/SoftwareLanguage.v), generic in its process names and their definitions. The protocol's processes are defined in [Protocol.v](src/protocol/Protocol.v), and [ProtocolBridge.v](src/protocol/ProtocolBridge.v) proves that they meet the conditions some language results need. The language gives a discrete semantics - to represent computations, as well as a "delay" semantics - to capture the behaviour of terms in the presence of continuous time.
 
 ### Other Modules
 
@@ -81,8 +86,8 @@ CoqDoc is pretty-printed documentation of Coq code. For more info, see [Document
 
 The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is recommended to build any CoqDoc locally here. There are many arguments you can pass to CoqDoc e.g. you can choose to omit proofs; for a full explanation of those arguments just run ``rocq doc --help``. Here are just two options that I think are useful:
 
- 1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``rocq doc --html -R src ComhCoq -d "CoqDoc/verbose" src/*.v --no-index --toc``
- 1. To build light HTML, without proofs, use: ``rocq doc --html -g -R src ComhCoq -d "CoqDoc/light" src/*.v --no-index --toc``
+ 1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``rocq doc --html -R src ComhCoq -d "CoqDoc/verbose" src/*/*.v --no-index --toc``
+ 1. To build light HTML, without proofs, use: ``rocq doc --html -g -R src ComhCoq -d "CoqDoc/light" src/*/*.v --no-index --toc``
 
 Note: the ``Index.html`` file renders with a bunch of broken links so I ignore it with ``--no-index`` and instead use a table of contents file as the entry point, using ``--toc``. This could probably be improved in future.
 
