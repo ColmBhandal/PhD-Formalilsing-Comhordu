@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Started** | 2026-10-13 |
-| **Status** | 🧑 Phase 5: step 13 in review |
+| **Status** | 🧑 Phase 5: step 14 in review |
 | **Branch** | One per PR |
 | **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
 | **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
@@ -23,7 +23,7 @@
 
 ## Conventions
 
-The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](../AGENTS.md), [`workstreams/`](AGENTS.md), [`reports/`](../reports/AGENTS.md), [`adr/`](../adr/AGENTS.md), [`archive/`](../archive/AGENTS.md); the top-level and `src/` ones cover the code.
+The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](../AGENTS.md), [`workstreams/`](AGENTS.md), [`reports/`](../reports/AGENTS.md), [`adr/`](../adr/AGENTS.md), [`archive/`](../archive/AGENTS.md); the top-level and `src/**` ones cover the code.
 
 ---
 
@@ -69,13 +69,7 @@ This phase runs as a loop: pick an item, agree the fix, open a PR, review and me
 
 - [x] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). ✅ 2026-10-14. The listener now reads all 3 notification fields, a [thesis correction](../thesis/thesis-corrections.md#1-the-listener-reads-too-few-fields-from-a-notification). `listening_AN_prot` is proved. `incomingNetNotif_del` gains a length hypothesis. [#2](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/2).
 - [x] 🤖 **13. Make the language generic.** ✅ 2026-10-15. The code built the protocol's process names and their definitions into the language. Now the language takes them as parameters, and its results hold for any guarded definitions, a weaker form of Remark 4.2 (p.69) and a [thesis correction](../thesis/thesis-corrections.md#2-patience-needs-guarded-definitions). `ProtocolBridge.v` proves that the protocol's definitions are guarded. The statement of `safety` and its 84 assumptions are unchanged. The protocol-only channels are left for step 27. [#3](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/3).
-- [ ] 🤖 **14. Split `src/` into `lib/`, `model/`, `lang/` and `protocol/`.** Agreed with a human on 2026-10-15. Each folder depends only on the ones listed before it, and gets a README.
-  - `lib/`: general tools that know nothing about Comhordú: the tactic libraries, the real-number helpers, and general basics such as time and list helpers.
-  - `model/`: the Comhordú model (thesis §3.3, p.41): the model axioms, what is defined from them, and `ModelConsistency.v`.
-  - `lang/`: the language, which is built on the model.
-  - `protocol/`: the protocol's processes, the bridge and the safety proof.
-
-  `ComhBasics.v` mixes the model axioms with general helpers, so it is split between `lib/` and `model/`. Only code moves, so every definition and statement stays as it is.
+- [x] 🤖 **14. Split `src/` into `lib/`, `model/`, `lang/` and `protocol/`.** ✅ 2026-10-15. Each folder depends only on the ones before it, and has a README and its own `AGENTS.md`. `ComhBasics.v` keeps the model, and its general helpers move to `lib/GenBasics.v`. Only code moves: printing every statement and definition before and after shows no change, and `safety` still rests on the same 84 assumptions.
 - [ ] 🤖 **15. Extract language results from the proved results.** Go through every fully proved result, pull as much as possible out into general results in `lang/`, and re-prove the protocol results from them. Keep every definition and the statement of `safety` unchanged. A protocol lemma whose job a general result now does can be removed, and each removal is called out in its PR. Heavy, so likely several PRs.
 - [ ] 🧑 **16. Component-state predicates** ([root cause 1](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#1-incomplete-component-state-predicates)). Fixes `reachableProt_triple`, the most structural problem.
 - [ ] 🧑 **17. Quick fixes in the cone:** `link_ent_outList` and `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
@@ -96,6 +90,7 @@ Step 12 and steps 16–19 cover every known reason `safety` is vacuous today. Af
 
 ## Log
 
+- **2026-10-15:** Step 14 done: `src/` is split into `lib/`, `model/`, `lang/` and `protocol/`, and nothing it claims has changed.
 - **2026-10-15:** Step 13 done: the language is generic in its process names and definitions, and `safety` still rests on 84 assumptions.
 - **2026-10-15:** Step 14 settled: four folders, adding `lib/` and `model/` to `lang/` and `protocol/`.
 - **2026-10-15:** New step 13: make the language generic before splitting `src/`, because the code builds the protocol into the language. Old steps 13–25 are now 14–26.
