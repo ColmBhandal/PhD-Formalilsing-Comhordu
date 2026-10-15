@@ -13,10 +13,10 @@
 - Nothing that stays changed. [`print_statements.py`](../../../helper-scripts/print_statements.py) printed every statement and definition in `src/` before and after; the only differences are the additions to `src/lang/` and the removals in [`removals.md`](removals.md). `make assumptions` lists the same 84 entries. The [evidence](evidence/README.md) has both outputs.
 - The protocol files shrank from 8,780 to 7,756 lines. The language files grew from 7,022 to 7,805.
 
-## Decisions needed from a human
+## Decisions
 
-1. **Generic network notions.** `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard` and `liftEntNet` are defined in `protocol/NetAuxBasics.v`, so the results about them stay there, although nothing in them is about Comhordú. Step 15 keeps every definition where it is, so moving them needs a decision. If they move to `lang/NetworkLanguage.v`, about 25 more results follow them.
-2. **`goMsg_gotRange_track_tot`** in `ProtAuxResults.v` has a language-only statement, but it exists only to show that the range `gotMsg` computes by subtraction can never be tested by `bPossInc` ([root cause 5](../2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#5-range-typing-esubtract-vs-bpossinc)). It stays next to its one use until step 21 fixes the typing.
+1. **Generic network notions.** `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard` and `liftEntNet` are defined in `protocol/NetAuxBasics.v`, so the results about them stay there, although nothing in them is about Comhordú. Step 15 keeps every definition where it is. **Decided:** they move to `lang/NetworkLanguage.v` with the results about them, as step 16 of the workstream, in a PR of its own.
+2. **`goMsg_gotRange_track_tot`** in `ProtAuxResults.v` has a language-only statement, but it exists only to show that the range `gotMsg` computes by subtraction can never be tested by `bPossInc` ([root cause 5](../2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#5-range-typing-esubtract-vs-bpossinc)). It stays next to its one use until step 22 fixes the typing. **Decided:** it stays.
 
 ## The general results
 
@@ -48,5 +48,5 @@ Three proved results have language-only statements and stay: `goMsg_gotRange_tra
 
 | Document | Read it when |
 |---|---|
-| [`removals.md`](removals.md) | Reviewing each removed protocol lemma and the general result that does its job now. |
+| [`removals.md`](removals.md) | Reviewing each removed protocol lemma and the general result that does its job now. Such removals are now encouraged by [`src/AGENTS.md`](../../../src/AGENTS.md). |
 | [`evidence/README.md`](evidence/README.md) | Re-running the statement and assumption checks. |
