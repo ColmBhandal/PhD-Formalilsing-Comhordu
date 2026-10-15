@@ -6,12 +6,12 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.ProcEquiv.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lang.ProcEquiv.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 (********************** Single ProcTerm State Predicates **********************)
 

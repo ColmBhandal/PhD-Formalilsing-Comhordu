@@ -1,7 +1,7 @@
 From Stdlib Require Export Reals Arith.
 From Stdlib Require Import Lra.
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.Extras.LibTactics.
 Open Scope R_scope.
 
 Ltac Rmult_le_zero :=

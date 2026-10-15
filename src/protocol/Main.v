@@ -7,28 +7,28 @@ if time allowed it.*)
 (***************************** Standard Imports *****************************)
 
 From Stdlib Require Import Reals Arith.
-Require Import ComhCoq.Extras.LibTactics.
-Require Import ComhCoq.GenTacs.
+Require Import ComhCoq.lib.Extras.LibTactics.
+Require Import ComhCoq.lib.GenTacs.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.InterfaceLanguage.
-Require Import ComhCoq.ModeStateLanguage.
-Require Import ComhCoq.EntityLanguage.
-Require Import ComhCoq.NetworkLanguage.
-(*Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lang.InterfaceLanguage.
+Require Import ComhCoq.lang.ModeStateLanguage.
+Require Import ComhCoq.lang.EntityLanguage.
+Require Import ComhCoq.lang.NetworkLanguage.
+(*Require Import ComhCoq.protocol.ProtAuxDefs.
 Require Import ComhCoq.EntAux.*)
-Require Import ComhCoq.NetAuxBasics.
-Require Import ComhCoq.NetAuxDefs.
-Require Import ComhCoq.NARNonFS_currSince.
-Require Import ComhCoq.NARMisc.
-Require Import ComhCoq.NARIncomp.
-Require Import ComhCoq.NARTop.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.protocol.NetAuxBasics.
+Require Import ComhCoq.protocol.NetAuxDefs.
+Require Import ComhCoq.protocol.NARNonFS_currSince.
+Require Import ComhCoq.protocol.NARMisc.
+Require Import ComhCoq.protocol.NARIncomp.
+Require Import ComhCoq.protocol.NARTop.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 (**Used to exploit a symmetry in the following proof, essentially continues on the proof
 from where it is applied*)

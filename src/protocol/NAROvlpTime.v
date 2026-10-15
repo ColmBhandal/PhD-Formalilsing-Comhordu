@@ -5,24 +5,24 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 From Stdlib Require Import Program.Equality.
 
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
 (*
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.ProtAuxDefs.
-Require Import ComhCoq.InterfaceLanguage.
-Require Import ComhCoq.ModeStateLanguage.
-Require Import ComhCoq.EntityLanguage.*)
-Require Import ComhCoq.NetworkLanguage.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.protocol.ProtAuxDefs.
+Require Import ComhCoq.lang.InterfaceLanguage.
+Require Import ComhCoq.lang.ModeStateLanguage.
+Require Import ComhCoq.lang.EntityLanguage.*)
+Require Import ComhCoq.lang.NetworkLanguage.
 (*Require Import ComhCoq.EntAux.*)
-Require Import ComhCoq.NetAuxBasics.
-Require Import ComhCoq.NetAuxDefs.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.protocol.NetAuxBasics.
+Require Import ComhCoq.protocol.NetAuxDefs.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 
 (*If an entity is pending then it cannot delay.*)

@@ -4,11 +4,11 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (** Theorems about Real numbers, distances, intervals.*)
 
 (***************************** Standard Imports *****************************)
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 From Stdlib Require Export Reals Arith.
 From Stdlib Require Export Logic.ProofIrrelevance.
-Require Import ComhCoq.GenTacs.
-Require Export ComhCoq.RInequalities.
+Require Import ComhCoq.lib.GenTacs.
+Require Export ComhCoq.lib.RInequalities.
 From Stdlib Require Import Lra.
 
 Open Scope R_scope.

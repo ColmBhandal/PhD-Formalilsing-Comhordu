@@ -5,11 +5,11 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 generic software language of SoftwareLanguage.v. ProtocolBridge.v shows that the
 definitions meet the conditions that some language results need.*)
 
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.SoftwareLanguage.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.SoftwareLanguage.
 
 
 (**Names for defining parametrised processes.*)

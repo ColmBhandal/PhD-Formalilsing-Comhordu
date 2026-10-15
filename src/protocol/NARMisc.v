@@ -4,26 +4,26 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (***************************** Standard Imports *****************************)
 
 From Stdlib Require Import Program.Equality.
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.GenTacs. 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.InterfaceLanguage.
-Require Import ComhCoq.ModeStateLanguage.
-Require Import ComhCoq.NetworkLanguage.
-Require Import ComhCoq.ProtAuxDefs.
-Require Import ComhCoq.ProtAuxResults.
-Require Import ComhCoq.EntAuxDefs.
-Require Import ComhCoq.EntAuxResults. 
-Require Import ComhCoq.NetAuxBasics.
-Require Import ComhCoq.NetAuxDefs.
-Require Import ComhCoq.ProtAuxResults.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.lib.GenTacs. 
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lang.InterfaceLanguage.
+Require Import ComhCoq.lang.ModeStateLanguage.
+Require Import ComhCoq.lang.NetworkLanguage.
+Require Import ComhCoq.protocol.ProtAuxDefs.
+Require Import ComhCoq.protocol.ProtAuxResults.
+Require Import ComhCoq.protocol.EntAuxDefs.
+Require Import ComhCoq.protocol.EntAuxResults. 
+Require Import ComhCoq.protocol.NetAuxBasics.
+Require Import ComhCoq.protocol.NetAuxDefs.
+Require Import ComhCoq.protocol.ProtAuxResults.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 (* begin helpers for state_disj_paused_notifAbort *)
 (* Given D : discActEnabled q a, where q is (bisimilar-free) concrete protocol
@@ -113,8 +113,8 @@ Lemma ovWait_ovReady_nextMode_net i n (p : reachableNet n) :
   (forall m t l, ovReadyStateNet m t l i n -> nextModeNet m i n).
 Proof.
   split; intros.
-  - eapply ComhCoq.NetAuxBasics.ovWaitState_nextMode_net; eassumption.
-  - eapply ComhCoq.NetAuxBasics.ovWait_ovReady_nextMode_net
+  - eapply ComhCoq.protocol.NetAuxBasics.ovWaitState_nextMode_net; eassumption.
+  - eapply ComhCoq.protocol.NetAuxBasics.ovWait_ovReady_nextMode_net
       with (x := zeroTime) (y := zeroTime); [exact p | right; eassumption].
 Qed.
 (*+*)
@@ -552,7 +552,7 @@ Proof.
   intro P.
   assert (exists q', paused -PA- chanUnpause *? -PA> q') as [q0 TR].
   { eexists. unfold paused. constructor. reflexivity. }
-  apply ComhCoq.ProcEquiv.bisim_symm in P.
+  apply ComhCoq.lang.ProcEquiv.bisim_symm in P.
   exact (bisim_disc_match _ _ _ _ P TR).
 Qed.
 

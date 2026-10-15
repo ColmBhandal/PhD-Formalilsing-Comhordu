@@ -6,15 +6,15 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.InterfaceLanguage.
-Require Import ComhCoq.ModeStateLanguage.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.EntityLanguage.
-Require Import ComhCoq.ProtAuxDefs.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.InterfaceLanguage.
+Require Import ComhCoq.lang.ModeStateLanguage.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lang.EntityLanguage.
+Require Import ComhCoq.protocol.ProtAuxDefs.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 
 (***************************** Lifting *****************************) 

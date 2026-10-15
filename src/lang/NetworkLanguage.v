@@ -5,16 +5,16 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (***************************** Standard Imports *****************************)
 
 From Stdlib Require Import Program.Equality.
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Export EntityLanguage.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Export ComhCoq.lang.EntityLanguage.
 Reserved Notation "e @ i .: n" (at level 50).
 Reserved Notation "n1 -NA- a -NA> n2" (left associativity, at level 50).
 Reserved Notation "n1 -ND- d -ND> n2" (left associativity, at level 50).

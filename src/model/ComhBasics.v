@@ -4,7 +4,7 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (** Various constants relating to the comhordu model are assumed here. Also some basic notions
 are defined here such as the notion of a network of entities.*)
 
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 From Stdlib Require Import Reals Arith Lia.
 
 (*********Imports********)
@@ -15,8 +15,8 @@ Notation "[ ]" := nil.
 Notation "[ x , .. , y ]" := (cons x .. (cons y nil) ..).
 Notation "e _: n" := (In e n) (at level 60).
 From Stdlib Require Export Logic.Decidable.
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
 From Stdlib Require Import Lists.ListSet.
 
 

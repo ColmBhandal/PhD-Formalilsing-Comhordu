@@ -7,14 +7,14 @@ ProcNames and ProcDefs below. Some results also need the definitions to be guard
 protocol shows with an instance of GuardedDefs. For the Comhordú protocol, see Protocol.v and
 ProtocolBridge.v.*)
 
-Require ComhCoq.Extras.LibTactics.
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
+Require ComhCoq.lib.Extras.LibTactics.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
 From Stdlib Require Import Logic.Decidable.
 From Stdlib Require Import Lists.ListSet.
 From Stdlib Require Import Lia.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.model.ComhBasics.
 
 (******************Syntax*******************)
 
@@ -652,7 +652,7 @@ Corollary sortDerivEquiv (a : DiscAct) (d d' : Delay) (p p' : ProcTerm) :
   Qed.
 
 
-Import ComhCoq.Extras.LibTactics.
+Import ComhCoq.lib.Extras.LibTactics.
 Open Scope R_scope.
 
 (**Sort captures at least all the actions that are available within the delay d. The converse

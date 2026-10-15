@@ -1,18 +1,18 @@
 (** This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (** This file lays down the foundation for the software language file by defining things like expressions and evaluation of expressions.*)
 
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
 From Stdlib Require Export Relations.
 From Stdlib Require Export Lists.ListSet.
 From Stdlib Require Export Reals Arith.
 From Stdlib Require Export List.
 From Stdlib Require Export Logic.FunctionalExtensionality.
-Require Import ComhCoq.ComhBasics.
+Require Import ComhCoq.model.ComhBasics.
 
 Open Scope nat_scope.
 

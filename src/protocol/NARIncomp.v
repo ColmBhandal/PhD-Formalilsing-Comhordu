@@ -4,27 +4,27 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 (***************************** Standard Imports *****************************)
 
 From Stdlib Require Import Program.Equality.
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.InterfaceLanguage.
-Require Import ComhCoq.ModeStateLanguage.
-Require Import ComhCoq.EntityLanguage.
-Require Import ComhCoq.ProtAuxDefs.
-Require Import ComhCoq.ProtAuxResults.
-Require Import ComhCoq.EntAuxDefs.
-Require Import ComhCoq.EntAuxResults.
-Require Import ComhCoq.NetworkLanguage.
-Require Import ComhCoq.NetAuxBasics.
-Require Import ComhCoq.NetAuxDefs.
-Require Import ComhCoq.NARMisc.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lang.InterfaceLanguage.
+Require Import ComhCoq.lang.ModeStateLanguage.
+Require Import ComhCoq.lang.EntityLanguage.
+Require Import ComhCoq.protocol.ProtAuxDefs.
+Require Import ComhCoq.protocol.ProtAuxResults.
+Require Import ComhCoq.protocol.EntAuxDefs.
+Require Import ComhCoq.protocol.EntAuxResults.
+Require Import ComhCoq.lang.NetworkLanguage.
+Require Import ComhCoq.protocol.NetAuxBasics.
+Require Import ComhCoq.protocol.NetAuxDefs.
+Require Import ComhCoq.protocol.NARMisc.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 
 (*If any entity has an incomingNet message the network can't delay.*)

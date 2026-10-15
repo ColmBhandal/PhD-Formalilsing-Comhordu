@@ -1,12 +1,12 @@
 (** This file was written by Colm Bhandal, PhD student, Foundations and Methods group,
 School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
 
 (***************** Timed lists *****************)
 

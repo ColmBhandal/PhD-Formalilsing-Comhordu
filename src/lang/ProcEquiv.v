@@ -6,12 +6,12 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.GenTacs.
-Require ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lib.GenTacs.
+Require ComhCoq.lib.Extras.LibTactics.
 
 Section ProcEquiv.
 Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
@@ -62,7 +62,7 @@ Ltac plus_le_left_red := match goal with [Q : ?a + ?b = ?a + ?c |-
   ?b = ?c] => replace b with (a + b - a);[ | ring];
   rewrite Q; ring end.
 
-Import ComhCoq.Extras.LibTactics.
+Import ComhCoq.lib.Extras.LibTactics.
 Open Scope R_scope.
 
 (*TOGO: Wherever the sort shit is.*)

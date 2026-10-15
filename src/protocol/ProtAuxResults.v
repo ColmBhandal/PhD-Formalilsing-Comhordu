@@ -3,20 +3,20 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 (***************************** Standard Imports *****************************)
 
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.ProtAuxDefs.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.protocol.ProtAuxDefs.
 From Stdlib Require Import Bool.
-Require Import ComhCoq.EntityLanguage.
-Require Import ComhCoq.ProcEquiv.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.lang.EntityLanguage.
+Require Import ComhCoq.lang.ProcEquiv.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 (****************** (TIDY?) General Stuff ******************)
 
@@ -636,7 +636,7 @@ Lemma ovReady_prev_app_unf n vs body es :
   def n = (vs, body) -> app n es ~p~ subProcTerm (listsToSub vs es) body.
 Proof.
   intro D. constructor.
-  - intros a p1 S. exists p1. split; [ | apply ComhCoq.ProcEquiv.bisim_refl].
+  - intros a p1 S. exists p1. split; [ | apply ComhCoq.lang.ProcEquiv.bisim_refl].
     inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
     + inversion S0; subst. rewrite D in *.
       match goal with H : (vs, body) = _ |- _ => inversion H; subst end.
@@ -644,7 +644,7 @@ Proof.
     + inversion S0; subst. rewrite D in *.
       match goal with H : (vs, body) = _ |- _ => inversion H; subst end.
       apply stepPTimed. assumption.
-  - intros a q1 S. exists q1. split; [ | apply ComhCoq.ProcEquiv.bisim_refl].
+  - intros a q1 S. exists q1. split; [ | apply ComhCoq.lang.ProcEquiv.bisim_refl].
     inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
     + apply stepPDisc. eapply stepDpApp; eassumption.
     + apply stepPTimed. eapply stepTpApp; eassumption.
@@ -674,20 +674,20 @@ Proof.
     let E1 := fresh in let E2 := fresh in
     inversion H as [ | ? ? ? ? E1 E2]; subst; inversion E1; subst end.
   exists x. unfold ovWaitState in *.
-  eapply ComhCoq.ProcEquiv.bisim_trans; [exact H0 | ].
+  eapply ComhCoq.lang.ProcEquiv.bisim_trans; [exact H0 | ].
   unfold ovWait.
-  repeat apply ComhCoq.ProcEquiv.choice_bisim_context;
-    try apply ComhCoq.ProcEquiv.bisim_refl.
+  repeat apply ComhCoq.lang.ProcEquiv.choice_bisim_context;
+    try apply ComhCoq.lang.ProcEquiv.bisim_refl.
   apply ovReady_prev_del_ctx. apply ovReady_prev_in_ctx.
   intros l2 Len. destruct l2 as [ | b [ | b' l2]]; simpl in Len; try discriminate.
   clean_proc.
-  eapply ComhCoq.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
-  apply ComhCoq.ProcEquiv.bisim_symm.
-  eapply ComhCoq.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
-  apply ComhCoq.ProcEquiv.bisim_symm.
+  eapply ComhCoq.lang.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
+  apply ComhCoq.lang.ProcEquiv.bisim_symm.
+  eapply ComhCoq.lang.ProcEquiv.bisim_trans; [apply ovReady_prev_app_unf; reflexivity | ].
+  apply ComhCoq.lang.ProcEquiv.bisim_symm.
   clean_proc.
   apply ovReady_prev_out_ctx.
-  apply ComhCoq.ProcEquiv.bisim_symm. exact BQ.
+  apply ComhCoq.lang.ProcEquiv.bisim_symm. exact BQ.
 Qed.
 
 Theorem switchBc_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) :

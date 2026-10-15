@@ -6,13 +6,13 @@ language results hold only for definitions that meet certain conditions. This fi
 that the protocol's definitions meet them, by giving the instances the language asks for.
 It also proves facts about the language that hold for this protocol but not in general.*)
 
-Require Import ComhCoq.Extras.LibTactics.
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.SoftwareLanguage.
-Require Export ComhCoq.Protocol.
+Require Import ComhCoq.lib.Extras.LibTactics.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Export ComhCoq.protocol.Protocol.
 From Stdlib Require Import Lia.
 
 (******************Guardedness*******************)

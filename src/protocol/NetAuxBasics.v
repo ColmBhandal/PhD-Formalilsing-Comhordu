@@ -5,24 +5,24 @@ School of Computer Science and Statistics, Trinity College, Dublin, Ireland.*)
 
 From Stdlib Require Import Reals Arith.
 From Stdlib Require Import List.
-Require Import ComhCoq.Extras.LibTactics.
+Require Import ComhCoq.lib.Extras.LibTactics.
 
 (***************************** Specialised Imports *****************************)
 
-Require Import ComhCoq.StandardResults.
-Require Import ComhCoq.ComhBasics.
-Require Import ComhCoq.LanguageFoundations.
-Require Import ComhCoq.SoftwareLanguage.
-Require Import ComhCoq.InterfaceLanguage.
-Require Import ComhCoq.ModeStateLanguage.
-Require Import ComhCoq.EntityLanguage.
-Require Import ComhCoq.NetworkLanguage.
-Require Import ComhCoq.ProtAuxDefs.
-Require Import ComhCoq.ProtAuxResults.
-Require Import ComhCoq.EntAuxDefs.
-Require Import ComhCoq.EntAuxResults.
-Require Import ComhCoq.GenTacs.
-Require Import ComhCoq.ProtocolBridge.
+Require Import ComhCoq.lib.StandardResults.
+Require Import ComhCoq.model.ComhBasics.
+Require Import ComhCoq.lang.LanguageFoundations.
+Require Import ComhCoq.lang.SoftwareLanguage.
+Require Import ComhCoq.lang.InterfaceLanguage.
+Require Import ComhCoq.lang.ModeStateLanguage.
+Require Import ComhCoq.lang.EntityLanguage.
+Require Import ComhCoq.lang.NetworkLanguage.
+Require Import ComhCoq.protocol.ProtAuxDefs.
+Require Import ComhCoq.protocol.ProtAuxResults.
+Require Import ComhCoq.protocol.EntAuxDefs.
+Require Import ComhCoq.protocol.EntAuxResults.
+Require Import ComhCoq.lib.GenTacs.
+Require Import ComhCoq.protocol.ProtocolBridge.
 
 (*IDEA: MIGRATE SOME OF THE CONTENTS OF THE FILE OVER VARIUOS NAB (NET-AUX-BASICS)
 PREFIXED FILES, THEN *EXPORT* THEM HERE, SO THAT THIS FILE JUST ACTS AS A
@@ -535,7 +535,7 @@ Ltac initNet_contra U :=
 (** The sleeping process can never input on the position channel, so it is
 not bisimilar to any process that can.*)
 Local Lemma initial_not_bcWait_net_aux1 q q' v :
-  ComhCoq.ProcEquiv.bisimulation sleeping q -> q -PA- chanPos ;? v -PA> q' -> False.
+  ComhCoq.lang.ProcEquiv.bisimulation sleeping q -> q -PA- chanPos ;? v -PA> q' -> False.
 Proof.
   intros S T. destruct S as [_ S2]. apply stepPDisc in T. apply S2 in T.
   destruct T as [p' [Sp _]]. inversion Sp; subst.
