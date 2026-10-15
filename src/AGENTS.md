@@ -14,6 +14,7 @@
 - The language files (`LanguageFoundations`, `SoftwareLanguage`, `InterfaceLanguage`, `ModeStateLanguage`, `EntityLanguage`, `NetworkLanguage`, `ProcEquiv`) are generic in the process names and their definitions. They never import a protocol file.
 - The protocol plugs in through `Protocol.v`, which defines its processes as instances of `ProcNames` and `ProcDefs`, and `ProtocolBridge.v`, which proves that they meet the language's conditions, such as `GuardedDefs`, and holds facts true only of this protocol. Protocol files import `ProtocolBridge`.
 - Put a language file's generic code in one `Section` whose `Context` takes the class instances. Rocq drops a section's notations, tactics and `Open Scope` when it ends, so put `Reserved Notation` above the section, declare each notation again after it, and define after it any tactic a later file uses.
+- Avoid closing and reopening a section to fit in a notation or tactic. Each extra `Section`/`End` pair is clutter. If a proof inside the section needs a tactic that has to live after it, write the proof without the tactic.
 - Give an `Admitted` lemma inside a section a `Proof using` line. Without one it depends on every instance in the section, including `GuardedDefs`.
 
 ## Markers and conventions
