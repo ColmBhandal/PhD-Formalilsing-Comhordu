@@ -8,13 +8,13 @@ Errors found in the [thesis](2014-10-28-phd-thesis.pdf) while formalising it, an
 
 **Thesis:**
 
-$$\mathbf{listening} \overset{\text{def}}{=} \mathit{chanAN}\langle r, m'' \rangle?\,.\,\mathbf{checkRange}(m'', r) + \cdots$$
+$$\mathbf{listening} \overset{\text{def}}{=} \mathit{chanAN}\langle r, m'' \rangle?\mathbin{.}\mathbf{checkRange}(m'', r) + \cdots$$
 
 Example 5.13 has the trace label $\mathit{chanAN}\langle m'', r \rangle?$, with the two fields the other way round.
 
 **Correction:**
 
-$$\mathbf{listening} \overset{\text{def}}{=} \mathit{chanAN}\langle r, m'', l' \rangle?\,.\,\mathbf{checkRange}(m'', r) + \cdots$$
+$$\mathbf{listening} \overset{\text{def}}{=} \mathit{chanAN}\langle r, m'', l' \rangle?\mathbin{.}\mathbf{checkRange}(m'', r) + \cdots$$
 
 The listener reads the position $l'$ and ignores it. The trace label in Example 5.13 becomes $\mathit{chanAN}\langle r, m'', l' \rangle?$.
 
@@ -28,7 +28,7 @@ The listener reads the position $l'$ and ignores it. The trace label in Example 
 
 **Thesis:** Theorem 4.7 says that a process that can't do a $\tau$ action can delay:
 
-$$\neg P \xrightarrow{\tau} \;\Rightarrow\; \exists d,\ P \xrightarrow{d}$$
+$$\neg P \xrightarrow{\tau} \quad\Rightarrow\quad \exists d, P \xrightarrow{d}$$
 
 It holds for every process, with no condition on the definitions. Remark 4.2 says that names in a definition "should be guarded", meaning each sits under an action prefix, but it is advice to the programmer, not a hypothesis of the theorem.
 
