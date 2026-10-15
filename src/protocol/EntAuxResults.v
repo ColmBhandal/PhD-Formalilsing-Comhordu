@@ -214,7 +214,7 @@ Proof.
   inversion GS; subst.
   match goal with [H : gotRangeStateProt _ _ _ |- _] => inversion H; subst end.
   eapply ent_del_mCurr_in_not; [ | eassumption].
-  intro m0. apply parTriple_dae_intro3.
+  intro m0. dae_listener.
   eapply gotRangeStateEnt_urgent_aux1. eassumption.
 Qed.
 
@@ -237,8 +237,8 @@ Proof.
   inversion CS; subst.
   match goal with [H : currCompStateProt _ _ _ |- _] => inversion H; subst end.
   eapply ent_del_mStable_mNext_in_not; [ | | eassumption].
-  - apply parTriple_dae_intro3. eapply currCompStateEnt_urgent_aux1. eassumption.
-  - intro m0. apply parTriple_dae_intro3.
+  - dae_listener. eapply currCompStateEnt_urgent_aux1. eassumption.
+  - intro m0. dae_listener.
     eapply currCompStateEnt_urgent_aux2. eassumption.
 Qed. (*Relies on the result that the mode state can always
 EITHER output on next or stable. #modif-urgent*)
@@ -252,7 +252,7 @@ Lemma tfsStartStateEnt_urgent : forall (e e' : Entity) (d : Delay),
   urgency_pre_tac2 tfsStartStateEnt tfsStartStateProt tfsStartState.
   (*The overlap reads the current mode, which the mode state always offers.*)
   eapply ent_del_sync_mState_not; [ | | eassumption].
-  - rewrite TR. apply parTriple_dae_intro2. eapply tfsStart_mCurr_in. eassumption.
+  - rewrite TR. dae_overlap. eapply tfsStart_mCurr_in. eassumption.
   - apply modeState_curr_enabled.
 Qed.
 
@@ -267,8 +267,7 @@ Lemma tfsListen_urgent : forall (e e' : Entity) (d : Delay),
   synch is possible, and so by maximal progress delay cannot happen.*)
   lets PA : tfsListen_paused TP. assert (pausedState p3) as P3 by (inversion PA; assumption).
   lets DP : link_ent_soft_del U1. rewrite TR in DP.
-  exact (parTriple_del_sync_not_23 _ _ _ _ _ _ (tfsListen_unpause_out _ TS)
-    (paused_unpause_in _ P3) ltac:(discriminate) DP).
+  triple_del_sync_not DP (tfsListen_unpause_out _ TS) (paused_unpause_in _ P3).
 Qed.
 
 Lemma tfsNext_urgent : forall (m : Mode) (e e' : Entity) (d : Delay),
@@ -284,9 +283,9 @@ Lemma tfsNext_urgent : forall (m : Mode) (e e' : Entity) (d : Delay),
   overlap offers both.*)
   destruct (mState_stable_next_enabled _ _ FS2) as [MS | MS];
   (eapply ent_del_sync_mState_not; [ | | eassumption]).
-  - rewrite TR. apply parTriple_dae_intro2. eapply tfsNext_mStable_out. eassumption.
+  - rewrite TR. dae_overlap. eapply tfsNext_mStable_out. eassumption.
   - exact MS.
-  - rewrite TR. apply parTriple_dae_intro2. eapply tfsNext_mNext_out. eassumption.
+  - rewrite TR. dae_overlap. eapply tfsNext_mNext_out. eassumption.
   - exact MS.
 Qed.
 
@@ -299,7 +298,7 @@ Lemma bcReady_urgent (m : Mode) (l : Position) : forall (e e' : Entity) (d : Del
   Thus, a synch between software and interface is possible, violating the "noSynch" condition
   that must hold for the entity to delay. Hence delay cannot happen.*)
   eapply ent_del_sync_inter_not; [ | | eassumption].
-  - rewrite TR. apply parTriple_dae_intro1. eapply bcReady_outProc_out. eassumption.
+  - rewrite TR. dae_broadcast. eapply bcReady_outProc_out. eassumption.
   - apply interface_outProc_in.
 Qed.
 
@@ -314,7 +313,7 @@ Lemma ovAbort_urgent : forall (e e' : Entity) (d : Delay),
   we show that stable! is activated on ovAbort, and hence a synch can happen with
   the mode state, so by progress there is no delay possible.*)
   eapply ent_del_sync_mState_not; [ | | eassumption].
-  - rewrite TR. apply parTriple_dae_intro2. apply ovAbort_stable_out. assumption.
+  - rewrite TR. dae_overlap. apply ovAbort_stable_out. assumption.
   - apply unstable_stable_in. exact OUS.
 Qed.
 
@@ -327,10 +326,8 @@ Lemma tfsBc_urgent : forall (e e' : Entity) (d : Delay),
   wait or the sleeping state, then an input on trans is possible, which can synch with
   the output on trans from tfsBc.*)
   inversion BC as [m x BW | SL | m l1 BR].
-  - exact (parTriple_del_sync_not_12 _ _ _ _ _ _ (bcWait_trans_in _ _ _ BW) TOT
-      ltac:(discriminate) DP).
-  - exact (parTriple_del_sync_not_12 _ _ _ _ _ _ (sleep_trans_in _ SL) TOT
-      ltac:(discriminate) DP).
+  - triple_del_sync_not DP (bcWait_trans_in _ _ _ BW) TOT.
+  - triple_del_sync_not DP (sleep_trans_in _ SL) TOT.
   (*Otherwise, the broadcast component is in the ready state, in which case we
   already have urgency from bcReady-urgent.*)
   - assert (bcReadyStateEnt m l1 ([|p0, l0, h0, k0|])) as BCE. constructor.
@@ -347,10 +344,8 @@ Lemma switchBc_urgent (m : Mode) : forall (e e' : Entity) (d : Delay),
   wait or the sleeping state, then an input on wake is possible, which can synch with
   the output on wake from switchBc.*)
   inversion BC as [m0 x BW | SL | m0 l1 BR].
-  - exact (parTriple_del_sync_not_12 _ _ _ _ _ _ (bcWait_wake_in m _ _ _ BW) TOT
-      ltac:(discriminate) DP).
-  - exact (parTriple_del_sync_not_12 _ _ _ _ _ _ (sleeping_wake_in m _ SL) TOT
-      ltac:(discriminate) DP).
+  - triple_del_sync_not DP (bcWait_wake_in m _ _ _ BW) TOT.
+  - triple_del_sync_not DP (sleeping_wake_in m _ SL) TOT.
   (*Otherwise, the broadcast component is in the ready state, in which case we
   already have urgency from bcReady-urgent.*)
   - assert (bcReadyStateEnt m0 l1 ([|p0, l0, h0, k0|])) as BCE. constructor.
@@ -368,7 +363,7 @@ Lemma swithcCurr_urgent (m : Mode) : forall (e e' : Entity) (d : Delay),
   on mCurr, which complements the output that is enabled in this state,
   and so we're urgent.*)
   eapply ent_del_sync_mState_not; [ | | eassumption].
-  - rewrite TR. apply parTriple_dae_intro2. apply switchCurr_mCurr_out. assumption.
+  - rewrite TR. dae_overlap. apply switchCurr_mCurr_out. assumption.
   - simpl in MS. rewrite MS. apply mst_tout_mCurr_in.
 Qed.
 
@@ -382,8 +377,7 @@ Lemma switchListen_urgent : forall (e e' : Entity) (d : Delay),
   assert (pausedState p3) as PS3. inversion SP. assumption.
   (*Now a synchronisation is shown on unpause.*)
   lets DP : link_ent_soft_del U1. rewrite TR in DP.
-  exact (parTriple_del_sync_not_23 _ _ _ _ _ _ (switchListen_unpause_out _ TS)
-    (paused_unpause_in _ PS3) ltac:(discriminate) DP).
+  triple_del_sync_not DP (switchListen_unpause_out _ TS) (paused_unpause_in _ PS3).
 Qed.
 
 
@@ -576,8 +570,8 @@ Proof.
   inversion NP as [p1 p2 p3 NP2]; subst.
   destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ T) as [E | [b TP]].
   - subst. left. constructor. constructor. assumption.
-  - destruct (link_par_triple_discEx _ _ _ _ _ TP) as [p1' [p2' [p3' E]]]; subst.
-    destruct (link_par_triple_discW_2 _ _ _ _ _ _ _ TP) as [E2 | [b' T2]]; subst.
+  - link_partripdiscex_tac E p1' p2' p3'. subst.
+    link_partripdiscW2_tac TP W. destruct W as [E2 | [b' T2]]; subst.
     + left. constructor. constructor. assumption.
     + destruct (tfsNext_next_ent_proc _ _ _ _ NP2 T2) as [X | X].
       * left. constructor. constructor. assumption.
@@ -601,8 +595,8 @@ Proof.
   destruct e' as [p' l' h' k'].
   destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ S) as [E | [b B]].
   - subst p'. left. constructor. constructor. assumption.
-  - destruct (link_par_triple_discEx _ _ _ _ _ B) as [p1' [p2' [p3' E]]]. subst p'.
-    destruct (link_par_triple_discW_2 _ _ _ _ _ _ _ B) as [E | [b' B']].
+  - link_partripdiscex_tac E p1' p2' p3'. subst p'.
+    link_partripdiscW2_tac B W. destruct W as [E | [b' B']].
     + subst p2'. left. constructor. constructor. assumption.
     + destruct (F _ _ _ B' X2) as [Z | Z]; [left | right];
       constructor; constructor; exact Z.

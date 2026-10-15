@@ -690,27 +690,23 @@ Qed.
 Import ComhCoq.lang.InterfaceLanguage.
 Import ComhCoq.lang.ModeStateLanguage.
 
-(** When a network delays, an entity whose software is a triple of parallel processes becomes
-one whose software is again such a triple, each component delaying along with the interface,
-the mode state and the position.*)
-Lemma net_del_elim q q0 q1 l h k i n n' d :
-  [|q $||$ q0 $||$ q1, l, h, k|] @ i .: n ->
+(** When a network delays, the entity at index i becomes one whose components have each
+delayed by the same amount, and which has moved at most as far as the maximum speed
+allows.*)
+Lemma net_del_elim p l h k i n n' d :
+  [|p, l, h, k|] @ i .: n ->
   n -ND- d -ND> n' ->
-  exists q' q0' q1' l' h' k',
-  [|q' $||$ q0' $||$ q1', l', h', k'|] @ i .: n' /\
-  q -PD- d -PD> q' /\ q0 -PD- d -PD> q0' /\ q1 -PD- d -PD> q1' /\
-  h -i- d -i> h' /\ k -ms- d -ms> k' /\
+  exists p' l' h' k',
+  [|p', l', h', k'|] @ i .: n' /\
+  p -PD- d -PD> p' /\ h -i- d -i> h' /\ k -ms- d -ms> k' /\
   dist2d l l' <= speedMax * d.
 Proof.
   intros E ND.
   destruct (link_net_ent_del_fwd n n' _ i d ND E) as [e' [E' S]].
   lets BM : boundedMovement S.
   inversion S; subst.
-  match goal with [PD : _ $||$ _ $||$ _ -PD- d -PD> _ |- _] => inversion PD; subst end.
-  match goal with [PD : _ $||$ _ -PD- d -PD> _ |- _] => inversion PD; subst end.
-  do 6 eexists. split; [eassumption | ].
+  do 4 eexists. split; [eassumption | ].
   split; [eassumption | ]. split; [eassumption | ]. split; [eassumption | ].
-  split; [eassumption | ]. split; [eassumption | ].
   simpl in BM. rewrite Rmult_comm. exact BM.
 Qed.
 
