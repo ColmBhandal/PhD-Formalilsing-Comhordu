@@ -555,7 +555,7 @@ Lemma msgAbort_paused_disj_net_unp q :
 Proof.
   intro P.
   assert (exists q', paused -PA- chanUnpause *? -PA> q') as [q0 TR].
-  { eexists. unfold paused. constructor. reflexivity. }
+  { eexists. unfold paused. constructor. typed_vals. }
   apply ComhCoq.lang.ProcEquiv.bisim_symm in P.
   exact (bisim_disc_match _ _ _ _ P TR).
 Qed.

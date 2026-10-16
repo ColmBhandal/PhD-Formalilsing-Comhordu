@@ -48,12 +48,22 @@ Ltac lift_act_sum p1 p2 :=
   | [V : p2 -PA- ?a -PA> ?p' |- _] => apply (stepDpChoiceR p1 p2) in V
   end.
 
-(*Generates a trivial list of base values of the specified length. The list
-just consists of a string of zeros (times).*)
-Fixpoint genBaseList (n : nat) : list BaseType :=
-  match n with
-  | 0 => []
-  | S n' => (baseTime zeroTime) :: (genBaseList n')
+(** A value of each type, for an input whose values are left open: a mode is taken from the
+context, and the other types have closed inhabitants.*)
+Ltac value_of_type t := lazymatch t with
+  | vtMode => match goal with [m : Mode |- _] => constr:(baseMode m) end
+  | vtTime => constr:(baseTime zeroTime)
+  | vtPosition => constr:(basePosition origin)
+  | vtDistance => constr:(baseDistance (mkDistance zeroNonneg))
+  | vtDelay => constr:(baseDelay (mkDelay onePos))
+  | vtNonneg => constr:(baseNonneg zeroNonneg)
+  end.
+
+(** A list of values typed for the variables xs: one value of each variable's type.*)
+Ltac typed_witness xs := lazymatch xs with
+  | nil => constr:(@nil BaseType)
+  | ?x :: ?xs' => let t := eval cbv in (varType x) in let v := value_of_type t in
+    let vs := typed_witness xs' in constr:(v :: vs)
   end.
 
 (*Converts a hypothesis of an action for p into one for b $> p, given that
@@ -71,10 +81,6 @@ Ltac lift_act_app h l2 :=
     apply stepDpApp_alt in V
   end.
 
-Lemma genBaseList_length A (l : list A) :
-  length (genBaseList (length l)) = length l. induction l.
-  reflexivity. simpl. f_equal. assumption. Qed.
-
 (*Generate all the discrete actions for some process p as hypotheses. Might leave some
 boolean equalities over as contradictions to prove. Note: a posssilbe side-effect
 of using this tactic is that any hypothesised actions on sub-terms of p will probably
@@ -84,10 +90,10 @@ been written to work with parallel constructs, though this functionality could e
 be added.*)
 Ltac gen_disc_acts p := 
   match p with
-  | ?c $< ?l >$? ?p' => let V := fresh in
-    assert (p -PA- c ;? genBaseList (length l) -PA>
-    subProcTerm (listsToSub l (listBaselistExp (genBaseList (length l)))) p');
-    [constructor; reflexivity | ]; remove_resets_hyp V; remove_updates_hyp V
+  | ?c $< ?l >$? ?p' => let V := fresh in let vs := typed_witness l in
+    assert (p -PA- c ;? vs -PA>
+    subProcTerm (listsToSub l (listBaselistExp vs)) p');
+    [constructor; typed_vals | ]; remove_resets_hyp V; remove_updates_hyp V
   | ?c $< ?l >$! ?p' =>
     let EEL := fresh in let EELEQ := fresh in
     remember (evalExpListsFun l) as EEL eqn:EELEQ;
@@ -179,7 +185,7 @@ Ltac activation_post_tac :=
   [ |- discActEnabled ?p ?a] => 
     match p with
     (*For sum, recursively go left and see if it succeeds, else go right.*)
-    | _ $< _ >$ ? _  => apply dae_inPfx; reflexivity
+    | _ $< _ >$ ? _  => apply dae_inPfx; typed_vals
     | _ $< _ >$ ! _  => apply dae_outPfx; constructor
     | ?p1 $+$ ?p2 => first [solve [apply daeSumL; activation_post_tac] |
       solve [apply daeSumR; activation_post_tac]]
@@ -331,46 +337,43 @@ Ltac prot_outProc_in_not_contra :=
 (****************** Component shapes ******************)
 (** broadcastState, overlapState and listenerState say that a component is reachable from
 its initial process. Up to bisimilarity, such a component is in one of the named states.
-The modes and positions it holds are base values, because they arrived by input; its timers
-are expressions, because they are computed. Inputs are untyped, so a mode may be any base
-value, and a computed timer may be ill formed. One exception: ovWait's pause timer is well
-formed only if its mode is a mode, so switchBc, which that timer guards, always holds a
-mode. The listener's conditional states resolve at once to the branch their condition
-selects, or to nilProc when the condition is ill formed. The lemmas below prove these
-shapes, and the brute-force results about the components follow from them by case
-analysis.*)
+The modes, positions and distances it holds are values of those types, because they arrived
+by typed inputs; its timers and ranges are expressions, because they are computed. The
+listener's conditional states resolve at once to the branch their condition selects. One
+condition can be ill formed: the range gotMsg computes is a plain non-negative real where
+bPossInc wants a distance, so a listener that has received a message can be stuck, which is
+to say bisimilar to nilProc. The lemmas below prove these shapes, and the brute-force
+results about the components follow from them by case analysis.*)
 
 Inductive broadcastShape (p : ProcTerm) : Prop :=
   | shSleeping : p ~p~ sleeping -> broadcastShape p
-  | shBcWait (v : BaseType) (e : Exp) : p ~p~ bcWait v e -> broadcastShape p
-  | shBcReady (v1 v2 : BaseType) : p ~p~ bcReady v1 v2 -> broadcastShape p.
+  | shBcWait (m : Mode) (e : Exp) : p ~p~ bcWait m e -> broadcastShape p
+  | shBcReady (m : Mode) (l : Position) : p ~p~ bcReady m l -> broadcastShape p.
 
 Inductive overlapShape (p : ProcTerm) : Prop :=
   | shDormant : p ~p~ dormant -> overlapShape p
-  | shInit (v : BaseType) : p ~p~ init v -> overlapShape p
-  | shOvWait (v : BaseType) (e2 e3 e4 : Exp) : p ~p~ ovWait v e2 e3 e4 ->
-    (evalExpFunTime e3 <> None -> exists m, v = baseMode m) -> overlapShape p
-  | shOvReady (v1 : BaseType) (e2 : Exp) (v3 : BaseType) :
-    p ~p~ ovReady v1 e2 v3 -> overlapShape p
+  | shInit (m : Mode) : p ~p~ init m -> overlapShape p
+  | shOvWait (m : Mode) (e2 e3 e4 : Exp) : p ~p~ ovWait m e2 e3 e4 -> overlapShape p
+  | shOvReady (m : Mode) (e2 : Exp) (l : Position) : p ~p~ ovReady m e2 l -> overlapShape p
   | shSwitchBc (m : Mode) : p ~p~ switchBc m -> overlapShape p
   | shSwitchCurr : p ~p~ switchCurr -> overlapShape p
   | shSwitchListen : p ~p~ switchListen -> overlapShape p
   | shOvAbort : p ~p~ ovAbort -> overlapShape p
   | shTfsStart : p ~p~ tfsStart -> overlapShape p
-  | shTfsNext (v : BaseType) : p ~p~ tfsNext v -> overlapShape p
+  | shTfsNext (m : Mode) : p ~p~ tfsNext m -> overlapShape p
   | shTfsCurr : p ~p~ tfsCurr -> overlapShape p
   | shTfsBc : p ~p~ tfsBc -> overlapShape p
   | shTfsListen : p ~p~ tfsListen -> overlapShape p.
 
 Inductive listenerShape (p : ProcTerm) : Prop :=
   | shListening : p ~p~ listening -> listenerShape p
-  | shRangeBad (v : BaseType) : p ~p~ rangeBad v -> listenerShape p
+  | shRangeBad (m : Mode) : p ~p~ rangeBad m -> listenerShape p
   | shBadOvlp : p ~p~ badOvlp -> listenerShape p
-  | shCurrOK (v : BaseType) : p ~p~ currOK v -> listenerShape p
+  | shCurrOK (m : Mode) : p ~p~ currOK m -> listenerShape p
   | shAbortOvlp : p ~p~ abortOvlp -> listenerShape p
-  | shGotMsg (v1 v2 : BaseType) : p ~p~ gotMsg v1 v2 -> listenerShape p
-  | shGotRange (v1 : BaseType) (e2 : Exp) : p ~p~ gotRange v1 e2 -> listenerShape p
-  | shCurrComp (v1 : BaseType) (e2 : Exp) : p ~p~ currComp v1 e2 -> listenerShape p
+  | shGotMsg (m : Mode) (l : Position) : p ~p~ gotMsg m l -> listenerShape p
+  | shGotRange (m : Mode) (e : Exp) : p ~p~ gotRange m e -> listenerShape p
+  | shCurrComp (m : Mode) (e : Exp) : p ~p~ currComp m e -> listenerShape p
   | shPaused : p ~p~ paused -> listenerShape p
   | shStuck : p ~p~ nilProc -> listenerShape p.
 
@@ -393,11 +396,6 @@ or nilProc.*)
 Ltac shape_body B := solve [eapply bisim_trans; [exact B | ];
   first [apply bisim_refl | unfold_app_bisim; apply bisim_refl]].
 
-(** Makes an input list of known length explicit.*)
-Ltac explicit_input_list := repeat match goal with [L : length ?l = ?n |- _] =>
-  is_var l; destruct l as [ | ?b l]; simpl in L; try discriminate L;
-  try (injection L as L) end.
-
 (** From [H : p ~p~ X] and [T : p -PA- a -PA> p'], the matching step of X and its derivative
 q with [B : p' ~p~ q]; then inverts the step on X's body, makes the input explicit and
 computes the substitution in B.*)
@@ -405,7 +403,7 @@ Ltac shape_step_pre B :=
   match goal with [H : ?p ~p~ _, T : ?p -PA- _ -PA> _ |- _] =>
     let q := fresh "q" in let TQ := fresh "TQ" in
     destruct (bisim_step_disc _ _ _ _ H T) as [q [TQ B]]; clear H T end;
-  prot_outProc_in_not_body; invert_disc_prefixes; explicit_input_list; clean_proc_hyp B.
+  prot_outProc_in_not_body; invert_disc_prefixes; explicit_typed_input; clean_proc_hyp B.
 
 (** From [B : p ~p~ (b $> P) $+$ (!~ b $> Q)], in either order, the branch b selects:
 [B : p ~p~ P], [p ~p~ Q], or [p ~p~ nilProc] when b is ill formed.*)
@@ -433,22 +431,9 @@ Ltac broadcast_shape_of B := first [
     eapply shSleeping; shape_body B | eapply shBcWait; shape_body B
   | eapply shBcReady; shape_body B ].
 
-(** Solves [evalExpFunTime e <> None -> exists m, v = baseMode m] for a timer e the overlap
-component computes from v: e is ill formed unless v is a mode.*)
-Ltac timer_mode :=
-  let N := fresh "N" in intro N;
-  match goal with [ |- exists m, ?v = baseMode m] =>
-    destruct v as [m | | | | | ]; [exists m; reflexivity | | | | | ];
-    exfalso; apply N; clear N; unfold evalExpFunTime; simpl;
-    repeat match goal with
-      | [ b : BaseType |- _ ] => destruct b; simpl
-      | [ |- context [evalExpFun ?e] ] => destruct (evalExpFun e); simpl
-      end; reflexivity
-  end.
-
 Ltac overlap_shape_of B := first [
     eapply shDormant; shape_body B | eapply shInit; shape_body B
-  | eapply shOvWait; [shape_body B | timer_mode] | eapply shOvReady; shape_body B
+  | eapply shOvWait; shape_body B | eapply shOvReady; shape_body B
   | eapply shSwitchBc; shape_body B | eapply shSwitchCurr; shape_body B
   | eapply shSwitchListen; shape_body B | eapply shOvAbort; shape_body B
   | eapply shTfsStart; shape_body B | eapply shTfsNext; shape_body B
@@ -489,27 +474,20 @@ Proof.
   unfold bcWait. intro D. invert_del_prefixes; eexists; del_timers_bisim.
 Qed.
 
-(** The pause timer after a delay is well formed only if it was before.*)
-Ltac timer_carries := first [ exact (fun N => N)
-  | intros _; match goal with [E : evalExpFunTime ?e = Some _ |- evalExpFunTime ?e <> None] =>
-      rewrite E; discriminate end ].
-
 Lemma ovWait_del_shape v e2 e3 e4 q d : ovWait v e2 e3 e4 -PD- d -PD> q ->
-  exists e3' e4', q ~p~ ovWait v e2 e3' e4' /\
-  (evalExpFunTime e3' <> None -> evalExpFunTime e3 <> None).
+  exists e3' e4', q ~p~ ovWait v e2 e3' e4'.
 Proof.
-  unfold ovWait. intro D. invert_del_prefixes; do 2 eexists;
-    (split; [del_timers_bisim | timer_carries]).
+  unfold ovWait. intro D. invert_del_prefixes; do 2 eexists; del_timers_bisim.
 Qed.
 
 Lemma broadcastShape_disc p p' a : broadcastShape p -> p -PA- a -PA> p' -> broadcastShape p'.
 Proof.
-  intros S T. destruct S as [H | v e H | v1 v2 H]; shape_step_pre B; broadcast_shape_of B.
+  intros S T. destruct S as [H | m e H | m l H]; shape_step_pre B; broadcast_shape_of B.
 Qed.
 
 Lemma broadcastShape_del p p' d : broadcastShape p -> p -PD- d -PD> p' -> broadcastShape p'.
 Proof.
-  intros S T. destruct S as [H | v e H | v1 v2 H].
+  intros S T. destruct S as [H | m e H | m l H].
   - apply shSleeping. eapply bisim_del_pres; [del_self_body | exact H | exact T].
   - destruct (bisim_step_del _ _ _ _ H T) as [q [TQ B]].
     destruct (bcWait_del_shape _ _ _ _ TQ) as [e' B'].
@@ -520,36 +498,32 @@ Qed.
 Lemma overlapShape_disc p p' a : overlapShape p -> p -PA- a -PA> p' -> overlapShape p'.
 Proof.
   intros S T.
-  destruct S as [H | v H | v e2 e3 e4 H SC | v1 e2 v3 H | m H | H | H | H | H | v H | H | H | H];
-    shape_step_pre B; try overlap_shape_of B.
-  (* ovWait's pause timer has run out, so its mode is a mode: the step is into switchBc.*)
-  match goal with [E : evalExpFunTime e3 = Some zeroTime |- _] =>
-    destruct (SC ltac:(rewrite E; discriminate)) as [m Ev]; subst v end.
-  overlap_shape_of B.
+  destruct S as [H | m H | m e2 e3 e4 H | m e2 l H | m H | H | H | H | H | m H | H | H | H];
+    shape_step_pre B; overlap_shape_of B.
 Qed.
 
 Lemma overlapShape_del p p' d : overlapShape p -> p -PD- d -PD> p' -> overlapShape p'.
 Proof.
   intros S T.
-  destruct S as [H | v H | v e2 e3 e4 H SC | v1 e2 v3 H | m H | H | H | H | H | v H | H | H | H];
+  destruct S as [H | m H | m e2 e3 e4 H | m e2 l H | m H | H | H | H | H | m H | H | H | H];
     [eapply shDormant | eapply shInit | idtac | eapply shOvReady | eapply shSwitchBc
     | eapply shSwitchCurr | eapply shSwitchListen | eapply shOvAbort | eapply shTfsStart
     | eapply shTfsNext | eapply shTfsCurr | eapply shTfsBc | eapply shTfsListen];
     try solve [eapply bisim_del_pres; [del_self_body | exact H | exact T]].
   destruct (bisim_step_del _ _ _ _ H T) as [q [TQ B]].
-  destruct (ovWait_del_shape _ _ _ _ _ _ TQ) as [e3' [e4' [B' I]]].
-  eapply shOvWait; [eapply bisim_trans; [exact B | exact B'] | intro N; apply SC, I, N].
+  destruct (ovWait_del_shape _ _ _ _ _ _ TQ) as [e3' [e4' B']].
+  eapply shOvWait. eapply bisim_trans; [exact B | exact B'].
 Qed.
 
 Lemma listenerShape_disc p p' a : listenerShape p -> p -PA- a -PA> p' -> listenerShape p'.
 Proof.
-  intros S T. destruct S as [H | v H | H | v H | H | v1 v2 H | v1 e2 H | v1 e2 H | H | H];
+  intros S T. destruct S as [H | m H | H | m H | H | m l H | m e H | m e H | H | H];
     shape_step_pre B; listener_shape_of B.
 Qed.
 
 Lemma listenerShape_del p p' d : listenerShape p -> p -PD- d -PD> p' -> listenerShape p'.
 Proof.
-  intros S T. destruct S as [H | v H | H | v H | H | v1 v2 H | v1 e2 H | v1 e2 H | H | H];
+  intros S T. destruct S as [H | m H | H | m H | H | m l H | m e H | m e H | H | H];
     [eapply shListening | eapply shRangeBad | eapply shBadOvlp | eapply shCurrOK
     | eapply shAbortOvlp | eapply shGotMsg | eapply shGotRange | eapply shCurrComp
     | eapply shPaused | eapply shStuck];
@@ -587,14 +561,15 @@ Qed.
 (**Proof sketch: Because none of its constituents can output on said channel.*)
 
 (** A process in the listening state is listening on the channel AN, for any
-notification of the right length: [r, m'', l'].*)
-Lemma listening_AN_prot p v :
-  length v = 3%nat -> listeningStateProt p -> discActEnabled p (chanAN ;? v).
+notification [r, m'', l'] of a range, a mode and a position.*)
+Lemma listening_AN_prot p (r : Distance) (m : Mode) (l : Position) :
+  listeningStateProt p ->
+  discActEnabled p (chanAN ;? [baseDistance r, baseMode m, basePosition l]).
 Proof.
-  intros L LS. inversion LS as [p1 p2 p3 Q]; subst.
+  intros LS. inversion LS as [p1 p2 p3 Q]; subst.
   apply daeParR; apply daeParR.
   eapply bisim_dae; [apply bisim_symm; apply Q | ]. unfold listening.
-  apply daeSumL; apply daeSumL; apply daeSumL. apply dae_inPfx. simpl. rewrite L. reflexivity.
+  apply daeSumL; apply daeSumL; apply daeSumL. apply dae_inPfx. typed_vals.
 Qed.
 (**Proof: Lift an activation result from simple level.
 Come up with a general tactic for that lifting?*)
@@ -638,7 +613,7 @@ Proof.
     unfold currPincCheck. simpl. remove_resets. remove_updates.
     apply stepDpChoiceL. eapply stepDpThen.
     + eapply stepDpApp; [reflexivity | ]. unfold currComp. simpl.
-      apply stepDpChoiceL. apply (stepDpIn chanMStable [] []). reflexivity.
+      apply stepDpChoiceL. apply (stepDpIn chanMStable [] []). typed_vals.
     + unfold evalBoolExpFunTot. simpl. rewrite PI. reflexivity.
 Qed.
 
@@ -684,7 +659,7 @@ Proof.
   unfold gotMsg in QS. invert_disc_prefixes.
   assert (G1 : gotRange m' r -PA- chanMCurr ;? [baseMode m'] -PA>
      subProcTerm (listsToSub [vM] (listBaselistExp [baseMode m'])) (app currPincCheckN [eVar vM, eBase m', eBase r]))
-    by (apply stepDpIn; reflexivity).
+    by (apply stepDpIn; typed_vals).
   destruct (bisim_step_disc _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ GR) PQ) G1)
     as [q1 [Q1 B1]].
   destruct (goMsg_gotRange_track_live m' r) as [a1 [g2 GS]].
@@ -715,10 +690,10 @@ converts the required amount of arguments to existentials.*)
 (*** Back tracking ***)
 
 (** Searches a sum of prefixes and zero timers for a step with the goal's action. An input
-whose values are left open takes any values of the right length.*)
-Ltac step_search := first [ apply stepDpIn; reflexivity
+whose values are left open takes a value of each variable's type, a mode from the context.*)
+Ltac step_search := first [ apply stepDpIn; typed_vals
   | match goal with [ |- inPrefix _ ?xs _ -PA- _ -PA> _ ] =>
-      apply (stepDpIn _ (genBaseList (length xs)) xs _ (genBaseList_length _ xs)) end
+      let vs := typed_witness xs in apply (stepDpIn _ vs xs); typed_vals end
   | solve [apply stepDpOut; repeat constructor]
   | apply stepDpTimeOut; [step_search | reflexivity]
   | apply stepDpChoiceL; step_search
@@ -773,12 +748,12 @@ computed; then the shapes whose derivative is not bisimilar to X are refuted.*)
 Ltac backtrack_shape SP :=
   match goal with [TR : ?p -PA- _ -PA> _, O : overlapState ?p |- _] =>
     destruct (overlapState_shape _ O)
-      as [B | v B | v e2 e3 e4 B SC | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
+      as [B | ?m B | ?m ?e2 ?e3 ?e4 B | ?m ?e2 ?l B | ?m B | B | B | B | B | ?m B | B | B | B];
     let q := fresh "q" in let TQ := fresh "TQ" in let BQ := fresh "BQ" in
     let BT := fresh "BT" in
     destruct (bisim_step_disc _ _ _ _ B TR) as [q [TQ BQ]];
     pose proof (bisim_trans _ _ _ (bisim_symm _ _ BQ) SP) as BT;
-    prot_outProc_in_not_body; invert_disc_prefixes; explicit_input_list; clean_proc_hyp BT;
+    prot_outProc_in_not_body; invert_disc_prefixes; explicit_typed_input; clean_proc_hyp BT;
     unfold liftNameProc in BT; try unfold_app_hyp_l BT; prot_outProc_in_not_body;
     try solve [refute_by_chan BT]
   end.
@@ -820,10 +795,11 @@ Proof.
   intros TR O SP. red in SP. backtrack_shape SP.
   - (* init: its derivative can read its position at once, so ovWait m t x y can too, and
        both derivatives then broadcast their modes, which therefore agree.*)
-    bt_step BT (chanPos ;? [baseTime zeroTime]) S1.
+    bt_step BT (chanPos ;? [basePosition origin]) S1.
     destruct (bisim_step_disc _ _ _ _ BT S1) as [r1 [R1 BR1]].
     invert_disc_prefixes. clean_proc_hyp BR1.
-    bt_step BR1 (chanOutProc ;! [v, baseTime zeroTime]) S2.
+    match type of BR1 with app _ (eBase ?b :: _) ~p~ _ =>
+      bt_step BR1 (chanOutProc ;! [b, basePosition origin]) S2 end.
     destruct (bisim_step_disc _ _ _ _ BR1 S2) as [r2 [R2 _]].
     invert_app_trans. invert_disc_prefixes. output_values.
     left. exact B.
@@ -839,8 +815,8 @@ Proof.
   intros TR O SP. red in SP. backtrack_shape SP.
   (* ovWait: its derivative broadcasts its mode and the position it read, so ovReady m t l
      matches that output, which fixes the mode.*)
-  match type of BT with outPrefix _ (_ :: eBase ?b :: nil) _ ~p~ _ =>
-    bt_step BT (chanOutProc ;! [v, b]) S2 end.
+  match type of BT with outPrefix _ (eBase ?b1 :: eBase ?b :: nil) _ ~p~ _ =>
+    bt_step BT (chanOutProc ;! [b1, b]) S2 end.
   destruct (bisim_step_disc _ _ _ _ BT S2) as [r2 [R2 _]].
   invert_disc_prefixes. output_values.
   exists e2 e3. red. eapply bisim_trans; [exact B | ]. unfold ovWait.
@@ -860,7 +836,8 @@ Proof.
   intros TR O SP. red in SP. backtrack_shape SP.
   (* ovWait: its derivative wakes the broadcaster with its mode, so switchBc m matches that
      output, which fixes the mode.*)
-  bt_step BT (chanWake ;! [v]) S2.
+  match type of BT with outPrefix _ (eBase ?b :: nil) _ ~p~ _ =>
+    bt_step BT (chanWake ;! [b]) S2 end.
   destruct (bisim_step_disc _ _ _ _ BT S2) as [r2 [R2 _]].
   invert_disc_prefixes. output_values.
   exists e2 e4. red. eapply bisim_trans; [exact B | ]. unfold ovWait.
@@ -877,7 +854,7 @@ Theorem switchCurr_prev (p p' : ProcTerm) (a : DiscAct) :
   exists m, switchBcState m p.
 Proof.
   intros TR O SP. red in SP. backtrack_shape SP.
-  exists m0. exact B.
+  eexists. exact B.
 Qed.
 
 (*** Fwd tracking ***)
@@ -932,7 +909,7 @@ Ltac activation_post_tac :=
   [ |- discActEnabled ?p ?a] => 
     match p with
     (*For sum, recursively go left and see if it succeeds, else go right.*)
-    | _ $< _ >$ ? _  => apply dae_inPfx; reflexivity
+    | _ $< _ >$ ? _  => apply dae_inPfx; typed_vals
     | _ $< _ >$ ! _  => apply dae_outPfx; constructor
     | ?p1 $+$ ?p2 => first [solve [apply daeSumL; activation_post_tac] |
       solve [apply daeSumR; activation_post_tac]]
@@ -973,9 +950,7 @@ Ltac currOK_next_fwd_pre :=
   match goal with [S : ?p ~p~ _, TR : ?p -PA- _ -PA> _ |- _] =>
     let q := fresh "q" in let TQ := fresh "TQ" in let B := fresh "B" in
     destruct (bisim_step_disc _ _ _ _ S TR) as [q [TQ B]] end;
-  invert_disc_prefixes;
-  try match goal with [H : length ?l = length _ |- _] =>
-    destruct l as [ | ?b [ | ?b' ?l]]; simpl in H; try discriminate H end;
+  invert_disc_prefixes; explicit_typed_input;
   cbn [listsToSub liftVarList liftExpList listBaselistExp map subProcTerm listSub
     liftNameProc subExp] in *;
   repeat match goal with [H : _ ~p~ _ |- _] => remove_updates_hyp H end.
@@ -990,18 +965,19 @@ Proof.
   currOK_next_fwd_pre.
   - right. unfold listeningState. eapply bisim_trans; [eassumption | ].
     currOK_next_listening_app.
-  - match goal with [b : BaseType |- _] => destruct b as [m|t|l|d|d|r] end.
-    1: left; exists m; unfold nextEqState; eapply bisim_trans; [eassumption | ];
-     currOK_next_unfold_app; apply bisim_refl.
-    all: right; unfold listeningState; eapply bisim_trans; [eassumption | ];
-    currOK_next_unfold_app.
-    all: (eapply bisim_trans; [apply if_then_bisim_false; eapply bevalEqualFalse | ]).
-    all: first [apply evalBase | discriminate | currOK_next_listening_app].
+  - left. eexists. unfold nextEqState. eapply bisim_trans; [eassumption | ].
+    currOK_next_unfold_app. apply bisim_refl.
 Qed.
 
 Theorem rangeBad_next (p p' : ProcTerm) (a : DiscAct) (m'' : Mode) :
   p -PA- a -PA> p' -> rangeBadState m'' p ->
-  (exists m, currEqState m m'' p'). Admitted. (*#fwd-track*)
+  (exists m, currEqState m m'' p').
+Proof.
+  intros TR CS. unfold rangeBadState in CS. unfold rangeBad in CS.
+  currOK_next_fwd_pre.
+  eexists. unfold currEqState. eapply bisim_trans; [eassumption | ].
+  currOK_next_unfold_app. apply bisim_refl.
+Qed.
 
 Theorem gotMessage_next (p p' : ProcTerm)
   (a : DiscAct) (m'' : Mode) (l : Position) :
@@ -1011,13 +987,27 @@ Theorem gotMessage_next (p p' : ProcTerm)
 Theorem gotRange_next (p p' : ProcTerm)
   (a : DiscAct) (m'' : Mode) (r : Distance) :
   p -PA- a -PA> p' -> gotRangeState m'' r p ->
-  (exists m, currPincCheckState m m'' r p'). Admitted. (*#fwd-track*)
+  (exists m, currPincCheckState m m'' r p').
+Proof.
+  intros TR CS. unfold gotRangeState in CS. unfold gotRange in CS.
+  currOK_next_fwd_pre.
+  eexists. unfold currPincCheckState. eapply bisim_trans; [eassumption | ].
+  currOK_next_unfold_app. apply bisim_refl.
+Qed.
 
 Theorem currComp_next (p p' : ProcTerm)
   (a : DiscAct) (m'' : Mode) (r : Distance) :
   p -PA- a -PA> p' -> currCompState m'' r p ->
   (exists m, nextPincCheckState m m'' r p') \/
-  listeningState p'. Admitted. (*#fwd-track*)
+  listeningState p'.
+Proof.
+  intros TR CS. unfold currCompState in CS. unfold currComp in CS.
+  currOK_next_fwd_pre.
+  - right. unfold listeningState. eapply bisim_trans; [eassumption | ].
+    currOK_next_listening_app.
+  - left. eexists. unfold nextPincCheckState. eapply bisim_trans; [eassumption | ].
+    currOK_next_unfold_app. apply bisim_refl.
+Qed.
 
 Theorem badOvlp_next (p p' : ProcTerm) (a : DiscAct) :
   p -PA- a -PA> p' -> badOvlpState p -> listeningState p'.
@@ -1040,7 +1030,12 @@ Qed.
 Lemma tfsStart_next (p p' : ProcTerm) (a : DiscAct) :
   p -PA- a -PA> p' -> tfsStartState p ->
   exists m, tfsNextState m p'.
-  Admitted. (*#fwd-track*)
+Proof.
+  intros TR CS. unfold tfsStartState in CS. unfold tfsStart in CS.
+  currOK_next_fwd_pre.
+  eexists. unfold tfsNextState. eapply bisim_trans; [eassumption | ].
+  currOK_next_unfold_app. apply bisim_refl.
+Qed.
   
 (****************** Conditionals ******************)
 (* In here are resuls relating conditional state predicates to their branches.

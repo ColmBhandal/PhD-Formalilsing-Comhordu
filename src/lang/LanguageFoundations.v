@@ -18,14 +18,35 @@ Require Import ComhCoq.model.ComhBasics.
 Open Scope nat_scope.
 
 
-(** A countably infinite set of variables indexed by natural numbers.*)
-Inductive Var : Type:=
-  | var : nat -> Var.
+(** The types of the values of the language: a mode, a time, a position, a distance, a
+delay or a non-negative real. Each is the type of the base values built with the matching
+constructor of BaseType below.*)
+Inductive ValType : Type :=
+  vtMode | vtTime | vtPosition | vtDistance | vtDelay | vtNonneg.
 
-Lemma eqDecVar : eqDec Var. unfold eqDec. destruct x1, x2.
-  addHyp (eq_nat_dec n n0). invertClear H. rewrite H0. left.
-  reflexivity. right. unfold not. intros. apply H0.
-  invertClear H. reflexivity. Qed.
+(** Equality on value types is decidable.*)
+Definition valTypeEqDec (t t' : ValType) : {t = t'} + {t <> t'}.
+  decide equality. Defined.
+
+Lemma eqDecValType : eqDec ValType. unfold eqDec. intros.
+  destruct (valTypeEqDec x1 x2); [left | right]; assumption. Qed.
+
+(** A countably infinite set of variables of each type, indexed by natural numbers. The
+type of a variable is the type of the values an input may bind it to: the variables of an
+input prefix are typed, as in the thesis (p.64).*)
+Inductive Var : Type :=
+  | var : ValType -> nat -> Var.
+
+(** The type of a variable.*)
+Definition varType (x : Var) : ValType :=
+  match x with var t _ => t end.
+
+Lemma eqDecVar : eqDec Var. unfold eqDec. destruct x1 as [t n], x2 as [t' n'].
+  destruct (valTypeEqDec t t') as [E | NE];
+    [subst t' | right; intro H; apply NE; inversion H; reflexivity].
+  destruct (eq_nat_dec n n') as [E | NE];
+    [subst n'; left; reflexivity | right; intro H; apply NE; inversion H; reflexivity].
+  Qed.
 
 (** BaseType type elements are either a mode, a time, a position, a distance or a delay.
 We use coercions to reduce constructor verbosity.*)
@@ -52,6 +73,61 @@ Lemma eqDecBase : eqDec BaseType. unfold eqDec. unfold decidable.
   right. unfold not. intros. apply H0. invertClear H. reflexivity. 
   addHyp (eqDecNonnegReal n n0). invertClear H. rewrite H0. left. reflexivity.
   right. unfold not. intros. apply H0. invertClear H. reflexivity. Qed.
+
+(** The type of a base value.*)
+Definition valTypeOf (b : BaseType) : ValType :=
+  match b with
+  | baseMode _ => vtMode
+  | baseTime _ => vtTime
+  | basePosition _ => vtPosition
+  | baseDistance _ => vtDistance
+  | baseDelay _ => vtDelay
+  | baseNonneg _ => vtNonneg
+  end.
+
+(** A value of type mode is a mode, and likewise for the other types.*)
+Lemma valTypeOf_mode b : valTypeOf b = vtMode -> exists m, b = baseMode m.
+  destruct b; simpl; intro H; inversion H. eexists. reflexivity. Qed.
+
+Lemma valTypeOf_time b : valTypeOf b = vtTime -> exists t, b = baseTime t.
+  destruct b; simpl; intro H; inversion H. eexists. reflexivity. Qed.
+
+Lemma valTypeOf_position b : valTypeOf b = vtPosition -> exists l, b = basePosition l.
+  destruct b; simpl; intro H; inversion H. eexists. reflexivity. Qed.
+
+Lemma valTypeOf_distance b : valTypeOf b = vtDistance -> exists r, b = baseDistance r.
+  destruct b; simpl; intro H; inversion H. eexists. reflexivity. Qed.
+
+(** The values vs are typed for the variables xs: there is one value per variable, and each
+value has its variable's type. An input binds its variables only to such values, so a
+process never holds a time where it expects a mode.*)
+Definition typedVals (xs : list Var) (vs : list BaseType) : Prop :=
+  Forall2 (fun x v => valTypeOf v = varType x) xs vs.
+
+(** Typed values are exactly the value lists whose types are the variables' types.*)
+Lemma typedVals_map xs vs : typedVals xs vs <-> map valTypeOf vs = map varType xs.
+  unfold typedVals. split.
+  - intro H. induction H; simpl; [reflexivity | f_equal; assumption].
+  - revert vs. induction xs as [ | x xs IH]; intros vs E; destruct vs as [ | v vs];
+    simpl in E; try discriminate; constructor; inversion E; auto.
+  Qed.
+
+Lemma typedVals_length xs vs : typedVals xs vs -> length vs = length xs.
+  intro H. apply Forall2_length in H. symmetry. assumption. Qed.
+
+Lemma typedVals_dec xs vs : {typedVals xs vs} + {~typedVals xs vs}.
+  destruct (list_eq_dec valTypeEqDec (map valTypeOf vs) (map varType xs)) as [E | NE].
+  - left. apply typedVals_map. assumption.
+  - right. intro H. apply NE. apply typedVals_map. assumption.
+  Qed.
+
+(** Inversion of typed values on the shape of the variable list.*)
+Lemma typedVals_nil_inv vs : typedVals [] vs -> vs = [].
+  intro H. inversion H. reflexivity. Qed.
+
+Lemma typedVals_cons_inv x xs vs : typedVals (x :: xs) vs ->
+  exists v vs', vs = v :: vs' /\ valTypeOf v = varType x /\ typedVals xs vs'.
+  intro H. inversion H; subst. eauto. Qed.
 
 
 (** A simple expression language over the base types.*)
@@ -138,13 +214,8 @@ Lemma natDec : forall n m : nat,
   intros. apply H0. symmetry. assumption. Qed.
 
 (**Given any two variables, they are either equal or not.*)
-Lemma varEqDec : forall x y : Var,
-  {x = y} + {x <> y}.
-  intros. destruct x. destruct y.
-  assert ({n = n0} + {n <> n0}). apply natDec.
-  inversion H; clear H. left. apply f_equal. assumption.
-  right. unfold not; intros. apply H0. inversion H. reflexivity.
-  Qed. 
+Lemma varEqDec : forall x y : Var, {x = y} + {x <> y}.
+  decide equality; first [apply natDec | apply valTypeEqDec]. Qed.
 
 (**True if the arguments are equal, false otherwise.*)
 Definition varEq (v1 v2 : Var) : bool :=
@@ -660,12 +731,12 @@ Lemma evalExp_evalExpFunTime (e : Exp) (t : Time) :
   unfold evalExpFunTime. rewrite H. destruct t. simpl.
   repeat f_equal. symmetry. assumption. Qed.
 
-(** For every natural number, there is a list of base
-expressions whose length is the length of that natural number. The existential witness
-used here is simply [0, 0, 0, ...], the list of all zero times.*)
-Lemma baseListEx (n : nat) : exists v, @length BaseType v = n.
-  induction n. exists (@nil BaseType). reflexivity. invertClear IHn.
-  exists (baseTime zeroTime :: x). simpl. f_equal. assumption. Qed.
+(** A list of expressions evaluates to at most one list of values.*)
+Lemma evalExpListsUnique (l : list Exp) (l1 l2 : list BaseType) :
+  evalExpLists l l1 -> evalExpLists l l2 -> l1 = l2.
+  intro H. revert l2. induction H; intros l3 H3; inversion H3; subst.
+  reflexivity. f_equal. eapply evalExpUnique; eassumption.
+  apply IHevalExpLists. assumption. Qed.
 
 (** If one list evaluated to another, then the lengths
 match.*)
@@ -750,6 +821,24 @@ Coercion liftVarList (v : Var) : list Var := [v].
 
 (** Lift an expression to a list of expressions.*)
 Coercion liftExpList (e : Exp) : list Exp := [e].
+
+(** Makes a typed input explicit: from [H : typedVals xs vs], with xs an explicit list of
+variables of known types and vs a variable, replaces vs by one value per variable, each a
+constructor of its variable's type applied to a fresh name.*)
+Ltac explicit_typed_input := repeat match goal with
+  | [H : typedVals (liftVarList _) _ |- _] => unfold liftVarList in H
+  | [H : typedVals [] ?vs |- _] => is_var vs; apply typedVals_nil_inv in H; subst vs
+  | [H : typedVals (?x :: ?xs) ?vs |- _] => is_var vs;
+    let v := fresh "v" in let vs' := fresh "vs" in let E := fresh "E" in
+    let T := fresh "T" in let H' := fresh "H" in
+    destruct (typedVals_cons_inv _ _ _ H) as [v [vs' [E [T H']]]]; clear H; subst vs;
+    destruct v; try discriminate T; clear T
+  end.
+
+(** Solves [typedVals xs vs] for explicit lists of variables and values.*)
+Ltac typed_vals := solve [unfold typedVals; try unfold liftVarList;
+  repeat (constructor; [reflexivity | ]); constructor].
+
 
 (**Lift a time to an exp.*)
 Coercion liftTimeExp (t : Time) : Exp := eBase (baseTime t).

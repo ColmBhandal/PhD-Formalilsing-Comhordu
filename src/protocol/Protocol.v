@@ -33,18 +33,20 @@ Lemma eqDecProtocolName : eqDec ProtocolName. unfold eqDec.
 specified using the name.*)
 Coercion liftNameProc (n : ProtocolName) : ProcTerm := n $([])$.
 
-(**Aliases for variables to decrease verbosity*)
-Definition vM := (var 0).
-Definition vMF := (var 1).
-Definition vM' := (var 2).
-Definition vM'' := (var 3).
-Definition vL := (var 4).
-Definition vL' := (var 5).
-Definition vT := (var 6).
-Definition vT' := (var 7).
-Definition vR := (var 8).
-Definition vX := (var 9).
-Definition vY := (var 10).
+(** Aliases for the protocol's variables, each with its type: the modes m, mf, m' and m'',
+the positions l and l', the times t, t', x and y, and the range r. An input binds a
+variable only to a value of its type.*)
+Definition vM := (var vtMode 0).
+Definition vMF := (var vtMode 1).
+Definition vM' := (var vtMode 2).
+Definition vM'' := (var vtMode 3).
+Definition vL := (var vtPosition 4).
+Definition vL' := (var vtPosition 5).
+Definition vT := (var vtTime 6).
+Definition vT' := (var vtTime 7).
+Definition vR := (var vtDistance 8).
+Definition vX := (var vtTime 9).
+Definition vY := (var vtTime 10).
 
 
 

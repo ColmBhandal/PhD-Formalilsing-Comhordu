@@ -151,7 +151,7 @@ Qed.
 (** Bisimilarity is a congruence for the input prefix, when the bodies are bisimilar for
 every input.*)
 Lemma inPrefix_bisim_context c xs p q :
-  (forall v, length v = length xs ->
+  (forall v, typedVals xs v ->
     subProcTerm (listsToSub xs (listBaselistExp v)) p ~p~
     subProcTerm (listsToSub xs (listBaselistExp v)) q) ->
   c $< xs >$ ? p ~p~ c $< xs >$ ? q.
@@ -297,7 +297,7 @@ Lemma sort_del a d p : sort a d p -> timedActEnabled p d ->
   (*Out pfx*)
   right; do 2 econstructor; assumption.
   (*In pfx*)
-  right; do 2 econstructor. symmetry. assumption.
+  right; do 2 econstructor. assumption.
   (*If true*)
   apply IHPD in H5. clear IHPD. invertClear H5. ex_flat. and_flat.
   invertClear AND2.

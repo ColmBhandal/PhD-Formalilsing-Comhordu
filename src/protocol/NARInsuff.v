@@ -441,7 +441,7 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
   lets W : delivered_incomingNetNotif H Q.
   (*Then by (Basics::incomingNetNotif_del) we get incomingNetNotif <r, m, l> 0 i n',
   our left disjunct.*)
-  left. lets E : incomingNetNotif_del p w W (@eq_refl nat 3%nat). invertClearAs2 E Z1 Z2.
+  left. lets E : incomingNetNotif_del p w W. invertClearAs2 E Z1 Z2.
   my_applys_eq Z2. apply timeEqR. simpl. rewrite <- x. simpl. ring. Qed.
 
 Theorem insuff_incomingNotif_bad (n n' : Network) (a : ActDiscNet) (m : Mode)
@@ -614,7 +614,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   we have the LHS.*)
   assert (t0 < adaptNotif) as TLAN. rewrite <- x. simpl. Rplus_lt_tac.
   delPos. lets DIN : delivered_incomingNetNotif H TLAN. left. 
-  lets IND : incomingNetNotif_del p w DIN (@eq_refl nat 3%nat). destruct IND. my_applys_eq i0.
+  lets IND : incomingNetNotif_del p w DIN. destruct IND. my_applys_eq i0.
   apply timeEqR. simpl. rewrite <- x. simpl. ring.
   (*Note, the proof is Similar to instant_insuff_abort.*)
   Qed.
@@ -652,7 +652,7 @@ Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
   (*Now, we already have from our hypothesis that AN < t' + d, rearranging to AN - t' < d.
   However, (Basiscs::incomingNetNotif-del) gives us that d <= AN - t', which is a
   contradiction.*)
-  lets K1 : incomingNetNotif_del p w K (@eq_refl nat 3%nat). invertClearAs2 K1 K2 K3. simpl in K2. false.
+  lets K1 : incomingNetNotif_del p w K. invertClearAs2 K1 K2 K3. simpl in K2. false.
   eapply Rle_not_lt. apply K2. simpl in G2. Rplus_lt_tac.
   (*So we are left with the case where t' = AN. We proceed from here by reductio
   ad absurdum, that is assume ~sufficient m r towards a contradiction.*)
@@ -666,7 +666,7 @@ Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
   elim_intro G H1 H2.
   (*The first case fails by contradiction via an application of (Basiscs::incomingNetNotif_del)
   yielding d <= 0, impossible for a strictly positive delay.*)
-  lets H4 : incomingNetNotif_del p w H1 (@eq_refl nat 3%nat). invertClearAs2 H4 H5 H6. false.
+  lets H4 : incomingNetNotif_del p w H1. invertClearAs2 H4 H5 H6. false.
   eapply Rle_not_lt. apply H5. simpl. delPos.
   (*The next case fails also because it can be shown that delay is impossible whenever we're on a
   notifAbortPath m r i n (...EA::notifAbortPath_urgent...). Hence we arrive at
@@ -733,8 +733,8 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   addHyp (delivered_incomingNetNotif n v r l0 t' i p H0 H4).
   remember (minusTime (nonneg (time adaptNotif)) (nonneg (time t'))
   (Rlt_le (nonneg (time t')) (nonneg (time adaptNotif)) H4)) as t''.
-  addHyp (incomingNetNotif_del n n' d ((baseDistance r)::v) t'' i p w H5
-    (f_equal (fun x => length ((baseDistance r)::x)) Heqv)). invertClear H6.
+  rewrite Heqv in H5.
+  addHyp (incomingNetNotif_del n n' d r m l t'' i p w H5). invertClear H6.
   rename x into Q1. generalize dependent Q1. rewrite Heqt''. intros.
   simpl in Q1. simpl in q.
   (*The contradiction comes in the form d <= AN - t' < d*)
@@ -746,8 +746,7 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   (*This leaves us with 3 sub cases on which to discriminate.*)
   decompose [or] H5; clear H5.
   (*The first two cases fail because delay can be shown to be impossible (...urgency...).*)
-  remember ([baseDistance r, baseMode m, basePosition l]) as v2.
-  addHyp (incomingNetNotif_del n n' d v2 zeroTime i p w H6 (f_equal (@length _) Heqv2)). invertClear H5.
+  addHyp (incomingNetNotif_del n n' d r m l zeroTime i p w H6). invertClear H5.
   rename x into Q2. clear H7. contradict Q2. apply Rlt_not_le. simpl. delPos.
   contradiction (notifBadPathNet_urgent i n n' d H7 w).
   (*Hence we are left with t' = AN and tfs m t i n for some t. In this case, we apply the tfs

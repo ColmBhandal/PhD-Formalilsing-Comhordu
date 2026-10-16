@@ -4,7 +4,7 @@ The multi-tiered language of the thesis (chapter 4, p.58), built on the [model](
 
 | File | What it holds |
 |---|---|
-| [`LanguageFoundations.v`](LanguageFoundations.v) | Expressions, their evaluation, and the other low-level parts the tiers share. |
+| [`LanguageFoundations.v`](LanguageFoundations.v) | The typed variables and the values they range over, expressions and their evaluation, and the other low-level parts the tiers share. |
 | [`SoftwareLanguage.v`](SoftwareLanguage.v) | The software tier (§4.1, p.61): a CCS-style language with value passing and time. |
 | [`ProcEquiv.v`](ProcEquiv.v) | Bisimulation of software processes. |
 | [`InterfaceLanguage.v`](InterfaceLanguage.v) | The interface tier (§4.2, p.81), which models an entity's environment with timed lists. |
