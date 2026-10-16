@@ -2,7 +2,7 @@
 
 ## When to write one
 
-- Only when a human explicitly asks for a detailed report. A PR is never a reason for one: its description is the record, the workstream links to it, and CI attaches the statements and assumptions diffs. See the working rules in the top-level [`AGENTS.md`](../../AGENTS.md).
+- Only when a human explicitly asks for a detailed report. A PR is never a reason for one: its description is the record and the workstream links to it. See the working rules in the top-level [`AGENTS.md`](../../AGENTS.md).
 
 ## One folder per report
 

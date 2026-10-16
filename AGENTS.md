@@ -33,7 +33,7 @@
 - `make` builds everything (`_CoqProject` → `rocq makefile` → `Makefile.coq`).
 - `make assumptions` prints what `safety` still rests on.
 - `make clean` removes build products.
-- CI (`.github/workflows/build.yml`) builds every pull request (when it's opened, and on each new commit), reports the remaining assumptions, and diffs the statements and the assumptions against the base branch. Keep it green: never merge a red build.
+- CI (`.github/workflows/build.yml`) builds every pull request (when it's opened, and on each new commit) and reports remaining assumptions. Keep it green: never merge a red build.
 
 ## Writing
 
@@ -48,8 +48,8 @@
 ## Working rules
 
 - Work is planned and tracked in `doc/workstreams/`, and decisions are recorded in `doc/adr/`.
-- **The PR is the record of a step.** Its description says what changed, what `safety` rests on now, and any decision a human must take, and no more. The workstream ticks the step with a sentence or two and the PR link. CI attaches to every pull request the diff of every statement and definition, and of the assumptions under `safety`, against the base branch. Don't repeat a PR's content in a log entry, a long commit message or a report.
+- **The PR is the record of a step.** Its description says what changed, what `safety` rests on now, and any decision a human must take, and no more. The workstream ticks the step with a sentence or two and the PR link. Don't repeat a PR's content in a log entry, a long commit message or a report.
 - A report in `doc/reports/` is only for a detailed write-up that a human explicitly asks for, such as the results of a proving pass. It is never a default per PR.
-- Changing what the project *claims* needs explicit human approval: theorem or lemma statements, definitions, model axioms, and deleting unproved results. Agents propose such changes in the PR description, or in a report when one is asked for; they don't make them. Deleting a proved result that a more general one replaces is not such a change; see `src/AGENTS.md`.
+- **Changing what the project *claims* needs explicit human approval**: the statement of `safety` above all, and any theorem or lemma statement, definition or model axiom, and deleting an unproved result. Agents propose such changes in the PR description, or in a report when one is asked for, and don't make them until a human agrees. The human reviewing the PR checks that this held. Deleting a proved result that a more general one replaces is not such a change; see `src/AGENTS.md`.
 - Whenever a change makes the formalisation depart from the thesis, record the correction in [`doc/thesis/thesis-corrections.md`](doc/thesis/thesis-corrections.md) in the same PR.
 - Never weaken the trust base silently. If a change adds an entry to `make assumptions` output, call it out in the PR.
