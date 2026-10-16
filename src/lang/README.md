@@ -10,4 +10,4 @@ The multi-tiered language of the thesis (chapter 4, p.58), built on the [model](
 | [`InterfaceLanguage.v`](InterfaceLanguage.v) | The interface tier (§4.2, p.81), which models an entity's environment with timed lists. |
 | [`ModeStateLanguage.v`](ModeStateLanguage.v) | The mode state tier (§4.3, p.90): an entity's current mode, and the next one while it changes. |
 | [`EntityLanguage.v`](EntityLanguage.v) | Entities (§4.4, p.93), each made of a process, a position, an interface and a mode state. |
-| [`NetworkLanguage.v`](NetworkLanguage.v) | Networks of entities (§4.4.1, p.99), with communication between entities and their movement in space. |
+| [`NetworkLanguage.v`](NetworkLanguage.v) | Networks of entities (§4.4.1, p.99), with communication between entities and their movement in space, and the notions a protocol proof needs about one entity of a network: its position, the distance to another, its queues, its mode state, and a predicate on it lifted to the network. |

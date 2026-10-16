@@ -99,6 +99,10 @@ Coercion currModeEnt (e : Entity) : Mode :=
 Definition nextModeEnt (e : Entity) : option Mode :=
   match e with [|_, _, _, a|] => nextModeMState a end.
 
+(** incomingEnt v e means v is in the incoming list of the interface of e.*)
+Inductive incomingEnt (v : list BaseType) : Entity -> Prop :=
+  | incent P l h K : incomingInter v h -> incomingEnt v ([|P, l, h, K|]).
+
 Open Scope R_scope.
 
 (** If the minimum distance of compatibiltiy of the respective modes
@@ -406,6 +410,19 @@ Proof.
   match goal with [Hi : _ -i- _ -i> _ |- _] => inversion Hi; subst; try assumption end.
   - eapply notifList_out_pres_pos; eassumption.
   - eapply notifList_in_pres; eassumption.
+Qed.
+
+(** A discrete entity step keeps every outgoing message with a positive timestamp.*)
+Lemma stepEnt_disc_pres_out_pos p p' l l' k k' li li' lo lo' ln ln' b v t :
+  [|p, l, {| li := li; lo := lo; ln := ln |}, k|] -EA- b ->>
+  [|p', l', {| li := li'; lo := lo'; ln := ln' |}, k'|] ->
+  <( v, t )> _: outList lo -> 0 < t -> <( v, t )> _: outList lo'.
+Proof.
+  intros H Hin Ht. inversion H; subst; try assumption;
+  match goal with [Hi : _ -i- _ -i> _ |- _] => inversion Hi; subst; try assumption end.
+  - eapply outList_buff_pres; eassumption.
+  - match goal with [Ho : _ -ol- _ !! -ol> _ |- _] => inversion Ho; subst end.
+    eapply outList_in_output_pres; eassumption.
 Qed.
 
 
