@@ -86,7 +86,8 @@ Proof.
       * exfalso. apply NF. destruct TB as [e E I].
         apply currMode_ent_ex in C. destruct C as [e' [I' C']].
         pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
-        rewrite <- C'. apply tfsBc_failSafe. exact E.
+        rewrite <- C'. apply tfsBc_failSafe; [ | exact E].
+        exact (reachable_net_ent _ _ _ (reachNetDisc n n' a p w) I).
   - apply IH; [ | assumption].
     apply (proj2 (currModeNet_del_pres n n' d m2 i w)). assumption.
 Qed.
@@ -157,7 +158,8 @@ Proof.
       destruct TB as [e E I].
       apply currMode_ent_ex in U. destruct U as [e' [I' C']].
       pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
-      rewrite <- C'. apply tfsBc_failSafe. exact E.
+      rewrite <- C'. apply tfsBc_failSafe; [ | exact E].
+      exact (reachable_net_ent _ _ _ (reachNetDisc n n' a rn w) I).
 Qed.
 
 Lemma currEq_eq_badOvlp_net m m'' i n :
@@ -218,7 +220,7 @@ Theorem delivered_incomingNetNotif (n : Network) (v : list BaseType) (r : Distan
 
 Theorem insuff_incomingNotif_abort (n n' : Network) (a : ActDiscNet) (m : Mode)
   (r : Distance) (l : Position) (i : nat) : 
-  nextModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
+  reachableNet n -> nextModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n' \/
   notifAbortPathNet i n'. Admitted. (*3*)
@@ -426,7 +428,7 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
   goal holds in the next state.*)
   elim_intro IHdisc D1 D2.
   assert (nextModeNet m i n) as Q. eapply nextSince_next. apply H1.
-  eapply insuff_incomingNotif_abort. apply Q.
+  eapply insuff_incomingNotif_abort. apply p. apply Q.
   apply w. assumption. assumption.
   (*Then there's the case where notifAbortPath m r i n. In this case, we can show by
   (notifAbort_not_nextSince) that either notifAbortPath m r i n' or ~nextSineState m i n'.*)
@@ -446,7 +448,7 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
 
 Theorem insuff_incomingNotif_bad (n n' : Network) (a : ActDiscNet) (m : Mode)
   (r : Distance) (l : Position) (i : nat) : 
-  currModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
+  reachableNet n -> currModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n' \/
   notifBadPathNet i n'. Admitted. (*3*)
@@ -516,7 +518,7 @@ Theorem notifBad_pres_tfs (m : Mode) (n n' : Network)
   lets NBC : notifBadPathNet_cases U CMN. or_flat. ex_flat.
   (*In the rangeBad case, forward tracking gives you a state that will
   yield notifBadPathNet.*)
-  lets RNN : rangeBad_next_net w OR CMN. left. or_flat.
+  lets RNN : rangeBad_next_net rn w OR CMN. left. or_flat.
   eapply rangeBad_notifBad_net; eassumption.
   ex_flat.
   assert (badOvlpStateNet i n') as BOS. eapply currEq_eq_badOvlp_net.
@@ -582,7 +584,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   (*OK, now we're back to the run of the mill, a few contradictions to come later.*)
   rename H2 into SWIN. elim IIA; [intro IL | intro IR]; clear IIA.
   assert (nextModeNet m i n) as NM. eapply nextSince_next. eassumption.
-  lets IIA : insuff_incomingNotif_abort NM w H0 IL. elim_intro IIA IIL IIR.
+  lets IIA : insuff_incomingNotif_abort p NM w H0 IL. elim_intro IIA IIL IIR.
   left. assumption.
   (*OK, so contradictions follow from the assertion of paused contradicting with the
   notifAbortPath, either now or in the previous state.*)
@@ -598,7 +600,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   transition and currSince (and so currMode) holding. So first we assert that currMode
   holds and then we can apply this theorem.*)
   assert (currModeNet m i n) as CMN. eapply currSince_curr. eassumption.
-  lets IIB : insuff_incomingNotif_bad CMN w H0 IH0.
+  lets IIB : insuff_incomingNotif_bad p CMN w H0 IH0.
   elim_intro IIB INN NBN. left. assumption. right. left. assumption.
   (*Then notifBadPathNet is shown to be either preserved or goes to tfs*)
   right. eapply notifBad_pres_tfs; assumption.
@@ -748,7 +750,7 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   (*The first two cases fail because delay can be shown to be impossible (...urgency...).*)
   addHyp (incomingNetNotif_del n n' d r m l zeroTime i p w H6). invertClear H5.
   rename x into Q2. clear H7. contradict Q2. apply Rlt_not_le. simpl. delPos.
-  contradiction (notifBadPathNet_urgent i n n' d H7 w).
+  contradiction (notifBadPathNet_urgent i n n' d p H7 w).
   (*Hence we are left with t' = AN and tfs m t i n for some t. In this case, we apply the tfs
   delay constructor to show tfs m (t + d) i n which is exactly our goal simplified from
   tfs m (AN + t + d - AN) i n p.*)

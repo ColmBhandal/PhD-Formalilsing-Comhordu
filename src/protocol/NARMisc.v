@@ -106,9 +106,6 @@ Qed.
 
 (*The following string of results should be provable by lifting inter-component
 relationships. Except the one with nextSince, not so sure there.*)
-Lemma init_nextMode_net m i n :
-  initStateNet m i n -> nextModeNet m i n. Admitted. (*4*)
-(*+*)
 Lemma ovWait_ovReady_nextMode_net i n (p : reachableNet n) :
   (forall m t x y, ovWaitStateNet m t x y i n ->
    nextModeNet m i n) /\
@@ -121,7 +118,7 @@ Proof.
 Qed.
 (*+*)
 Lemma switchBc_nextMode_net m i n :
-  switchBcStateNet m i n -> nextModeNet m i n. Admitted. (*4*)
+  reachableNet n -> switchBcStateNet m i n -> nextModeNet m i n. Admitted. (*4*)
 (*+*)
 Lemma switchCurr_nextSince_nextMode_net m t i n p :
   nextSince m t i n p ->
@@ -257,7 +254,7 @@ Then split into the different nextSinceState cases and use an aux lemma for each
   eapply OON1. replace m with x. eassumption. symmetry.
   eapply nextSince_ovReaddy_modeEq; eassumption.
 (*Case 3*)
-  eapply switchBc_nextMode_net. replace m with x. eassumption. symmetry.
+  eapply switchBc_nextMode_net. apply p. replace m with x. eassumption. symmetry.
   eapply nextSince_switchBc_modeEq; eassumption.
 (*Case 4*)
   eapply switchCurr_nextSince_nextMode_net; eassumption.
@@ -380,7 +377,7 @@ Theorem tfs_transGuard (n : Network) (m : Mode) (t : Time) (i : nat)
   (*So now we must deal with the case where the previous state wasn't tfsCurr.
   Here we can show (...PA::tracking...) that it was tfsNext and that the transition
   was an output to the mode state of the next mode.*)
-  addHyp (tfsCurrStateNet_bktrk_net n n' i a H w). invertClear H2. contradiction H3.
+  addHyp (tfsCurrStateNet_bktrk_net n n' i a p H w). invertClear H2. contradiction H3.
   decompose [ex] H4. clear H4. rename x into m1. rename x0 into mF.
   decompose [and] H2. clear H2.
   (*Now, by previous knowledge we know that the mode transition time
@@ -393,7 +390,7 @@ Theorem tfs_transGuard (n : Network) (m : Mode) (t : Time) (i : nat)
   generalize dependent x1. rewrite <- H2. intros. split.  
   eapply transGuard_intro. apply H7. apply modeTransTime_bound.
   (*Now, for the delay inductive case, we know that delay preserves tfsCurr*)
-  addHyp (tfsCurrState_del_pres_net n n' d i w). addHyp H. rewrite <- H1 in H2.
+  addHyp (tfsCurrState_del_pres_net n n' d i p w). addHyp H. rewrite <- H1 in H2.
   (*So we can apply I.H. to the previous state.*)
   apply IHtfs in H2. invertClear H2. rename x into t'. invertClear H3.
   (*Then we know that the transGuard decreases and the t from
@@ -495,7 +492,7 @@ Lemma notifAbortPathNet_urgent_rangeBad_ent m p l h k e' d :
 Proof.
   intros RB ED. inversion RB as [p1 p2 p3 RB3 EQ]; subst.
   noSyncNow_tac.
-  destruct (NS (chanMCurr ;? [baseMode (currModeMState k)])) as [_ DM].
+  destruct (NS (chanMCurr ;? [baseMode (currModeMState k)])) as [_ [DM _]].
   - dae_listener.
     exact (notifAbortPathNet_urgent_rangeBad_in m (currModeMState k) p3 RB3).
   - apply DM. exact (modeState_curr_enabled k).
@@ -509,7 +506,7 @@ Lemma notifAbortPathNet_urgent_currOK_ent m m' p l h k e' d :
 Proof.
   intros CO NM ED. inversion CO as [p1 p2 p3 CO3 EQ]; subst.
   noSyncNow_tac.
-  destruct (NS (chanMNext ;? [baseMode m'])) as [_ DM].
+  destruct (NS (chanMNext ;? [baseMode m'])) as [_ [DM _]].
   - dae_listener.
     exact (notifAbortPathNet_urgent_currOK_in m m' p3 CO3).
   - apply DM. destruct k as [m0 | m0 m1 t0]; simpl in NM; inversion NM; subst.
@@ -539,13 +536,13 @@ Qed.
 (**Proof: lift from...EA::urgency... #urgent-path*)
 
 Lemma notifBadPathNet_urgent i n n' d :
-  notifBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
+  reachableNet n -> notifBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
 (**Proof: Follows from urgency results from all underlying component states.
 Urgency holds in each one because there is always a synch possible with the
 mode state or the overlap component. #urgent-path*)
 
 Lemma msgBadPathNet_urgent (n n' : Network) (d : Delay) (i : nat) :
-  msgBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
+  reachableNet n -> msgBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
 (**Proof: Lift urgency from EA urgency result. #urgent-path*)
 
 (* begin helpers for msgAbort_paused_disj_net *)

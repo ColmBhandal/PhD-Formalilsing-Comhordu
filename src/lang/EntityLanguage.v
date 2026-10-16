@@ -200,12 +200,16 @@ Definition discActEnabledEnt (e : Entity) (a : ActDiscEnt) :=
   exists e', e -EA- a ->> e'.
 
 (** This predicate says that it is impossible for p to synchronise with either i
-or k via the discrete action a i.e. if p can do a, then neither i nor k can do its
-complement.*)
+or k via the discrete action a, and that a is not a read of the position: if p can do a,
+then neither i nor k can do its complement, and a is not an input on chanPos. The last
+clause is the thesis's (Definition 4.22, p.98). The position is always on offer to the
+software, by the rule stepDePosRead, so a process that can read it must not let time
+pass, just as one that can synchronise must not.*)
 Definition noSyncNow (a : DiscAct) (p : ProcTerm)
   (i : Interface) (k : ModeState) : Prop :=
   discActEnabled p a ->
-  (~discActEnabledInter (a^) i /\ ~discActEnabledMState (a^) k).
+  (~discActEnabledInter (a^) i /\ ~discActEnabledMState (a^) k /\
+  forall l : Position, a <> chanPos ;? [basePosition l]).
 
 (** This predicate says that p i and k cannot synchronise now, nor can they
 synchronise after each has respectively performed a delay of d' that is less
@@ -363,7 +367,7 @@ Qed.
 Lemma ent_del_sync_mState_not p l h k d e' a : discActEnabled p a ->
   discActEnabledMState (a^) k -> [|p, l, h, k|] -ED- d ->> e' -> False.
 Proof.
-  intros DA DM DEL. destruct (ent_del_noSyncNow _ _ _ _ _ _ DEL a DA) as [_ NM].
+  intros DA DM DEL. destruct (ent_del_noSyncNow _ _ _ _ _ _ DEL a DA) as [_ [NM _]].
   apply NM. assumption.
 Qed.
 
@@ -373,6 +377,14 @@ Lemma ent_del_sync_inter_not p l h k d e' a : discActEnabled p a ->
 Proof.
   intros DA DI DEL. destruct (ent_del_noSyncNow _ _ _ _ _ _ DEL a DA) as [NI _].
   apply NI. assumption.
+Qed.
+
+(** No delay while the software can read a position: the entity's own is always on offer.*)
+Lemma ent_del_pos_in_not p l h k d e' l0 :
+  discActEnabled p (chanPos ;? [basePosition l0]) -> [|p, l, h, k|] -ED- d ->> e' -> False.
+Proof.
+  intros DA DEL. destruct (ent_del_noSyncNow _ _ _ _ _ _ DEL _ DA) as [_ [_ NP]].
+  apply (NP l0). reflexivity.
 Qed.
 
 (** Software that reads any current mode cannot let time pass: the mode state always

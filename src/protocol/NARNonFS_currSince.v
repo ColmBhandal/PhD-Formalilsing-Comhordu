@@ -179,7 +179,8 @@ Theorem nonFS_currSince (m : Mode) (i : nat) (n : Network)
   (*We can eliminate the tfs case because failSafe m contradicts our hypothesis.*)
   elim_intro OO SW TF. Focus 2.
   assert (tfsBcStateEnt ([|p', l', h', k'|])). constructor. rewrite Y.
-  constructor. apply TF. apply tfsBc_failSafe in H12.
+  constructor. apply TF. apply tfsBc_failSafe in H12;
+  [ | exact (reachable_net_ent _ _ _ (reachNetDisc n n' a X s) H4)].
   simpl in H12. rewrite H10 in H12. false.
   (*This allows us to conclude that the previous state was nextSince m t i n for some t
   (switchCurr_nextSince)*)

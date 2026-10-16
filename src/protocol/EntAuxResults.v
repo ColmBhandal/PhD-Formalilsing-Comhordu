@@ -37,15 +37,42 @@ Lemma nextModeEnt_not_stable m1 m2 p l h :
 (*Most results here should be provable with a simple enough lifting tactic-
 and should be tagged accordingly with "back-track-lift-ent".*)
 
-Lemma tfsNext_prev_ent m e e' a : tfsNextStateEnt m e' ->
+(** Backward tracking lifted to an entity whose software is reachable: if the overlap
+component satisfies X after a discrete entity step, then before the step it already did, or
+it stepped into X from a reachable overlap state.*)
+Lemma overlap_prev_ent (X : ProcTerm -> Prop) p l h k e' a :
+  reachableProt p -> [|p, l, h, k|] -EA- a ->> e' -> liftProcEnt (liftOverlap X) e' ->
+  liftProcEnt (liftOverlap X) ([|p, l, h, k|]) \/
+  exists p1 p2 p3 p2' b, p = p1 $||$ p2 $||$ p3 /\ overlapState p2 /\
+  p2 -PA- b -PA> p2' /\ X p2'.
+Proof.
+  intros RP S L. destruct e' as [p' l' h' k'].
+  inversion L as [q lq hq kq LO]; subst. inversion LO as [p1' p2' p3' X2]; subst.
+  lets PS : reachableProt_triple RP. inversion PS as [p1 p2 p3 BS OS LS]; subst.
+  destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ S) as [E | [b B]].
+  - inversion E; subst. left. constructor. constructor. exact X2.
+  - link_partripdiscW2_tac B W. destruct W as [E | [b' B']].
+    + subst. left. constructor. constructor. exact X2.
+    + right. exists p1 p2 p3 p2' b'. split; [reflexivity | ]. split; [exact OS | ].
+      split; assumption.
+Qed.
+
+Lemma tfsNext_prev_ent m e e' a : reachableEnt e -> tfsNextStateEnt m e' ->
   e -EA- a ->> e' -> tfsNextStateEnt m e \/ tfsStartStateEnt e.
-  Admitted. (*#back-track-lift-ent*)
+Proof.
+  intros RE TN S. destruct e as [p l h k]. lets RP : reachable_ent_prot RE.
+  destruct (overlap_prev_ent _ _ _ _ _ _ _ RP S TN)
+    as [L | [p1 [p2 [p3 [p2' [b [E [OS [B TN']]]]]]]]].
+  - left. exact L.
+  - subst. destruct (tfsNext_prev _ _ _ _ B OS TN') as [TS | TN2]; [right | left];
+      constructor; constructor; assumption.
+Qed.
 (*Proof: Lift backtracking results at process level. *)
 
 (***************************** Inter-Component Relationships *****************************)
 (**In here, I'd like results that relate the states of things within a reachable entity e.g. the state of the software component and the mode state.*)
 
-Lemma currEq_mode m m'' e :
+Lemma currEq_mode m m'' e : reachableEnt e ->
   currEqStateEnt m m'' e -> m = currModeEnt e. Admitted.
 
 Lemma ovAbort_unstable e : reachableEnt e -> ovAbortStateEnt e -> unstable (mstEnt e).  
@@ -53,19 +80,17 @@ Lemma ovAbort_unstable e : reachableEnt e -> ovAbortStateEnt e -> unstable (mstE
   introz U. Admitted. (*#inter-component*)
   
 (**If an entity is in the tfsCurr state, then the mext mode exists and is failsafe.*)
-Lemma tfsCurr_failSafe (e : Entity) (m : Mode) :
-  tfsCurrStateEnt e -> exists m, nextModeEnt m e /\ failSafe m.
+Lemma tfsCurr_failSafe (e : Entity) :
+  reachableEnt e -> tfsCurrStateEnt e -> exists m, nextModeEnt m e /\ failSafe m.
   Admitted. (*#inter-component*)
 (**GENERAL TACTICS WOULD BE USEFUL HERE, BECAUSE THERE ARE 3 FAIRLY SMILAR THEOREMS TO COME.
 Proof: Look at the overlap component. Upon entering this state, it must have written out a fail safe mode
 to the mode state- in particular, the successor to the current mode.*)
 
-(*CHANGE: Here and at application in NARNonFS_currSince.v.
-Add reachability of entity as a hypothesis*)
-(**If an entity is in the tfsBc state, then the current mode of that entity
+(**If a reachable entity is in the tfsBc state, then the current mode of that entity
 is failsafe.*)
 Lemma tfsBc_failSafe (e : Entity) :
-  tfsBcStateEnt e -> failSafe (currModeEnt e).
+  reachableEnt e -> tfsBcStateEnt e -> failSafe (currModeEnt e).
   (**Proof: Backtracking gives that the previous state was tfsCurrState*)
   introz U. Admitted. (*C*)
 (*then tfsCurr_failSafe gives that the next mode there was failsafe.
@@ -197,9 +222,24 @@ Ltac urgency_pre_tac2_2 SE SP S :=
 
 (*** Urgency Results ***)
 
+(* begin helpers for gotMsgStateEnt_urgent *)
+(** A process in the gotMsg state can read any position on the channel pos.*)
+Lemma gotMsgStateEnt_urgent_aux1 (p : ProcTerm) (m : Mode) (l l0 : Position) :
+  gotMsgState m l p -> discActEnabled p (chanPos ;? [basePosition l0]).
+  activation_tac. Qed.
+(* end helpers *)
+
+(** The listener reads its position as soon as it has a message, since the position is
+always on offer: no delay in the gotMsg state. Reachability plays no part.*)
 Lemma gotMsgStateEnt_urgent (e e' : Entity) (d : Delay) m l :
   reachableEnt e -> gotMsgStateEnt m l e -> e -ED- d ->> e' -> False.
-  Admitted.
+Proof.
+  intros RE GS DEL. destruct e as [p lp h k].
+  inversion GS; subst.
+  match goal with [H : gotMsgStateProt _ _ _ |- _] => inversion H; subst end.
+  eapply ent_del_pos_in_not with (l0 := l); [ | eassumption].
+  dae_listener. eapply gotMsgStateEnt_urgent_aux1. eassumption.
+Qed.
 
 (* begin helpers for gotRangeStateEnt_urgent *)
 (** A process in the gotRange state can read any mode on the channel mCurr.*)
