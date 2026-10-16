@@ -141,19 +141,27 @@ Proof.
     + eapply IH; [reflexivity | assumption].
 Qed.
 
+(** Outputting from a timed list keeps every element but the one output, whose timestamp has
+run out.*)
+Lemma timedList_out l l' w x :
+  l -tl- w !! -tl> l' -> x _: l -> x _: l' \/ x = <( w, zeroTime )>.
+Proof.
+  intros H. remember (w !!) as a eqn:Ea. revert Ea.
+  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
+    intros Ea Hin; try discriminate.
+  - injection Ea as Ew. subst. destruct Hin as [Heq | Hin]; [right; symmetry | left]; assumption.
+  - destruct Hin as [Heq | Hin].
+    + left. left. assumption.
+    + destruct (IH Ea Hin) as [Hin' | Heq]; [left; right | right]; assumption.
+Qed.
+
 (** Outputting from a timed list keeps every element with a positive timestamp.*)
 Lemma timedList_out_pres_pos l l' w v t :
   l -tl- w !! -tl> l' -> <( v, t )> _: l -> 0 < t -> <( v, t )> _: l'.
 Proof.
-  intros H. remember (w !!) as a eqn:Ea. revert Ea.
-  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
-    intros Ea Hin Hpos; try discriminate.
-  - destruct Hin as [Heq | Hin].
-    + injection Heq as Hv Hz. subst t. simpl in Hpos. lra.
-    + assumption.
-  - destruct Hin as [Heq | Hin].
-    + left. assumption.
-    + right. eapply IH; [exact Ea | eassumption | assumption].
+  intros H Hin Hpos. destruct (timedList_out _ _ _ _ H Hin) as [Hin' | Heq].
+  - exact Hin'.
+  - injection Heq as Hv Hz. subst t. simpl in Hpos. lra.
 Qed.
 
 
@@ -596,36 +604,6 @@ Lemma inter_mStable_in_not h h' : h -i- chanMStable {! [] -i> h' -> False.
 Lemma inter_abort_in_not h h' :
   h -i- chanAbort {?[] -i> h' -> False.
   introz U. inversion U. Qed.
-
-(* begin helpers for outList_in_output_pres *)
-From Stdlib Require Import Lra.
-Lemma outList_in_output_pres_aux : forall l a l', l -tl- a -tl> l' ->
-  forall u x, a = atlOut u -> x _: l -> x _: l' \/ x = <(u, zeroTime)>.
-Proof.
-  intros l a l' H.
-  induction H as [v1 l1 | l1 l1' v1 e Hs IH | d1 | l1 l1' d1 v1 t1 t1' Hs IH Ht];
-    intros u x Ea Hin; try discriminate.
-  - injection Ea as Eu. subst. destruct Hin as [Hx | Hx].
-    + right. subst. reflexivity.
-    + left. assumption.
-  - destruct Hin as [Hx | Hx].
-    + left. left. assumption.
-    + destruct (IH u x Ea Hx) as [Hy | Hy].
-      * left. right. assumption.
-      * right. assumption.
-Qed.
-(* end helpers *)
-
-Lemma outList_in_output_pres v u t lo lo' :
-  <( v, t )> _: outList lo -> outList lo -tl- u !! -tl> outList lo' ->
-  0 < t -> <( v, t )> _: outList lo'.
-Proof.
-  intros H1 H2 H3.
-  destruct (outList_in_output_pres_aux _ _ _ H2 u _ eq_refl H1) as [Hy | Hy].
-  - assumption.
-  - injection Hy as Hv Ht. subst t. simpl in H3. lra.
-Qed.
-(*Prove in bulk: #interface-linking*)
 
 (** Buffering a message into an output list keeps every element.*)
 Lemma outList_buff_pres lo lo' w x :

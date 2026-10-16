@@ -458,25 +458,24 @@ Theorem tfs_bound (n : Network) (m : Mode) (t : Time) (i : nat)
 
 
 
-(*If v is timed out and outgoing, and the parent network makes a discrete transition,
-then in the resultant network, v is either still timed out and outgoing or it has just
-been delivered in this instant.*)
+(*If v is timed out and outgoing from the entity i at position l, and the parent network makes
+a discrete transition, then in the resultant network, v is either still timed out and outgoing
+or it has just been delivered from l in this instant.*)
 Theorem outgoing_timeout_disc (n n' : Network) (a : ActDiscNet) (i : nat)
   (p : reachableNet n) (w : n -NA- a -NA> n') (v : list BaseType) (l : Position) :
-  outgoing v zeroTime i n ->
+  inPosNet l i n -> outgoing v zeroTime i n ->
   outgoing v zeroTime i n' \/
   exists r, delivered ([-v, l, r-]) zeroTime i n' (reachNetDisc n n' a p w).
-  introz U.
-  (*Case analysis on the discrete action in question*)
-  destruct a.
-  (*In the case of output, we further check to see if the message payload output is v.*)
-  destruct m as [v' l' r'].
+Proof.
+  intros IP OG.
   (*The only case where something is in the output list of an interface and not in the
   output list of the derivative is where the action linking the states is a broadcast
-  of the message in question, which gives us delivered with timestamp 0 i.e. the RHS.*)
-  (*For a of type tau, input or ignore, we can show that outgoing is preserved
-  (...linking theorems + theorems on timed lists...), hence the LHS. *)
-  Admitted. (*3*)
+  of the message in question, which gives us delivered with timestamp 0 i.e. the RHS.
+  For a of type tau, input or ignore, outgoing is preserved, hence the LHS.*)
+  destruct (outgoing_disc _ _ _ _ _ _ _ w IP OG) as [OG' | [_ [r EQ]]].
+  - left. exact OG'.
+  - right. exists r. subst a. apply deliveredBase with (t := zeroTime).
+Qed.
 (**Proof: In steps above*)
 
 (*AMALGAMATE WITH OTHERS- cull repetitions?*)

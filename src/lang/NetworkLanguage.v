@@ -807,18 +807,69 @@ Proof.
   eapply Rle_not_lt. apply x. simpl. delPos.
 Qed.
 
+(** Across a discrete network step, an outgoing message stays outgoing unless the step is its
+entity broadcasting it from its position, which needs the message's timestamp to have run out.*)
+Theorem outgoing_disc (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time)
+  (l : Position) (i : nat) :
+  n -NA- a -NA> n' -> inPosNet l i n -> outgoing v t i n ->
+  outgoing v t i n' \/ (t = zeroTime /\ exists r, a = [-v, l, r-] /! i).
+Proof.
+  intros ST IP OG. destruct OG as [p l0 li lo ln k EIN INO].
+  destruct IP as [p1 h1 k1 EIN1].
+  lets EQ : entInNetUnique EIN1 EIN. inversion EQ. subst. clear EQ.
+  destruct (link_net_ent_disc_fwd_ex _ _ _ ST _ _ EIN) as [e' EIN'].
+  destr_ent_inter e' p' l' k' li' lo' ln'.
+  (*An entity step that is not an output keeps the message.*)
+  assert (forall b, [|p, l0, {| li := li; lo := lo; ln := ln |}, k|] -EA- b ->>
+    [|p', l', {| li := li'; lo := lo'; ln := ln' |}, k'|] -> (forall m, b <> m #!) ->
+    outgoing v t i n') as KEEP.
+  { intros b S NO.
+    destruct (stepEnt_disc_out _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ S INO) as [IN' | [_ [r EQ]]].
+    - econstructor; eassumption.
+    - exfalso. eapply NO. exact EQ. }
+  destruct a as [m j | m | m | m | ].
+  - (*An output by j: by i itself, or by another entity, which i inputs or ignores.*)
+    destruct (Nat.eq_dec j i) as [EQj | NE]; [subst j | ].
+    + destruct (outputMatch _ _ _ _ ST) as [e1 [e1' [M1 [M1' S1]]]].
+      lets EQ1 : entInNetUnique M1 EIN. subst e1.
+      lets EQ1' : entInNetUnique M1' EIN'. subst e1'.
+      destruct (stepEnt_disc_out _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ S1 INO) as [IN' | [EQt [r EQ]]].
+      * left. econstructor; eassumption.
+      * right. split; [exact EQt | ]. exists r. inversion EQ. reflexivity.
+    + destruct (outputMismatch _ _ _ _ _ _ ST EIN' NE) as [e1 [M1 S1]].
+      lets EQ1 : entInNetUnique M1 EIN. subst e1.
+      left. destruct S1 as [S1 | S1]; apply (KEEP _ S1); intros ? C; inversion C.
+  - (*An input: i inputs or ignores.*)
+    destruct (acceptLink _ _ _ _ _ (stepDnAccIn _ _ _ ST) EIN') as [e1 [M1 S1]].
+    lets EQ1 : entInNetUnique M1 EIN. subst e1.
+    left. destruct S1 as [S1 | S1]; apply (KEEP _ S1); intros ? C; inversion C.
+  - (*An ignore changes nothing.*)
+    apply ignoreEqNet in ST. subst n'. left. econstructor; [exact EIN | exact INO].
+  - (*An accept: i inputs or ignores.*)
+    destruct (acceptLink _ _ _ _ _ ST EIN') as [e1 [M1 S1]].
+    lets EQ1 : entInNetUnique M1 EIN. subst e1.
+    left. destruct S1 as [S1 | S1]; apply (KEEP _ S1); intros ? C; inversion C.
+  - (*A silent step by j: by i itself, or by another entity, which leaves i unchanged.*)
+    destruct (tauLink _ _ ST) as [j [e1 [e1' [M1 [M1' [S1 OTH]]]]]].
+    destruct (Nat.eq_dec j i) as [EQj | NE]; [subst j | ].
+    + lets EQ1 : entInNetUnique M1 EIN. subst e1.
+      lets EQ1' : entInNetUnique M1' EIN'. subst e1'.
+      left. apply (KEEP _ S1); intros ? C; inversion C.
+    + lets M2 : OTH NE EIN'.
+      lets EQ2 : entInNetUnique M2 EIN. inversion EQ2; subst.
+      left. econstructor; eassumption.
+Qed.
+
 (** If v is outgoing with non-zero timestamp t, and the network performs a
 discrete action, then v is still outgoing in the derivative network.*)
 Theorem outgoing_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time) (i : nat) :
   n -NA- a -NA> n' -> outgoing v t i n -> 0 < t ->
   outgoing v t i n'.
 Proof.
-  intros ST OG POS. destruct OG as [p l li lo ln k EIN INO].
-  destruct (link_net_ent_disc_fwd _ _ _ _ _ ST EIN) as [e' [EIN' [EQ | [b S]]]].
-  - subst. econstructor; eassumption.
-  - destr_ent_inter e' p' l' k' li' lo' ln'.
-    econstructor. eassumption.
-    eapply stepEnt_disc_pres_out_pos; eassumption.
+  intros ST OG POS. lets IP : OG. destruct IP as [p l li lo ln k EIN _].
+  destruct (outgoing_disc _ _ _ _ _ l _ ST (ipWitness _ _ _ _ _ _ EIN) OG) as [OG' | [EQ _]].
+  - exact OG'.
+  - subst t. simpl in POS. lra.
 Qed.
 
 (** If v is incomingNetNotif with non-zero timestamp t, and the network performs a discrete

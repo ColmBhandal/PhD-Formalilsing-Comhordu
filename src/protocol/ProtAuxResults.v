@@ -1213,12 +1213,29 @@ Ltac invert_trans_del := match goal with [P : _ -PD- _ -PD> _ |- _]
 
 (*** Simple Predicate Preservation ***)
 
+(** A delay keeps the overlap component waiting for the same mode and wait time. Only its two
+timers change: they count down until they run out.*)
 Lemma ovWait_del_pres m t x y p p' d :
   ovWaitState m t x y p -> p -PD- d -PD> p' ->
-  ovWaitState m t x y p'.
-  
-  introz U.
-   Admitted. (*#delay-pres*)
+  exists x' y', ovWaitState m t x' y' p'.
+Proof.
+  intros U V. destruct (bisim_step_del _ _ _ _ U V) as [q [W B]].
+  unfold ovWait in W.
+  (*The two input prefixes delay to themselves, and each timer delays to some timer.*)
+  repeat match goal with
+    | [H : _ $+$ _ -PD- _ -PD> _ |- _] => inversion H; subst; clear H
+    | [H : _ $< _ >$ ? _ -PD- _ -PD> _ |- _] => apply del_self_inPrefix in H; subst
+    end.
+  match goal with [HC : $< _ >$ (_ $< _ >$ ? _) -PD- _ -PD> _ |- _] =>
+    destruct (del_del_bisim _ _ _ _ _ (evalExpFunTime_time _) (del_self_inPrefix _ _ _) HC)
+    as [y' BC] end.
+  match goal with [HD : $< _ >$ (_ $< _ >$ ! _) -PD- _ -PD> _ |- _] =>
+    destruct (del_del_bisim _ _ _ _ _ (evalExpFunTime_time _) (del_self_outPrefix _ _ _) HD)
+    as [x' BD] end.
+  exists x'. exists y'. unfold ovWaitState, ovWait.
+  eapply bisim_trans; [exact B | ].
+  repeat apply choice_bisim_context; first [apply bisim_refl | assumption].
+Qed.
 
 Lemma ovReady_del_pres m t l p p' d :
   ovReadyState m t l p -> p -PD- d -PD> p' ->
@@ -1252,7 +1269,7 @@ Theorem del_pres_nextSinceState (p p' : ProcTerm) (d : Delay) :
   (*Proof: Inversion on nextSinceState into all possible cases*)
   introz U. inversion U.
   (*Now simply apply delay preservation results on these.*)
-  lets AUX : ovWait_del_pres H U0. eapply nexsOvwSt; eassumption.
+  destruct (ovWait_del_pres _ _ _ _ _ _ _ H U0) as [x' [y' AUX]]. eapply nexsOvwSt; eassumption.
   lets AUX : ovReady_del_pres H U0. eapply nexsOvrSt; eassumption.
   lets AUX : switchBc_del_pres H U0. eapply nexsSbcSt; eassumption.
   lets AUX : switchCurr_del_pres H U0. eapply nexsScSt; eassumption.
