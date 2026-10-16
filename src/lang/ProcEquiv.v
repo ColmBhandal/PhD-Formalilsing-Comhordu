@@ -271,6 +271,20 @@ Proof.
       rewrite <- (timeDelAddZeroL d0). apply stepTpDelAdd; assumption.
 Qed.
 
+(** Delaying a timed guard whose body delays only to itself leaves the body under some
+timer: what is left of the guard, or zero once it has run out.*)
+Lemma del_del_bisim (e : Exp) (t : Time) (p q : ProcTerm) (d : Delay) :
+  evalExpFunTime e = Some t ->
+  (forall d' q', p -PD- d' -PD> q' -> q' = p) ->
+  $< e >$ p -PD- d -PD> q -> exists (t' : Time), q ~p~ $< t' >$ p.
+Proof.
+  intros E S D. inversion D; subst.
+  - match goal with [H : p -PD- _ -PD> q |- _] => apply S in H; subst q end.
+    exists zeroTime. apply bisim_symm. apply del_zero_bisim. apply evalExpFunTime_time.
+  - eexists. apply bisim_refl.
+  - congruence.
+Qed.
+
 (*** Slightly more Specific ***)
 
 (*TIDY*)

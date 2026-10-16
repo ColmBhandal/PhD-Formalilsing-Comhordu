@@ -128,12 +128,13 @@ Theorem sent_out_del (n : Network) (v : list BaseType) (i : nat)
   outgoing v 0 i n or delivered v r 0 i n.*)
   apply IHU in HeqmL. clear IHU. elim_intro HeqmL OZ EDZ.
   (*In the first case we know outgoing v 0 i n. In which case we can apply
-  (Basics::outgoing_timeout_disc) to obtain our goal.*)  
-  (*First we just do a little bit of pocessing to explicitly get the entity
+  (Basics::outgoing_timeout_disc) to obtain our goal.*)
+  (*First we just do a little bit of processing to explicitly get the entity
   and hence its position.*)
-  lets OZX : OZ. inversion OZX.
-  lets OTD : outgoing_timeout_disc OZ. or_flat.
-  (*The left subcase immediatley gives the goal.*)
+  lets OZX : OZ. inversion OZX as [q0 l li lo ln k EIN INO].
+  assert (inPosNet l i n) as IP by (econstructor; eassumption).
+  lets OTD : outgoing_timeout_disc IP OZ. or_flat.
+  (*The left subcase immediately gives the goal.*)
   left. eassumption.
   (*The right sub-case gives the RHS of the goal.*)
   ex_flat. right. exists x. exists l. eassumption.
