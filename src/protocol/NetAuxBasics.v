@@ -86,6 +86,80 @@ Ltac link_netprotreach_tac U :=
   let U1 := fresh U in lets U1 : link_net_prot_reach H H0
   end.
 
+(********************************* Steps backward to a component *********************************)
+(** In a reachable network an entity's software is a protocol triple, and a step of the
+network is a step of each component. These results take a network step back to the state
+of one component before it, so that a tracking result about the component lifts to the
+network in a line or two.*)
+
+(** A discrete step, backward to the overlap component of entity i: the component kept its
+state, or stepped into it from a reachable overlap state.*)
+Lemma overlap_prev_net (X : ProcTerm -> Prop) i n n' a :
+  reachableNet n -> n -NA- a -NA> n' -> liftEntNet (liftProcEnt (liftOverlap X)) i n' ->
+  liftEntNet (liftProcEnt (liftOverlap X)) i n \/
+  exists p1 p2 p3 p2' b l h k, [|p1 $||$ p2 $||$ p3, l, h, k|] @ i .: n /\
+  overlapState p2 /\ p2 -PA- b -PA> p2' /\ X p2'.
+Proof.
+  intros RN S L. destruct L as [e' L E'].
+  destruct (link_net_ent_disc_bkwd _ _ _ _ _ S E') as [e [E [EQ | [a' SE]]]].
+  - subst. left. econstructor; eassumption.
+  - destruct e as [p l h k]. lets RP : link_net_prot_reach RN E.
+    destruct (overlap_prev_ent _ _ _ _ _ _ _ RP SE L)
+      as [L0 | [p1 [p2 [p3 [p2' [b [EQ [OS [B X2]]]]]]]]].
+    + left. econstructor; eassumption.
+    + subst. right. exists p1 p2 p3 p2' b l h k. split; [exact E | ].
+      split; [exact OS | ]. split; assumption.
+Qed.
+
+(** A delay, backward to the components of entity i: each component of the reachable triple
+delays into its counterpart.*)
+Lemma triple_del_bkwd_net i n n' d p1' p2' p3' l' h' k' :
+  reachableNet n -> n -ND- d -ND> n' -> [|p1' $||$ p2' $||$ p3', l', h', k'|] @ i .: n' ->
+  exists p1 p2 p3 l h k, [|p1 $||$ p2 $||$ p3, l, h, k|] @ i .: n /\
+  protocolState (p1 $||$ p2 $||$ p3) /\
+  [|p1 $||$ p2 $||$ p3, l, h, k|] -ED- d ->> [|p1' $||$ p2' $||$ p3', l', h', k'|] /\
+  p1 -PD- d -PD> p1' /\ p2 -PD- d -PD> p2' /\ p3 -PD- d -PD> p3'.
+Proof.
+  intros RN D E'.
+  destruct (link_net_ent_del_bkwd _ _ _ _ _ D E') as [e [E S]].
+  destruct e as [p l h k]. lets RP : link_net_prot_reach RN E.
+  lets PS : reachableProt_triple RP. inversion PS as [p1 p2 p3 BS OS LS]; subst.
+  lets PD : link_ent_soft_del S.
+  assert (Q : p1 -PD- d -PD> p1' /\ p2 -PD- d -PD> p2' /\ p3 -PD- d -PD> p3') by
+    (triple_del_inv PD; auto).
+  destruct Q as [D1 [D2 D3]].
+  exists p1 p2 p3 l h k. repeat split; assumption.
+Qed.
+
+(** A delay, backward to the overlap component of entity i.*)
+Lemma overlap_del_bkwd_net (X : ProcTerm -> Prop) i n n' d :
+  reachableNet n -> n -ND- d -ND> n' -> liftEntNet (liftProcEnt (liftOverlap X)) i n' ->
+  exists p1 p2 p3 p2' l h k, [|p1 $||$ p2 $||$ p3, l, h, k|] @ i .: n /\
+  overlapState p2 /\ p2 -PD- d -PD> p2' /\ X p2'.
+Proof.
+  intros RN D L. destruct L as [e' L E'].
+  inversion L as [q lq hq kq LO]; subst. inversion LO as [p1' p2' p3' X2]; subst.
+  destruct (triple_del_bkwd_net _ _ _ _ _ _ _ _ _ _ RN D E')
+    as [p1 [p2 [p3 [l [h [k [E [PS [_ [_ [D2 _]]]]]]]]]]].
+  inversion PS as [? ? ? BS OS LS]; subst.
+  exists p1 p2 p3 p2' l h k. repeat split; assumption.
+Qed.
+
+(** A delay, forward to the overlap component of entity i. No reachability is needed: the
+software is a triple already, since X is a statement about its overlap component.*)
+Lemma overlap_del_fwd_net (X : ProcTerm -> Prop) i n n' d :
+  n -ND- d -ND> n' -> liftEntNet (liftProcEnt (liftOverlap X)) i n ->
+  exists p2 p2' p1' p3' l' h' k', [|p1' $||$ p2' $||$ p3', l', h', k'|] @ i .: n' /\
+  p2 -PD- d -PD> p2' /\ X p2.
+Proof.
+  intros D L. destruct L as [e L E].
+  inversion L as [q lq hq kq LO]; subst. inversion LO as [p1 p2 p3 X2]; subst.
+  destruct (net_del_elim _ _ _ _ _ _ _ _ E D) as [p' [l' [h' [k' [E' [PD _]]]]]].
+  triple_shape PD Q. destruct Q as [p1' [p2' [p3' EQ]]]. subst p'.
+  assert (PD2 : p2 -PD- d -PD> p2') by (triple_del_inv PD; auto).
+  exists p2 p2' p1' p3' l' h' k'. repeat split; assumption.
+Qed.
+
 Parameter currModeNet : Mode -> nat -> Network -> Prop.
 (**Idea: Lift currModeEnt*)
 
@@ -163,7 +237,7 @@ Qed.
 
 (*Pre-requisite: some sort of lifting tactic*)
 Lemma tfsCurrStateNet_bktrk_net : forall (n n' : Network) (i : nat) (a : ActDiscNet),
-  tfsCurrStateNet i n' -> n -NA- a -NA> n' ->
+  reachableNet n -> tfsCurrStateNet i n' -> n -NA- a -NA> n' ->
   tfsCurrStateNet i n \/
   (exists m mF, exists p,
   tfsNextStateNet m i n /\ failSafe mF /\
@@ -172,9 +246,21 @@ Lemma tfsCurrStateNet_bktrk_net : forall (n n' : Network) (i : nat) (a : ActDisc
 
 (*Pre-requisite: some sort of lifting tactic- maybe a generic lifting tactic taking
 any predicate over a ProcTerm and lifting it to work over a network predicate?*)
-Conjecture tfsCurrState_del_pres_net : forall (n n' : Network) (d : Delay) (i : nat),
-  n -ND- d -ND> n' ->
+Lemma tfsCurrState_del_pres_net : forall (n n' : Network) (d : Delay) (i : nat),
+  reachableNet n -> n -ND- d -ND> n' ->
   (tfsCurrStateNet i n <-> tfsCurrStateNet i n').
+Proof.
+  intros n n' d i RN D. split; intro TC.
+  - destruct (overlap_del_fwd_net _ _ _ _ _ D TC)
+      as [p2 [p2' [p1' [p3' [l' [h' [k' [E' [PD TC2]]]]]]]]].
+    econstructor; [ | exact E']. constructor. constructor.
+    eapply bisim_del_pres; [del_self_body | exact TC2 | exact PD].
+  - destruct (overlap_del_bkwd_net _ _ _ _ _ RN D TC)
+      as [p1 [p2 [p3 [p2' [l [h [k [E [OS [PD TC']]]]]]]]]].
+    econstructor; [ | exact E]. constructor. constructor.
+    eapply overlap_del_bkwd; [exact OS | exact PD | exact TC' | ].
+    intros m0 e2 e3 e4 B. ovWait_bisim_contra B.
+Qed.
 (**Proof: #del-pres-fwd-net #del-pres-bkwd-net*)
 
 (*The only two possibilities for a change in mode state as per a discrete
@@ -191,12 +277,26 @@ Brute force analysis of the possible states of each 3 components of the softare 
 the two disjuncts. That is, the only capability a protocol process has of writing on mCurr is from the overlap component in those specific
 states.*)
 
-Conjecture tfsState_del_pres_net : forall (n n' : Network) (i : nat) (d : Delay),
-  n -ND- d -ND> n' -> (tfsStateNet i n <-> tfsStateNet i n').
+Lemma tfsState_del_pres_net : forall (n n' : Network) (i : nat) (d : Delay),
+  reachableNet n -> n -ND- d -ND> n' -> (tfsStateNet i n <-> tfsStateNet i n').
+Proof.
+  intros n n' i d RN D. split; intro TS.
+  - destruct (overlap_del_fwd_net _ _ _ _ _ D TS)
+      as [p2 [p2' [p1' [p3' [l' [h' [k' [E' [PD TS2]]]]]]]]].
+    econstructor; [ | exact E']. constructor. constructor.
+    eapply del_pres_tfsState; eassumption.
+  - destruct (overlap_del_bkwd_net _ _ _ _ _ RN D TS)
+      as [p1 [p2 [p3 [p2' [l [h [k [E [OS [PD TS']]]]]]]]]].
+    econstructor; [ | exact E]. constructor. constructor.
+    destruct TS' as [T | m T | T | T | T];
+      [apply tfsStaSt | apply (tfsNexSt _ m) | apply tfsCurSt | apply tfsBcSt | apply tfsLisSt];
+      (eapply overlap_del_bkwd; [exact OS | exact PD | exact T | ]);
+      intros m0 e2 e3 e4 B; ovWait_bisim_contra B.
+Qed.
 (**Proof: #del-pres-fwd-net #del-pres-bkwd-net*)
 
 Lemma switch_states_mState : forall (n n' : Network) (i : nat) (a : ActDiscNet)
-  (m : Mode), n -NA- a -NA> n' -> switchCurrStateNet i n ->
+  (m : Mode), reachableNet n -> n -NA- a -NA> n' -> switchCurrStateNet i n ->
   switchListenStateNet i n' -> nextModeNet m i n -> currModeNet m i n'. Admitted. (*3*)
 (**Proof: Tracking shows us that the action must be tau, composed of an output from the software process on mCurr and an input
 on the same by the mode state. Then it can be shown separately that an input on the mode state that is nextMode m yields a mode
@@ -318,7 +418,7 @@ Lemma tfsListen_next_net n n' a i :
   tfsListenStateNet i n' \/ dormantStateNet i n'.
   fwd_track_net_tac tfsListen_next_ent. Qed.
 
-Lemma rangeBad_next_net m m'' i n n' a :
+Lemma rangeBad_next_net m m'' i n n' a : reachableNet n ->
   n -NA- a -NA> n' -> rangeBadStateNet m'' i n -> currModeNet m i n ->
   rangeBadStateNet m'' i n' \/ currEqStateNet m m'' i n'.
   (*Proof: If it wasn't for the currModeNet entanglement, you'd just be able
@@ -410,10 +510,56 @@ Lemma paused_switch_net (n : Network) (i : nat) :
 (**Proof: Lift result from entity level ultimately- analogous theorems except with
 reachableProt and prot level state predicates.*)
 
+(** The broadcast timer counts down through a delay: a wait with a positive timer left came
+from the wait with the timer longer by the delay. The broadcaster before the delay was a
+reachable broadcast state: sleeping, which is no wait; bcReady, which is urgent; or a wait,
+whose timer was well formed and did not run out, since afterwards it reads x > 0.*)
 Lemma bcWaitNet_del_bkwd (n n' : Network) (m : Mode) (x : Time)
-  (i : nat) (d : Delay) : n -ND- d -ND> n' ->
+  (i : nat) (d : Delay) : reachableNet n -> zeroTime < x -> n -ND- d -ND> n' ->
   bcWaitStateNet m x i n' -> bcWaitStateNet m (x +dt+ d) i n.
-  Admitted. (*4*)
+Proof.
+  intros RN XP D BW. destruct BW as [e' BW E'].
+  inversion BW as [q lq hq kq BP]; subst. inversion BP as [p1' p2' p3' BW1]; subst.
+  destruct (triple_del_bkwd_net _ _ _ _ _ _ _ _ _ _ RN D E')
+    as [p1 [p2 [p3 [l [h [k [E [PS [S [D1 _]]]]]]]]]].
+  inversion PS as [? ? ? BS OS LS]; subst.
+  econstructor; [ | exact E]. constructor. constructor. red.
+  destruct (broadcastState_shape _ BS) as [B | m' e B | m' l' B].
+  - (* sleeping delays to itself, and is no wait *)
+    exfalso. apply (sleeping_not_bcWait m x).
+    eapply bisim_trans; [ | exact BW1]. apply bisim_symm.
+    eapply bisim_del_pres; [del_self_body | exact B | exact D1].
+  - destruct (bisim_step_del _ _ _ _ B D1) as [q [TQ BQ]].
+    assert (BX : q ~p~ bcWait m x) by
+      (eapply bisim_trans; [apply bisim_symm; exact BQ | exact BW1]).
+    clear BQ.
+    destruct (bcWait_del_cases _ _ _ _ TQ) as [[t [H [EV EQ]]] | [[t [EV [LT [q' TP]]]] | [EV EQ]]];
+      try subst q.
+    + (* the timer counted down from t to x, so t = x + d *)
+      destruct (bcWait_bisim_inj _ _ _ _ BX) as [EM ET]. subst m'.
+      apply (f_equal (fun u => nonneg (time u))) in ET. simpl in ET.
+      eapply bisim_trans; [exact B | ]. unfold bcWait.
+      repeat apply choice_bisim_context; try apply bisim_refl.
+      apply del_bisim_guard. rewrite EV. unfold liftTimeExp. rewrite evalExpFunTime_time.
+      f_equal. apply timeEqR. simpl. lra.
+    + (* the timer ran out during the delay: the derivative reads its position now, and a
+         wait with x > 0 left cannot *)
+      exfalso. destruct (bisim_disc_match _ _ _ _ BX TP) as [r R].
+      apply bcWait_pos_read_inv in R. apply evalExpFunTime_zero_inv in R.
+      simpl in XP. lra.
+    + (* an ill-formed timer never runs out, but a wait with x left reads its position after x *)
+      exfalso. destruct (bcWait_pos_read m x) as [[Z _] | [dx [qx [EQx [TDx [qx' Sx]]]]]].
+      * simpl in XP. lra.
+      * destruct (bisim_step_del _ _ _ _ (bisim_symm _ _ BX) TDx) as [q1 [TD1 BQ1]].
+        destruct (bisim_disc_match _ _ _ _ BQ1 Sx) as [r R].
+        destruct (bcWait_del_cases _ _ _ _ TD1) as [[t [H [EV' _]]] | [[t [EV' _]] | [_ EQ1]]];
+          try (rewrite EV in EV'; discriminate).
+        subst q1. apply bcWait_pos_read_inv in R. rewrite EV in R. discriminate.
+  - (* bcReady is urgent: the interface always takes its broadcast *)
+    exfalso. eapply ent_del_sync_inter_not; [ | | exact S].
+    + dae_broadcast. eapply bcReady_outProc_out_shape. exact B.
+    + apply interface_outProc_in.
+Qed.
 (**Proof: Well, a backwards delay preservation would give us bcWaitState m x' i n for some x'. But forward tracking would then give us that
 in the derivative state the second parameter is x' - d. So x = x' - d and so x' = x + d, as required.*)
 
@@ -442,54 +588,6 @@ Ltac initNet_contra U :=
   | [U8 : context[listening] |- _] => inversion U8
   end.
 
-(* begin helpers for initial_not_bcWait_net *)
-(** The sleeping process can never input on the position channel, so it is
-not bisimilar to any process that can.*)
-Local Lemma initial_not_bcWait_net_aux1 q q' v :
-  ComhCoq.lang.ProcEquiv.bisimulation sleeping q -> q -PA- chanPos ;? v -PA> q' -> False.
-Proof.
-  intros S T. destruct (bisim_step_disc _ _ _ _ (bisim_symm _ _ S) T) as [p' [Sp _]].
-  unfold sleeping in Sp. invert_disc_prefixes.
-Qed.
-
-(** The sleeping process delays only to itself.*)
-Local Lemma initial_not_bcWait_net_aux2 d s :
-  sleeping -PD- d -PD> s -> s = sleeping.
-Proof.
-  revert d s. unfold sleeping. del_self_tac.
-Qed.
-
-(** The sleeping process is not bisimilar to any bcWait process: the latter
-can (possibly after a delay) input on the position channel.*)
-Local Lemma initial_not_bcWait_net_aux m x : bcWaitState m x sleeping -> False.
-Proof.
-  unfold bcWaitState. intro S.
-  destruct x as [[x xnn]].
-  destruct (Rle_lt_or_eq_dec 0 x xnn) as [Hlt | Heq].
-  - set (d := mkDelay (mkposreal x Hlt)).
-    assert (exists q', bcWait m (mkTime (mknonnegreal x xnn)) -PD- d -PD> q' /\
-      exists q'', q' -PA- chanPos ;? [basePosition origin] -PA> q'') as [q' [TD [q'' TP]]].
-    { eexists. split.
-      - unfold bcWait. apply stepTpSum; [apply stepTpSum | apply stepTpIn]; [apply stepTpIn | ].
-        eapply (stepTpDelSub _ d _ (mkTime (mknonnegreal x xnn)) (Rle_refl x)).
-        reflexivity.
-      - eexists. apply stepDpChoiceL. apply stepDpChoiceR. apply stepDpTimeOut.
-        apply stepDpIn. typed_vals.
-        unfold evalExpFunTime. simpl. f_equal. apply timeEqR. simpl. ring. }
-    destruct S as [_ S2]. apply stepPTimed in TD. apply S2 in TD.
-    destruct TD as [s [Ss Bs]]. inversion Ss; subst.
-    match goal with H : sleeping -PD- _ -PD> _ |- _ =>
-      apply initial_not_bcWait_net_aux2 in H; subst end.
-    eapply initial_not_bcWait_net_aux1; eassumption.
-  - subst x.
-    assert (exists q'', bcWait m (mkTime (mknonnegreal 0 xnn)) -PA-
-      chanPos ;? [basePosition origin] -PA> q'') as [q'' TP].
-    { eexists. unfold bcWait. apply stepDpChoiceL. apply stepDpChoiceR.
-      apply stepDpTimeOut. apply stepDpIn. typed_vals.
-      unfold evalExpFunTime. simpl. f_equal. apply timeEqR. simpl. reflexivity. }
-    eapply initial_not_bcWait_net_aux1; eassumption.
-Qed.
-(* end helpers *)
 
 Lemma initial_not_bcWait_net (n : Network) (m : Mode) (x : Time) (i : nat) :
   initialNet n -> bcWaitStateNet m x i n -> False.
@@ -498,12 +596,12 @@ Proof.
   lets IE : initialNet_ent I Ein.
   destruct Be as [p l h k Bp]. inversion IE as [p0 l0 h0 k0 IP FS]; subst.
   inversion IP; subst. unfold procProtocol in Bp. inversion Bp; subst.
-  eapply initial_not_bcWait_net_aux; eassumption.
+  eapply sleeping_not_bcWait; eassumption.
 Qed.
 
 (** If we're nextSince & we can delay, then we're in the ovWait state.*)
 Lemma nextSince_del_ovWait (n n' : Network) (i : nat) (d : Delay) :
-  n -ND- d -ND> n' -> nextSinceStateNet i n ->
+  reachableNet n -> n -ND- d -ND> n' -> nextSinceStateNet i n ->
   exists m t x y, ovWaitStateNet m t (delToTime (x +dt+ d)) (delToTime (y +dt+ d)) i n. Admitted. (*3*)
 (**Proof: Apply nextSince_rel_state and then eliminate bcReady other urgent states. Also eliminate
 the ovWaitStates whos time parameter is less than d (a weak sort of urgency)- have a weak urgency
@@ -597,13 +695,13 @@ Lemma init_nextMode_net m i n :
 
 (*LOCAL TIDY*)
 
-Lemma ovReady_prev_net_strong m t l n n' i a : 
+Lemma ovReady_prev_net_strong m t l n n' i a : reachableNet n ->
   ovReadyStateNet m t l i n' -> n -NA- a -NA> n' ->
   ovReadyStateNet m t l i n \/
   (exists x0 y0, ovWaitStateNet m t x0 y0 i n).
   Admitted. (*#lift-track-net #strong*)
 
-Lemma ovWait_prev_net_strong m t x y n n' i a : 
+Lemma ovWait_prev_net_strong m t x y n n' i a : reachableNet n ->
   ovWaitStateNet m t x y i n' -> n -NA- a -NA> n' ->
   ovWaitStateNet m t x y i n \/
   (exists t0 l0, ovReadyStateNet m t0 l0 i n) \/
@@ -617,13 +715,21 @@ Lemma nextMode_pres_fwd_net m i n n' a :
 (**Proof: Brute force? Inter-component relationships? Is there any
 machinery that you can use to help you prove this one?*)
 
-Lemma ovWait_del_pres_bkwd_net_strong n n' d m t x y i :
+Lemma ovWait_del_pres_bkwd_net_strong n n' d m t x y i : reachableNet n ->
   n -ND- d -ND> n' -> ovWaitStateNet m t x y i n' ->
   ovWaitStateNet m t (x +dt+ d) (y +dt+ d) i n. Admitted. (*#del-pres-net #strong*)
 
-Lemma ovReady_del_pres_bkwd_net n n' d m t l i :
+Lemma ovReady_del_pres_bkwd_net n n' d m t l i : reachableNet n ->
   n -ND- d -ND> n' -> ovReadyStateNet m t l i n' ->
-  ovReadyStateNet m t l i n. Admitted. (*#del-pres-net*)
+  ovReadyStateNet m t l i n.
+Proof.
+  intros RN D OR.
+  destruct (overlap_del_bkwd_net _ _ _ _ _ RN D OR)
+    as [p1 [p2 [p3 [p2' [l0 [h [k [E [OS [PD OR']]]]]]]]]].
+  econstructor; [ | exact E]. constructor. constructor.
+  eapply overlap_del_bkwd; [exact OS | exact PD | exact OR' | ].
+  intros m0 e2 e3 e4 B. ovWait_bisim_contra B.
+Qed.
 
 Lemma nextModeNet_del_pres n n' d m i :
   n -ND- d -ND> n' -> nextModeNet m i n -> nextModeNet m i n'.
@@ -902,7 +1008,7 @@ lenWitness.*)
 Ltac netState_ent_net_tac := eapply lenWitness;
   [eassumption | eassumption].
 
-Lemma tfsNext_currModeNet_eq m1 m2 i n : currModeNet m1 i n ->
+Lemma tfsNext_currModeNet_eq m1 m2 i n : reachableNet n -> currModeNet m1 i n ->
   tfsNextStateNet m2 i n -> m1 = m2. Admitted. (*5*)
 (*Proof: On initially entering this state, the mode is read from the mode state,
 giving the equality. In the discrete inductive case it can be shown by
@@ -973,12 +1079,12 @@ Ltac state_pred_elim_net H H1 :=
 
 (***************************** Lifted results *****************************)
 
-Lemma tfsStart_prev_net i n n' a : tfsStartStateNet i n' ->
-  n -NA- a -NA> n' -> tfsStartStateNet i n \/
+Lemma tfsStart_prev_net i n n' a : reachableNet n -> tfsStartStateNet i n' ->
+  n -NA- a -NA> n' -> tfsStartStateNet i n \/ dormantStateNet i n \/
   exists m t x y, ovWaitStateNet m t x y i n.
   Admitted. (*#lift-track-net*)
 
-Lemma ovReady_prev_net m t l i n n' a :
+Lemma ovReady_prev_net m t l i n n' a : reachableNet n ->
   ovReadyStateNet m t l i n' -> n -NA- a -NA> n' ->
   ovReadyStateNet m t l i n \/
   exists x y, ovWaitStateNet m t x y i n. Admitted. (*#lift-track-net*)
@@ -986,38 +1092,64 @@ Lemma ovReady_prev_net m t l i n n' a :
 (*Organise these, write tactics for them, pull in results from elsewhere in
 the file that belong here.*)
 
+(** A delay keeps the overlap component waiting for the same mode and wait time; only its
+timers change, as ovWait_del_pres says of the component.*)
 Lemma ovWait_del_pres_net m t x y i n n' d : n -ND- d -ND> n' ->
-  (ovWaitStateNet m t x y i n <-> ovWaitStateNet m t x y i n'). Admitted. (*4*)
+  ovWaitStateNet m t x y i n -> exists x' y', ovWaitStateNet m t x' y' i n'.
+Proof.
+  intros D OW.
+  destruct (overlap_del_fwd_net _ _ _ _ _ D OW)
+    as [p2 [p2' [p1' [p3' [l' [h' [k' [E' [PD OW2]]]]]]]]].
+  destruct (ovWait_del_pres _ _ _ _ _ _ _ OW2 PD) as [x' [y' OW']].
+  exists x' y'. econstructor; [ | exact E']. constructor. constructor. exact OW'.
+Qed.
 (*Standard delay preservation tactic at network level, which itself
 lifts from lower levels.*)
 
-Lemma tfsNext_prev_net m i n n' a : tfsNextStateNet m i n' ->
+Lemma tfsNext_prev_net m i n n' a : reachableNet n -> tfsNextStateNet m i n' ->
   n -NA- a -NA> n' -> tfsNextStateNet m i n \/ tfsStartStateNet i n.
-  intros.
-  backtrack_net_pre H.
-  lets TPE : tfsNext_prev_ent H1 H5.
-  elim_intro TPE TN TS;[left | right]; netState_ent_net_tac.
-  Qed.  
+Proof.
+  intros RN TN S.
+  destruct (overlap_prev_net _ _ _ _ _ RN S TN)
+    as [L | [p1 [p2 [p3 [p2' [b [l [h [k [E [OS [B TN']]]]]]]]]]]].
+  - left. exact L.
+  - destruct (tfsNext_prev _ _ _ _ B OS TN') as [TS | TN2]; [right | left];
+      (econstructor; [ | exact E]); constructor; constructor; assumption.
+Qed.
 
-Lemma del_pres_bkwd_tfsNext m i n n' d :
+Lemma del_pres_bkwd_tfsNext m i n n' d : reachableNet n ->
   n -ND- d -ND> n' -> tfsNextStateNet m i n' -> tfsNextStateNet m i n.
-  Admitted. (*4*)
-(*Proof: Lift delay preservation- write tactic for this*)  
+Proof.
+  intros RN D TN.
+  destruct (overlap_del_bkwd_net _ _ _ _ _ RN D TN)
+    as [p1 [p2 [p3 [p2' [l [h [k [E [OS [PD TN']]]]]]]]]].
+  econstructor; [ | exact E]. constructor. constructor.
+  eapply overlap_del_bkwd; [exact OS | exact PD | exact TN' | ].
+  intros m0 e2 e3 e4 B. ovWait_bisim_contra B.
+Qed.
+(*Proof: Lift delay preservation- write tactic for this*)
 
-Lemma del_pres_bkwd_tfsStart i n n' d :
+Lemma del_pres_bkwd_tfsStart i n n' d : reachableNet n ->
   n -ND- d -ND> n' -> tfsStartStateNet i n' -> tfsStartStateNet i n.
-  Admitted. (*4*)
+Proof.
+  intros RN D TS.
+  destruct (overlap_del_bkwd_net _ _ _ _ _ RN D TS)
+    as [p1 [p2 [p3 [p2' [l [h [k [E [OS [PD TS']]]]]]]]]].
+  econstructor; [ | exact E]. constructor. constructor.
+  eapply overlap_del_bkwd; [exact OS | exact PD | exact TS' | ].
+  intros m0 e2 e3 e4 B. ovWait_bisim_contra B.
+Qed.
 
-Lemma tfsNext_urgent_net m i n n' d :
+Lemma tfsNext_urgent_net m i n n' d : reachableNet n ->
   tfsNextStateNet m i n -> n -ND- d -ND> n' -> False.
 Proof.
-  intros U V. inversion U as [e SE EIN].
+  intros RN U V. inversion U as [e SE EIN].
   destruct (del_net_ent e i n n' d EIN V) as [e' ED].
   inversion SE as [p l h k TP Hpe]. subst e.
   inversion TP as [p1 p2 p3 TS Hp]. subst p.
   assert (currModeNet (currModeEnt ([|p1 $||$ p2 $||$ p3, l, h, k|])) i n) as CM
     by (eapply currMode_intro; [reflexivity | exact EIN]).
-  lets EQ : tfsNext_currModeNet_eq CM U. simpl in EQ.
+  lets EQ : tfsNext_currModeNet_eq RN CM U. simpl in EQ.
   assert (currModeMState k -mtr-> failSafeSucc m) as FS
     by (rewrite EQ; apply failSafeSucc_successor).
   destruct (mState_stable_next_enabled _ _ FS) as [MS | MS].
@@ -1056,7 +1188,7 @@ Then apply a matching tactic at this level, and you should be done.*)
 
 (*Perhaps modify this to get rid of the "t + period m" and replace it with some existential
 instead. Then do a separate tracking result to get the "t + period m".*)
-Lemma ovWait_prev_net m t x y i n n' a : ovWaitStateNet m t x y i n' ->
+Lemma ovWait_prev_net m t x y i n n' a : reachableNet n -> ovWaitStateNet m t x y i n' ->
   n -NA- a -NA> n' ->
   ovWaitStateNet m t x y i n \/
   (exists l, ovReadyStateNet m (t +t+ period m) l i n) \/

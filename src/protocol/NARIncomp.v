@@ -552,7 +552,7 @@ Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
   (*The first two disjuncts fail because it can be shown that delay is
   impossible in these cases (incomingNet-urgent), (...EA::msgBadPath-urgent...).*)
   apply False_ind. eapply incomingNet_urgent. apply p. apply H12. apply w.
-  apply False_ind. eapply msgBadPathNet_urgent. apply H13. apply w.
+  apply False_ind. eapply msgBadPathNet_urgent. apply p. apply H13. apply w.
   (*Which leaves us with tfs m 0 i n p, and we can proceed immediately from this to
   our goal by one application of the tfs delay constructor.*)
   constructor. rewrite H6. assumption. Qed.*) Admitted.

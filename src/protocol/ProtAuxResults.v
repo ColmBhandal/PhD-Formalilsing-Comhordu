@@ -18,6 +18,7 @@ From Stdlib Require Import Bool.
 Require Import ComhCoq.lang.EntityLanguage.
 Require Import ComhCoq.lang.ProcEquiv.
 Require Import ComhCoq.protocol.ProtocolBridge.
+From Stdlib Require Import Reals Lra.
 
 (****************** (TIDY?) General Stuff ******************)
 
@@ -1287,6 +1288,182 @@ Proof.
     (eapply bisim_del_pres; [del_self_tac | eassumption | eassumption]).
 Qed.
 (*Proof: lift delay preservation results in a similar fashion to del_pres_nextSinceState*)
+
+(*** The broadcaster's wait, observed through bisimulation ***)
+(** A state predicate is a bisimilarity class, and two named states with different
+parameters can fall in one class when the difference is not observable (root cause 10 of the
+first proving pass). The broadcaster's wait is not such a case: its timer is observable through
+the moment its position read becomes enabled, and its mode through the message it then
+broadcasts. The results below make that precise, and say what a wait delays into.*)
+
+(** A waiting broadcaster whose timer has run out reads its position at once.*)
+Lemma bcWait_pos_read_zero (m : Mode) (e : Exp) :
+  evalExpFunTime e = Some zeroTime ->
+  exists q, bcWait m e -PA- chanPos ;? [basePosition origin] -PA> q.
+Proof.
+  intro E. eexists. unfold bcWait. apply stepDpChoiceL. apply stepDpChoiceR.
+  apply stepDpTimeOut; [ | exact E]. apply stepDpIn. typed_vals.
+Qed.
+
+(** Only a timer that has run out lets a waiting broadcaster read its position.*)
+Lemma bcWait_pos_read_inv (m : Mode) (e : Exp) (v : list BaseType) q :
+  bcWait m e -PA- chanPos ;? v -PA> q -> evalExpFunTime e = Some zeroTime.
+Proof.
+  unfold bcWait. intro S. invert_disc_prefixes. assumption.
+Qed.
+
+(** What a waiting broadcaster delays into: a wait whose timer has counted down, when the
+timer is well formed and at least the delay; a wait that reads its position at once, when the
+timer ran out during the delay; and itself, when the timer is ill formed.*)
+Lemma bcWait_del_cases (m : Mode) (e : Exp) (d : Delay) q :
+  bcWait m e -PD- d -PD> q ->
+  (exists (t : Time) (H : d <= t), evalExpFunTime e = Some t /\ q = bcWait m (minusTime t d H)) \/
+  (exists t, evalExpFunTime e = Some t /\ nonneg (time t) < pos (delay d) /\
+    exists q', q -PA- chanPos ;? [basePosition origin] -PA> q') \/
+  (evalExpFunTime e = None /\ q = bcWait m e).
+Proof.
+  unfold bcWait. intro D. invert_del_prefixes.
+  - right. left. eexists. split; [eassumption | ]. split.
+    + match goal with [ |- _ < pos (delay (_ +dt+ ?d0)) ] =>
+        pose proof (cond_pos (delay d0)) end. simpl. lra.
+    + eexists. apply stepDpChoiceL. apply stepDpChoiceR. apply stepDpIn. typed_vals.
+  - left. do 2 eexists. split; [eassumption | reflexivity].
+  - right. right. split; [assumption | reflexivity].
+Qed.
+
+(** A waiting broadcaster with a well-formed timer reads its position at once if the timer is
+zero, and after delaying by the timer otherwise.*)
+Lemma bcWait_pos_read (m : Mode) (t : Time) :
+  (nonneg (time t) = 0 /\ exists q, bcWait m t -PA- chanPos ;? [basePosition origin] -PA> q) \/
+  (exists (d : Delay) q, nonneg (time t) = pos (delay d) /\ bcWait m t -PD- d -PD> q /\
+   exists q', q -PA- chanPos ;? [basePosition origin] -PA> q').
+Proof.
+  destruct t as [[r nn]]. destruct (Rle_lt_or_eq_dec 0 r nn) as [Hlt | Heq].
+  - right. set (d := mkDelay (mkposreal r Hlt)).
+    exists d (bcWait m (minusTime r d (Rle_refl r))). split; [reflexivity | ]. split.
+    + unfold bcWait. apply stepTpSum; [apply stepTpSum | apply stepTpIn]; [apply stepTpIn | ].
+      eapply (stepTpDelSub _ d _ (mkTime (mknonnegreal r nn)) (Rle_refl r)). reflexivity.
+    + apply bcWait_pos_read_zero. unfold liftTimeExp. rewrite evalExpFunTime_time.
+      f_equal. apply timeEqR. simpl. ring.
+  - left. split; [simpl; symmetry; exact Heq | ].
+    apply bcWait_pos_read_zero. unfold liftTimeExp. rewrite evalExpFunTime_time.
+    f_equal. apply timeEqR. simpl. symmetry. exact Heq.
+Qed.
+
+(* begin helpers for sleeping_not_bcWait *)
+(** The sleeping process can never input on the position channel, so it is not bisimilar to
+any process that can.*)
+Local Lemma sleeping_not_bcWait_aux1 q q' v :
+  sleeping ~p~ q -> q -PA- chanPos ;? v -PA> q' -> False.
+Proof.
+  intros S T. destruct (bisim_step_disc _ _ _ _ (bisim_symm _ _ S) T) as [p' [Sp _]].
+  unfold sleeping in Sp. invert_disc_prefixes.
+Qed.
+
+(** The sleeping process delays only to itself.*)
+Local Lemma sleeping_not_bcWait_aux2 d s : sleeping -PD- d -PD> s -> s = sleeping.
+Proof. revert d s. unfold sleeping. del_self_tac. Qed.
+(* end helpers *)
+
+(** The sleeping process is not bisimilar to any wait: a wait can, possibly after a delay, input
+on the position channel.*)
+Lemma sleeping_not_bcWait (m : Mode) (x : Time) : sleeping ~p~ bcWait m x -> False.
+Proof.
+  intro B. destruct (bcWait_pos_read m x) as [[_ [q S]] | [d [q [_ [TD [q' S]]]]]].
+  - eapply sleeping_not_bcWait_aux1; [exact B | exact S].
+  - destruct (bisim_step_del _ _ _ _ (bisim_symm _ _ B) TD) as [s [TS BS]].
+    apply sleeping_not_bcWait_aux2 in TS. subst s.
+    eapply sleeping_not_bcWait_aux1; [apply bisim_symm; exact BS | exact S].
+Qed.
+
+(* begin helpers for bcWait_bisim_inj *)
+(** Of two bisimilar waits, neither has the shorter timer: when the shorter one has run out,
+that side reads its position and the other cannot.*)
+Local Lemma bcWait_bisim_inj_aux1 (m1 m2 : Mode) (t1 t2 : Time) :
+  bcWait m1 t1 ~p~ bcWait m2 t2 -> t2 <= t1.
+Proof.
+  intro B. destruct (Rle_or_lt t2 t1) as [LE | LT]; [exact LE | exfalso].
+  destruct (bcWait_pos_read m1 t1) as [[Z [q S]] | [d [q [EQ [TD [q' S]]]]]].
+  - (* t1 is zero: the other wait reads its position now, so its timer is zero too *)
+    destruct (bisim_disc_match _ _ _ _ B S) as [r R].
+    apply bcWait_pos_read_inv in R. apply evalExpFunTime_zero_inv in R. simpl in *. lra.
+  - (* after delaying by t1, the other wait reads its position, so its timer was t1 *)
+    destruct (bisim_step_del _ _ _ _ B TD) as [q2 [TD2 BQ]].
+    destruct (bisim_disc_match _ _ _ _ BQ S) as [r R].
+    destruct (bcWait_del_cases _ _ _ _ TD2) as [[t [H [E EQ2]]] | [[t [E [LTd _]]] | [E _]]].
+    + subst q2. apply bcWait_pos_read_inv in R. apply evalExpFunTime_zero_inv in R.
+      unfold liftTimeExp in E. rewrite evalExpFunTime_time in E. injection E as E. subst t.
+      simpl in *. lra.
+    + unfold liftTimeExp in E. rewrite evalExpFunTime_time in E. injection E as E. subst t.
+      simpl in *. lra.
+    + unfold liftTimeExp in E. rewrite evalExpFunTime_time in E. discriminate.
+Qed.
+
+(** Two bisimilar waits whose timers have run out are for the same mode: each reads its
+position and then offers its mode on outProc, and the other has to match.*)
+Local Lemma bcWait_bisim_inj_aux2 (m1 m2 : Mode) (e1 e2 : Exp) :
+  evalExpFunTime e1 = Some zeroTime -> evalExpFunTime e2 = Some zeroTime ->
+  bcWait m1 e1 ~p~ bcWait m2 e2 -> m1 = m2.
+Proof.
+  intros E1 E2 B.
+  destruct (bcWait_pos_read_zero m1 e1 E1) as [q1 S1].
+  destruct (bisim_step_disc _ _ _ _ B S1) as [q2 [S2 BQ]].
+  unfold bcWait in S1, S2. invert_disc_prefixes. clean_proc_hyp BQ.
+  bt_step BQ (chanOutProc ;! [baseMode m1, basePosition origin]) S3.
+  destruct (bisim_step_disc _ _ _ _ BQ S3) as [r2 [R2 _]].
+  invert_app_trans. invert_disc_prefixes. output_values. reflexivity.
+Qed.
+(* end helpers *)
+
+(** Bisimilar waits have the same mode and the same timer.*)
+Lemma bcWait_bisim_inj (m1 m2 : Mode) (t1 t2 : Time) :
+  bcWait m1 t1 ~p~ bcWait m2 t2 -> m1 = m2 /\ t1 = t2.
+Proof.
+  intro B.
+  assert (EQ : t1 = t2).
+  { apply timeEqR. apply Rle_antisym.
+    - exact (bcWait_bisim_inj_aux1 _ _ _ _ (bisim_symm _ _ B)).
+    - exact (bcWait_bisim_inj_aux1 _ _ _ _ B). }
+  subst t2. split; [ | reflexivity].
+  destruct (bcWait_pos_read m1 t1) as [[Z _] | [d [q [EQ [TD _]]]]].
+  - (* the timers are zero already *)
+    eapply bcWait_bisim_inj_aux2; [ | | exact B]; unfold liftTimeExp;
+      rewrite evalExpFunTime_time; f_equal; apply timeEqR; simpl; exact Z.
+  - (* run the timers out first *)
+    destruct (bisim_step_del _ _ _ _ B TD) as [q2 [TD2 BQ]].
+    destruct (bcWait_del_cases _ _ _ _ TD) as [[t [H [E E1]]] | [[t [E [LTd _]]] | [E _]]];
+      destruct (bcWait_del_cases _ _ _ _ TD2) as [[t' [H' [E' E2]]] | [[t' [E' [LTd' _]]] | [E' _]]];
+      unfold liftTimeExp in E, E'; rewrite evalExpFunTime_time in E, E';
+      try discriminate; injection E as E; injection E' as E'; subst t t'; simpl in *; try lra.
+    subst q q2. eapply bcWait_bisim_inj_aux2; [ | | exact BQ]; unfold liftTimeExp;
+      rewrite evalExpFunTime_time; f_equal; apply timeEqR; simpl; lra.
+Qed.
+
+(*** Backward delay tracking ***)
+
+(** Refutes [B : ovWait m e2 e3 e4 ~p~ Z] for a named overlap state Z other than ovWait, by
+a channel one side uses and the other does not.*)
+Ltac ovWait_bisim_contra B :=
+  unfold ovWait, dormant, init, ovReady, switchBc, switchCurr, switchListen, ovAbort,
+    tfsStart, tfsNext, tfsCurr, tfsBc, tfsListen, liftNameProc in B; refute_by_chan B.
+
+(** Every overlap state but ovWait delays only to itself, and ovWait delays to an ovWait. So
+an overlap component that delays into a state Z that no ovWait is bisimilar to was in Z
+before the delay.*)
+Lemma overlap_del_bkwd (Z p p' : ProcTerm) (d : Delay) :
+  overlapState p -> p -PD- d -PD> p' -> p' ~p~ Z ->
+  (forall m e2 e3 e4, ovWait m e2 e3 e4 ~p~ Z -> False) -> p ~p~ Z.
+Proof.
+  intros OS D BZ NW.
+  destruct (overlapState_shape _ OS)
+    as [B | m B | m e2 e3 e4 B | m e2 l B | m B | B | B | B | B | m B | B | B | B];
+    try solve [eapply bisim_trans; [exact B | ]; eapply bisim_trans; [ | exact BZ];
+      apply bisim_symm; eapply bisim_del_pres; [del_self_body | exact B | exact D]].
+  exfalso. destruct (bisim_step_del _ _ _ _ B D) as [q [TQ BQ]].
+  destruct (ovWait_del_shape _ _ _ _ _ _ TQ) as [e3' [e4' B']].
+  eapply NW. eapply bisim_trans; [apply bisim_symm; exact B' | ].
+  eapply bisim_trans; [apply bisim_symm; exact BQ | exact BZ].
+Qed.
 
 (****************** Linking ******************)
 (** The protocol's software is a triple of components. The language's results about the

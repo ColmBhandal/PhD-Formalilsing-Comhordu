@@ -98,11 +98,6 @@ Theorem nextSince_fst_deliv_suff (n : Network) (t : Time) (m : Mode)
 
 (*TIDY*)
 
-(*DELETE ON RECOMPILE*)
-Lemma ovWait_del_pres_bkwd_net_strong n n' d m t x y i :
-  n -ND- d -ND> n' -> ovWaitStateNet m t x y i n' ->
-  ovWaitStateNet m t (x +dt+ d) (y +dt+ d) i n. Admitted.
-
 Lemma init_ovWait_track_net m m' t' i x y n n' a :
   initStateNet m i n -> ovWaitStateNet m' t' x y i n' ->
   n -NA- a -NA> n' -> m = m' /\ x = t' /\ y = zeroTime.
@@ -195,7 +190,7 @@ Theorem nextSince_periodic_sent (n : Network) (m : Mode) (t t' : Time)
   (Misc::nextSince_rel_state) to get the possible states for nextSince.*)
   lets NR : nextSince_rel_state H.
   (*We show by (...EA::urgency...) that the only such state capable of delay is ovWait.*)
-  lets ND : nextSince_del_ovWait w NR. decompEx4 ND m0 t0 x y OS. assert (m0 = m) as ME.
+  lets ND : nextSince_del_ovWait p w NR. decompEx4 ND m0 t0 x y OS. assert (m0 = m) as ME.
   eapply nextSince_ovWait_modes_eq. apply OS. apply H.
   (*We then proceed analogously to currSince_periodic_sent, case analysing on d <= t' or
   t' < d etc. only we use (ovWait_sent) in the place of (bcWait_sent).*)
@@ -320,7 +315,7 @@ Theorem bcWait_sent (n : Network) (m : Mode) (x : Time)
   timering.
   (*The delay inductive case follows by an application of I.H. and then the delay
   constructor for sent.*)
-  lets BD : bcWaitNet_del_bkwd s H. assert (zeroTime < x +dt+ d) as ZL.
+  lets BD : bcWaitNet_del_bkwd p H0 s H. assert (zeroTime < x +dt+ d) as ZL.
   apply Rplus_lt_weaken_rl. timeNonneg. simpl.
   delPos. lets IH : IHp BD ZL. decompEx2 IH l q SE. assert (x <= period m) as q0.
   simpl in q. eapply Rplus_le_weaken_lr. apply q. apply Rlt_le. delPos. exists l q0.

@@ -649,6 +649,14 @@ Lemma evalExpFunTime_time t :
   destruct t. unfold evalExpFunTime. simpl. reflexivity.
   Qed.
 
+(** A time that evaluates to the zero time is zero.*)
+Lemma evalExpFunTime_zero_inv t :
+  evalExpFunTime (liftTimeExp t) = Some zeroTime -> nonneg (time t) = 0.
+Proof.
+  unfold liftTimeExp. rewrite evalExpFunTime_time. intro E. injection E as E. subst.
+  reflexivity.
+Qed.
+
 Lemma sort_guard_eval_eq a d e1 e2 p :
   sort a d ($<e1>$ p) ->
   evalExpFunTime e1 = evalExpFunTime e2 ->
