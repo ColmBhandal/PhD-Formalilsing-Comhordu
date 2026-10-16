@@ -2083,6 +2083,77 @@ Proof.
   exists p'; exists ps'; exists i. auto.
 Qed.
 
+(*********Reachability*********)
+
+(** The processes reachable from p0 by any number of discrete steps and delays.*)
+Inductive reachableFrom (p0 : ProcTerm) : ProcTerm -> Prop :=
+  | reachableFromBase : reachableFrom p0 p0
+  | reachableFromDisc p p' a : reachableFrom p0 p -> p -PA- a -PA> p' -> reachableFrom p0 p'
+  | reachableFromDel p p' d : reachableFrom p0 p -> p -PD- d -PD> p' -> reachableFrom p0 p'.
+
+(** A property of p0 that every discrete step and every delay preserves holds of everything
+reachable from p0.*)
+Lemma reachableFrom_invariant (P : ProcTerm -> Prop) p0 p : P p0 ->
+  (forall q q' a, P q -> q -PA- a -PA> q' -> P q') ->
+  (forall q q' d, P q -> q -PD- d -PD> q' -> P q') ->
+  reachableFrom p0 p -> P p.
+Proof.
+  intros H0 HD HT R. induction R; eauto.
+Qed.
+
+(** What is reachable from a parallel composition is a parallel composition of processes
+reachable from its components.*)
+Lemma reachableFrom_parAll p0 ps0 q : reachableFrom (parAll p0 ps0) q ->
+  exists p ps, q = parAll p ps /\ Forall2 reachableFrom (p0 :: ps0) (p :: ps).
+Proof.
+  intro R. induction R as [ | q q' a R [p [ps [E F]]] S | q q' d R [p [ps [E F]]] S].
+  - exists p0; exists ps0. split; [reflexivity | ].
+    apply Forall2_diag. intros. apply reachableFromBase.
+  - subst q. apply parAll_disc_weak in S.
+    destruct S as [p' [ps' [E G]]]. subst q'. exists p'; exists ps'. split; [reflexivity | ].
+    eapply Forall2_impl; [ | eapply Forall2_compose; [exact F | exact G]].
+    simpl. intros x z [y [Rxy [Ey | [b T]]]]; subst; eauto using reachableFromDisc.
+  - subst q. apply parAll_del_inv in S.
+    destruct S as [p' [ps' [E G]]]. subst q'. exists p'; exists ps'. split; [reflexivity | ].
+    eapply Forall2_impl; [ | eapply Forall2_compose; [exact F | exact G]].
+    simpl. intros x z [y [Rxy T]]. eauto using reachableFromDel.
+Qed.
+
+(*********Channels*********)
+
+(** The channel of a discrete action, with true for an input.*)
+Definition actChan (a : DiscAct) : option (Channel * bool) :=
+  match a with
+  | c ;? _ => Some (c, true)
+  | c ;! _ => Some (c, false)
+  | tauAct => None
+  end.
+
+(** The channels of a term's prefixes, with their directions, not looking inside
+applications.*)
+Fixpoint chansProc (p : ProcTerm) : list (Channel * bool) :=
+  match p with
+  | nilProc => []
+  | outPrefix c _ _ => [(c, false)]
+  | inPrefix c _ _ => [(c, true)]
+  | ifThen _ q => chansProc q
+  | sum q1 q2 => chansProc q1 ++ chansProc q2
+  | parComp q1 q2 => chansProc q1 ++ chansProc q2
+  | app _ _ => []
+  | del _ q => chansProc q
+  end.
+
+(** A term whose applications are all under a prefix acts only on the channels of its
+prefixes. So two terms are not bisimilar when one can act on a channel the other does not
+mention.*)
+Lemma step_chans p a q : p -PA- a -PA> q -> unguardedNames p = [] ->
+  forall cd, actChan a = Some cd -> In cd (chansProc p).
+Proof.
+  intros S U cd E. induction S; simpl in *; try discriminate;
+    try (apply app_eq_nil in U; destruct U as [U1 U2]);
+    try (injection E as E; subst; left; reflexivity); auto using in_or_app.
+Qed.
+
 End Results.
 
 Notation "p1 -P=> p2" := (stepProcRefl p1 p2) (at level 50).

@@ -13,6 +13,7 @@ Require Import ComhCoq.lang.LanguageFoundations.
 Require Import ComhCoq.lang.SoftwareLanguage.
 Require Import ComhCoq.lib.GenTacs.
 Require ComhCoq.lib.Extras.LibTactics.
+From Stdlib Require Import Lra.
 
 Section ProcEquiv.
 Context {PNames : ProcNames} {PDefs : ProcDefs} {PGuarded : GuardedDefs}.
@@ -244,6 +245,30 @@ Proof.
       * exists ($< e1 >$ p). split.
         -- apply stepPTimed. apply stepTpDelIll. congruence.
         -- apply CIH. assumption.
+Qed.
+
+(** A delay guard that has run out does nothing.*)
+Lemma del_zero_bisim e p : evalExpFunTime e = Some zeroTime -> $< e >$ p ~p~ p.
+Proof.
+  intro E. constructor.
+  - intros a p1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + inversion S0; subst. exists p1. split; [ | apply bisim_refl].
+      apply stepPDisc. assumption.
+    + inversion S0; subst.
+      * match goal with [H : evalExpFunTime e = Some ?t |- _] =>
+          rewrite E in H; injection H as H; subst t end.
+        rewrite timeDelAddZeroL. exists p1. split; [ | apply bisim_refl].
+        apply stepPTimed. assumption.
+      * exfalso.
+        match goal with [H : evalExpFunTime e = Some ?t |- _] =>
+          rewrite E in H; injection H as H; subst t end.
+        clear S S0. destruct d0 as [[dr dpos]]. simpl in *. lra.
+      * congruence.
+  - intros a q1 S. inversion S as [a0 t0 S0 | d0 t0 S0]; subst.
+    + exists q1. split; [ | apply bisim_refl]. apply stepPDisc.
+      apply stepDpTimeOut; assumption.
+    + exists q1. split; [ | apply bisim_refl]. apply stepPTimed.
+      rewrite <- (timeDelAddZeroL d0). apply stepTpDelAdd; assumption.
 Qed.
 
 (*** Slightly more Specific ***)
@@ -721,6 +746,16 @@ Lemma if_then_bisim_false b p q :
   apply cond_bisim_false. apply evalBoolExpRelFun in U.
   unfold evalBoolExpFunTot. rewrite U. simpl.
   reflexivity. Qed.
+
+(** When the condition is ill formed, neither branch is available.*)
+Lemma if_then_bisim_none b p q :
+  evalBoolExpFun b = None -> b $> p $+$ !~ b $> q ~p~ nilProc.
+Proof.
+  intro E. eapply bisim_trans.
+  { apply choice_bisim_context; apply cond_bisim_false;
+      unfold evalBoolExpFunTot; simpl; rewrite E; reflexivity. }
+  apply choice_bism_unit_r.
+Qed.
 
 End ProcEquiv.
 

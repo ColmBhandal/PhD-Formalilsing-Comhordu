@@ -104,9 +104,10 @@ by reading the current position l, and by urgency no time can pass in the state,
 and then by disc_pre_pos [salvaged] the position is the same. *)
 
 (** If an entity is in a state ready to output some m l from the overlap component,
-then it is in the position l.*)
-Theorem ovReady_pos (e : Entity) (m : Mode) (t : Time) (l : Position) :
-  reachableEnt e -> ovReadyStateEnt m t l e -> inPosEnt l e. Admitted. (*D- reachableEnt*)
+then it is in the position l. The timer is any expression, well formed or not: it plays no
+part, and a reachable overlap component may hold an ill-formed one (see ovReadyStateExp).*)
+Theorem ovReady_pos (e : Entity) (m : Mode) (t : Exp) (l : Position) :
+  reachableEnt e -> ovReadyStateExpEnt m t l e -> inPosEnt l e. Admitted. (*D- reachableEnt*)
 (**Proof: Analogous to that of bcReady_pos.*)
 
 Lemma tfsListen_paused p1 p2 p3 :
@@ -325,14 +326,14 @@ Lemma tfsBc_urgent : forall (e e' : Entity) (d : Delay),
   (*Case analysis on the state of the broadcast component. If it is in either the
   wait or the sleeping state, then an input on trans is possible, which can synch with
   the output on trans from tfsBc.*)
-  inversion BC as [m x BW | SL | m l1 BR].
-  - triple_del_sync_not DP (bcWait_trans_in _ _ _ BW) TOT.
+  destruct (broadcastState_shape _ BC) as [SL | v x BW | v1 v2 BR].
   - triple_del_sync_not DP (sleep_trans_in _ SL) TOT.
-  (*Otherwise, the broadcast component is in the ready state, in which case we
-  already have urgency from bcReady-urgent.*)
-  - assert (bcReadyStateEnt m l1 ([|p0, l0, h0, k0|])) as BCE. constructor.
-    rewrite TR. constructor. assumption. lets BCU : bcReady_urgent U BCE.
-    apply BCU. apply U1.
+  - triple_del_sync_not DP (bcWait_trans_in_shape _ _ _ BW) TOT.
+  (*Otherwise, the broadcast component is in the ready state, which is urgent: it can
+  output on outProc, and the interface can always input on it.*)
+  - eapply ent_del_sync_inter_not; [ | | eassumption].
+    + rewrite TR. dae_broadcast. eapply bcReady_outProc_out_shape. eassumption.
+    + apply interface_outProc_in.
 Qed.
 
 Lemma switchBc_urgent (m : Mode) : forall (e e' : Entity) (d : Delay),
@@ -343,14 +344,14 @@ Lemma switchBc_urgent (m : Mode) : forall (e e' : Entity) (d : Delay),
   (*Case analysis on the state of the broadcast component. If it is in either the
   wait or the sleeping state, then an input on wake is possible, which can synch with
   the output on wake from switchBc.*)
-  inversion BC as [m0 x BW | SL | m0 l1 BR].
-  - triple_del_sync_not DP (bcWait_wake_in m _ _ _ BW) TOT.
+  destruct (broadcastState_shape _ BC) as [SL | v x BW | v1 v2 BR].
   - triple_del_sync_not DP (sleeping_wake_in m _ SL) TOT.
-  (*Otherwise, the broadcast component is in the ready state, in which case we
-  already have urgency from bcReady-urgent.*)
-  - assert (bcReadyStateEnt m0 l1 ([|p0, l0, h0, k0|])) as BCE. constructor.
-    rewrite TR. constructor. assumption. lets BCU : bcReady_urgent U BCE.
-    apply BCU. apply U1.
+  - triple_del_sync_not DP (bcWait_wake_in_shape m _ _ _ BW) TOT.
+  (*Otherwise, the broadcast component is in the ready state, which is urgent: it can
+  output on outProc, and the interface can always input on it.*)
+  - eapply ent_del_sync_inter_not; [ | | eassumption].
+    + rewrite TR. dae_broadcast. eapply bcReady_outProc_out_shape. eassumption.
+    + apply interface_outProc_in.
 Qed.
 
 Lemma swithcCurr_urgent (m : Mode) : forall (e e' : Entity) (d : Delay),

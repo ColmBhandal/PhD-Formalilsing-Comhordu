@@ -40,6 +40,15 @@ Definition ovWaitState (m : Mode) (t x y: Time) (p : ProcTerm) : Prop :=
 Definition ovReadyState (m : Mode) (t : Time) (l : Position) (p : ProcTerm) : Prop :=
   p ~p~ ovReady m t l.
 
+(** ovWait and ovReady with their timers as expressions. A timer is computed from the modes
+read on mNext and mCurr, and inputs are untyped, so a reachable overlap component may hold
+an ill-formed timer; see the component shapes in ProtAuxResults.v.*)
+Definition ovWaitStateExp (m : Mode) (t x y : Exp) (p : ProcTerm) : Prop :=
+  p ~p~ ovWait m t x y.
+
+Definition ovReadyStateExp (m : Mode) (t : Exp) (l : Position) (p : ProcTerm) : Prop :=
+  p ~p~ ovReady m t l.
+
 Definition switchBcState (m : Mode) (p : ProcTerm) : Prop :=
   p ~p~ switchBc m.
 
@@ -118,17 +127,14 @@ Definition nextPincCheckState (m m' : Mode) (d : Distance) (p : ProcTerm) : Prop
 
 (*Broadcast*)
 
-Inductive broadcastState (p : ProcTerm) : Prop :=
-  | broadBcwSt (m : Mode) (x : Time) : bcWaitState m x p -> broadcastState p
-  | broadSlpSt : sleepingState p -> broadcastState p
-  | broadBcrSt (m : Mode) (l : Position) : bcReadyState m l p -> broadcastState p.
+(** The states of a component are the processes reachable from its initial process. Each
+one is bisimilar to one of the named states above, with the parameters the component has
+received so far; ProtAuxResults.v proves that characterisation.*)
+Definition broadcastState : ProcTerm -> Prop := reachableFrom sleeping.
 
 (*Overlap*)
 
-(*INCOMPLETE- Need to add constructors for ALL the overlap states.*)
-Inductive overlapState (p : ProcTerm) : Prop :=
-  | ovlpDorSt : dormantState p -> overlapState p
-  | ovlpWaSt (m : Mode) (t x y : Time) : ovWaitState m t x y p -> overlapState p.
+Definition overlapState : ProcTerm -> Prop := reachableFrom dormant.
 
 Inductive nextSinceState (p : ProcTerm) : Prop :=
   | nexsOvwSt (m : Mode) (t x y : Time) : ovWaitState m t x y p -> nextSinceState p
@@ -150,13 +156,7 @@ Inductive switchState (p : ProcTerm) : Prop :=
 
 (*Listening*)
 
-Inductive listenerState (p : ProcTerm) : Prop :=
-  | listLisSt : listeningState p -> listenerState p
-  | listRbSt (m : Mode) : rangeBadState m p -> listenerState p
-  | listCokSt (m : Mode) : currOKState m p -> listenerState p
-  | listAovSt : abortOvlpState p -> listenerState p
-  | listBovSt : badOvlpState p -> listenerState p
-  | listCucost (m : Mode) (r : Distance) : currCompState m r p -> listenerState p.
+Definition listenerState : ProcTerm -> Prop := reachableFrom listening.
 
   
 
@@ -194,6 +194,7 @@ Definition tfsNextStateProt m := liftOverlap (tfsNextState m).
 Definition tfsStartStateProt := liftOverlap tfsStartState.
 Definition initStateProt m := liftOverlap (initState m).
 Definition ovReadyStateProt m t l := liftOverlap (ovReadyState m t l).
+Definition ovReadyStateExpProt m t l := liftOverlap (ovReadyStateExp m t l).
 Definition switchCurrStateProt := liftOverlap switchCurrState.
 Definition switchListenStateProt := liftOverlap switchListenState.
 

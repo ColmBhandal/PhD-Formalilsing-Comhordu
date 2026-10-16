@@ -43,6 +43,8 @@ Definition initStateEnt (m : Mode) : Entity -> Prop :=
 liftProcEnt (initStateProt m).
 Definition ovReadyStateEnt (m : Mode) (t : Time) (l : Position) : Entity -> Prop :=
 liftProcEnt (ovReadyStateProt m t l).
+Definition ovReadyStateExpEnt (m : Mode) (t : Exp) (l : Position) : Entity -> Prop :=
+liftProcEnt (ovReadyStateExpProt m t l).
 Definition switchCurrStateEnt : Entity -> Prop :=
 liftProcEnt switchCurrStateProt.
 Definition switchListenStateEnt : Entity -> Prop :=
