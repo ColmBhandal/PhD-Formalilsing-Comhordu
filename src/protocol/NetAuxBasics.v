@@ -468,13 +468,13 @@ Proof.
   destruct (Rle_lt_or_eq_dec 0 x xnn) as [Hlt | Heq].
   - set (d := mkDelay (mkposreal x Hlt)).
     assert (exists q', bcWait m (mkTime (mknonnegreal x xnn)) -PD- d -PD> q' /\
-      exists q'', q' -PA- chanPos ;? [baseTime zeroTime] -PA> q'') as [q' [TD [q'' TP]]].
+      exists q'', q' -PA- chanPos ;? [basePosition origin] -PA> q'') as [q' [TD [q'' TP]]].
     { eexists. split.
       - unfold bcWait. apply stepTpSum; [apply stepTpSum | apply stepTpIn]; [apply stepTpIn | ].
         eapply (stepTpDelSub _ d _ (mkTime (mknonnegreal x xnn)) (Rle_refl x)).
         reflexivity.
       - eexists. apply stepDpChoiceL. apply stepDpChoiceR. apply stepDpTimeOut.
-        apply stepDpIn. reflexivity.
+        apply stepDpIn. typed_vals.
         unfold evalExpFunTime. simpl. f_equal. apply timeEqR. simpl. ring. }
     destruct S as [_ S2]. apply stepPTimed in TD. apply S2 in TD.
     destruct TD as [s [Ss Bs]]. inversion Ss; subst.
@@ -483,9 +483,9 @@ Proof.
     eapply initial_not_bcWait_net_aux1; eassumption.
   - subst x.
     assert (exists q'', bcWait m (mkTime (mknonnegreal 0 xnn)) -PA-
-      chanPos ;? [baseTime zeroTime] -PA> q'') as [q'' TP].
+      chanPos ;? [basePosition origin] -PA> q'') as [q'' TP].
     { eexists. unfold bcWait. apply stepDpChoiceL. apply stepDpChoiceR.
-      apply stepDpTimeOut. apply stepDpIn. reflexivity.
+      apply stepDpTimeOut. apply stepDpIn. typed_vals.
       unfold evalExpFunTime. simpl. f_equal. apply timeEqR. simpl. reflexivity. }
     eapply initial_not_bcWait_net_aux1; eassumption.
 Qed.
@@ -734,14 +734,17 @@ entities are preserved forwards in a network.*)
 (*If v is incomingNetNotif with timestamp t, and the network can delay, then in
 the derivative network v is incomingNetNotif with timestamp t - d.
 Corollary is that whenever t = 0 delay is impossible.
-This needs v to have the shape of a notification, [r, m, l], since the listener
-can only input a notification of that length.*)
-Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
-  (t : Time) (i : nat) : 
-  reachableNet n -> n -ND- d -ND> n' -> incomingNetNotif v t i n -> length v = 3%nat ->
-  {p : d <= t | incomingNetNotif v (minusTime t d p) i n'}.
+This needs the notification to have the shape [r, m, l] of a range, a mode and a position,
+since the listener can only input a notification of that shape.*)
+Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (r : Distance) (m : Mode)
+  (lm : Position) (t : Time) (i : nat) :
+  reachableNet n -> n -ND- d -ND> n' ->
+  incomingNetNotif [baseDistance r, baseMode m, basePosition lm] t i n ->
+  {p : d <= t | incomingNetNotif [baseDistance r, baseMode m, basePosition lm]
+    (minusTime t d p) i n'}.
   (*invert/destruct incomingNotif to [p, l, {li, lo, ln}, k] @ i.: n & v, t : ln*)
-  intro RN. introz U. destruct U0.
+  intro RN. introz U. remember [baseDistance r, baseMode m, basePosition lm] as v eqn:Hv.
+  destruct U0.
   (*Set up the derivaive entity.*)
   link_netentdelfwd_tac e' Y. destr_ent_inter e' p' l' k' li' lo' ln'.
   (*Apply ent-interface del linking tactic*)
@@ -790,7 +793,7 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
   lets NSF : NSD DD HY HY2 HY1.
   (*Then ahead we go to show the synchronisation on chanAN of v does exist.*)
   unfold noSyncNow in NSF. assert (discActEnabled p1 (chanAN;? v)) as DAE.
-  apply listening_AN_prot; [exact U1 | ]. assert (listeningStateNet i n1) as LSN. eapply del_listening_net.
+  rewrite Hv. apply listening_AN_prot. assert (listeningStateNet i n1) as LSN. eapply del_listening_net.
   eapply reachNetDel. apply RN. apply ND1. apply ND2. apply ED0. inversion LSN as [e IV1 IV2].
   inversion IV1 as [p4 l4 h4 k4 IV3 IV4]. my_applys_eq IV3. rewrite <- IV4 in IV2.
   entnetuniq2 EU n1. inversion EU. reflexivity. apply NSF in DAE. decompAnd2 DAE DI DM.
@@ -798,7 +801,7 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (v : list BaseType)
   (*If t = 0, then we have our contradiction with noSyncNow, just like the last step
   of the previous case.*)
   clear NSD. unfold noSyncNow in NSN. assert (discActEnabled p (chanAN;? v)) as DAE.
-  apply listening_AN_prot; [exact U1 | ]. assert (listeningStateNet i n) as LSN. eapply del_listening_net.
+  rewrite Hv. apply listening_AN_prot. assert (listeningStateNet i n) as LSN. eapply del_listening_net.
   apply RN. apply U. apply H. inversion LSN. inversion H4. my_applys_eq H6.
   cut (e = e0). intros. rewrite H8 in H7. rewrite Heqe0 in H7. inversion H7.
   reflexivity. entnetuniq U e e0. assumption. apply NSN in DAE. decompAnd2 DAE DI DM.

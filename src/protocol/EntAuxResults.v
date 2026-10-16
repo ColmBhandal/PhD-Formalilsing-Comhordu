@@ -530,11 +530,6 @@ Lemma ovReady_ovWait_track_ent m m' t t' x' y' l0 a
   (*Some aspects of the proof e.g. l = l0 may require separate results.
   Maybe they already exist?*)Admitted.
 
-Lemma tfsStart_next_ent e e' a :
-  e -EA- a ->> e' -> tfsStartStateEnt e ->
-  tfsStartStateEnt e' \/ exists m, tfsNextStateEnt m e'.
-  Admitted. (*#fwd-track-lift-ent*)
-  
 (* begin helpers for tfsNext_next_ent *)
 Lemma tfsNext_next_ent_currN : ProcEquiv.bisimulation (tfsCurrN $([])$) tfsCurr.
 Proof. apply app_bisim_nil. reflexivity. Qed.
@@ -640,6 +635,21 @@ Lemma tfsCurr_next_ent e e' a :
 Proof.
   intros S T.
   exact (tfsCurr_next_ent_lift tfsCurrState tfsBcState _ _ _ tfsCurr_next_ent_aux S T).
+Qed.
+
+(** From tfsStart, the overlap component reads the current mode and moves to tfsNext with
+it. The mode it reads is a mode because inputs are typed: it comes from the mode state, or
+from another component writing a mode on mCurr.*)
+Lemma tfsStart_next_ent e e' a :
+  e -EA- a ->> e' -> tfsStartStateEnt e ->
+  tfsStartStateEnt e' \/ exists m, tfsNextStateEnt m e'.
+Proof.
+  intros T S.
+  destruct (tfsCurr_next_ent_lift tfsStartState (fun q => exists m, tfsNextState m q)
+    e e' a (fun q q' b T' S' => or_intror (tfsStart_next q q' b T' S')) T S) as [X | X].
+  - left. exact X.
+  - right. inversion X as [p l h k LO]; subst. inversion LO as [p1 p2 p3 [m M]]; subst.
+    exists m. constructor. constructor. exact M.
 Qed.
 
 (* begin helpers for tfsBc_next_ent *)

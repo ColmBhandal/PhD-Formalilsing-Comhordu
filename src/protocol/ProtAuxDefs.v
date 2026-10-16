@@ -41,8 +41,9 @@ Definition ovReadyState (m : Mode) (t : Time) (l : Position) (p : ProcTerm) : Pr
   p ~p~ ovReady m t l.
 
 (** ovWait and ovReady with their timers as expressions. A timer is computed from the modes
-read on mNext and mCurr, and inputs are untyped, so a reachable overlap component may hold
-an ill-formed timer; see the component shapes in ProtAuxResults.v.*)
+read on mNext and mCurr, and the wait time is defined only when the one mode can change to
+the other, so a reachable overlap component may hold an ill-formed timer; see the component
+shapes in ProtAuxResults.v.*)
 Definition ovWaitStateExp (m : Mode) (t x y : Exp) (p : ProcTerm) : Prop :=
   p ~p~ ovWait m t x y.
 
