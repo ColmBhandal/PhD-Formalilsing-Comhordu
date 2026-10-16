@@ -1,0 +1,1069 @@
+2c2
+< == ComhCoq.lang.EntityLanguage (35 names)
+---
+> == ComhCoq.lang.EntityLanguage (37 names)
+151a152,163
+> Inductive
+> incomingEnt (PNames : SoftwareLanguage.ProcNames)
+> (v : list LanguageFoundations.BaseType) : Entity -> Prop :=
+>     incent : forall (P : SoftwareLanguage.ProcTerm)
+>                (l : StandardResults.Position)
+>                (h : InterfaceLanguage.Interface)
+>                (K : ModeStateLanguage.ModeState),
+>              InterfaceLanguage.incomingInter v h ->
+>              incomingEnt v ([|P, l, h, K|]).
+> 
+> Arguments incomingEnt {PNames} v%_list_scope _
+> Arguments incent {PNames} v%_list_scope P l h K _
+554a567,593
+> @stepEnt_disc_pres_out_pos
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs)
+>          (p p' : SoftwareLanguage.ProcTerm) (l l' : StandardResults.Position)
+>          (k k' : ModeStateLanguage.ModeState)
+>          (li li' : InterfaceLanguage.InputList)
+>          (lo lo' : InterfaceLanguage.OutputList)
+>          (ln ln' : InterfaceLanguage.NotifList) (b : ActDiscEnt)
+>          (v : list LanguageFoundations.BaseType) (t : GenBasics.Time),
+>        [|p, l,
+>        {|
+>          InterfaceLanguage.li := li;
+>          InterfaceLanguage.lo := lo;
+>          InterfaceLanguage.ln := ln
+>        |}, k|] -EA- b ->>
+>        [|p', l',
+>        {|
+>          InterfaceLanguage.li := li';
+>          InterfaceLanguage.lo := lo';
+>          InterfaceLanguage.ln := ln'
+>        |}, k'|] ->
+>        List.In {| InterfaceLanguage.msg := v; InterfaceLanguage.stamp := t |}
+>          (InterfaceLanguage.outList lo) ->
+>        Rdefinitions.RbaseSymbolsImpl.Rlt (Rdefinitions.IZR BinNums.Z0)
+>          (RIneq.nonneg (GenBasics.time t)) ->
+>        List.In {| InterfaceLanguage.msg := v; InterfaceLanguage.stamp := t |}
+>          (InterfaceLanguage.outList lo')
+790,795c829,833
+< outList_in_input_pres
+<      : forall (v u : list LanguageFoundations.BaseType) 
+<          (t : GenBasics.Time) (lo lo' : OutputList),
+<        List.In (<( v, t )>) (outList lo) ->
+<        outList lo -tl- u ?? -tl> outList lo' ->
+<        List.In (<( v, t )>) (outList lo')
+---
+> outList_buff_pres
+>      : forall (lo lo' : OutputList) (w : list LanguageFoundations.BaseType)
+>          (x : TimedEl),
+>        lo -ol- w ?? -ol> lo' ->
+>        List.In x (outList lo) -> List.In x (outList lo')
+2464c2502
+< == ComhCoq.lang.NetworkLanguage (47 names)
+---
+> == ComhCoq.lang.NetworkLanguage (76 names)
+2554a2593,2608
+> @del_link_distNet_bkwd
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (d : GenBasics.Delay) (i j : nat) (x' : GenBasics.Distance),
+>        n -ND- d -ND> n' ->
+>        distNet i j n' x' ->
+>        exists x : GenBasics.Distance,
+>          distNet i j n x /\
+>          Rdefinitions.Rle (RIneq.nonneg (GenBasics.distance x))
+>            (Rdefinitions.RbaseSymbolsImpl.Rplus
+>               (RIneq.nonneg (GenBasics.distance x'))
+>               (Rdefinitions.RbaseSymbolsImpl.Rmult
+>                  (Rdefinitions.RbaseSymbolsImpl.Rmult
+>                     (Rdefinitions.IZR (BinInt.Z.pos (BinNums.xO BinNums.xH)))
+>                     (RIneq.nonneg ComhBasics.speedMax))
+>                  (RIneq.pos (GenBasics.delay d))))
+2567a2622,2651
+> @disc_pres_distNet_bkwd
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (a : ActDiscNet) (i j : nat) (x : GenBasics.Distance),
+>        n -NA- a -NA> n' -> distNet i j n' x -> distNet i j n x
+> Inductive
+> distNet (PNames : SoftwareLanguage.ProcNames) (i i' : nat) 
+> (n : Network) : GenBasics.Distance -> Prop :=
+>     dnWitness : forall l l' : StandardResults.Position,
+>                 inPosNet l i n ->
+>                 inPosNet l' i' n -> distNet i i' n (GenBasics.distFun l l').
+> 
+> Arguments distNet {PNames} (i i')%_nat_scope n _
+> Arguments dnWitness {PNames} (i i')%_nat_scope n l l' _ _
+> @distNet_elim
+>      : forall (PNames : SoftwareLanguage.ProcNames) 
+>          (i j : nat) (n : Network) (x : GenBasics.Distance),
+>        distNet i j n x ->
+>        exists e1 e2 : Entity,
+>          e1 @ i .: n /\
+>          e2 @ j .: n /\
+>          x = {| GenBasics.distance := StandardResults.dist2d e1 e2 |}
+> @distNet_intro
+>      : forall (PNames : SoftwareLanguage.ProcNames) 
+>          (e1 e2 : Entity) (i j : nat) (n : Network) 
+>          (x : GenBasics.Distance),
+>        e1 @ i .: n ->
+>        e2 @ j .: n ->
+>        x = {| GenBasics.distance := StandardResults.dist2d e1 e2 |} ->
+>        distNet i j n x
+2603a2688,2730
+> Inductive
+> inPosNet (PNames : SoftwareLanguage.ProcNames) (l : StandardResults.Position)
+> (i : nat) (n : Network) : Prop :=
+>     ipWitness : forall (p : SoftwareLanguage.ProcTerm)
+>                   (h : InterfaceLanguage.Interface)
+>                   (k : ModeStateLanguage.ModeState),
+>                 [|p, l, h, k|] @ i .: n -> inPosNet l i n.
+> 
+> Arguments inPosNet {PNames} l i%_nat_scope n
+> Arguments ipWitness {PNames} l i%_nat_scope n p h k _
+> @inPos_del_bound_bkwd
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (d : GenBasics.Delay) (l' : StandardResults.Position) 
+>          (i : nat),
+>        inPosNet l' i n' ->
+>        n -ND- d -ND> n' ->
+>        exists l : StandardResults.Position,
+>          inPosNet l i n /\
+>          Rdefinitions.Rle (RIneq.nonneg (StandardResults.dist2d l l'))
+>            (Rdefinitions.RbaseSymbolsImpl.Rmult
+>               (RIneq.nonneg ComhBasics.speedMax)
+>               (RIneq.pos (GenBasics.delay d)))
+> @inPos_ex
+>      : forall (PNames : SoftwareLanguage.ProcNames) 
+>          (i : nat) (n : Network) (e : Entity),
+>        e @ i .: n -> exists l : StandardResults.Position, inPosNet l i n
+> @inPos_pos
+>      : forall (PNames : SoftwareLanguage.ProcNames) 
+>          (e : Entity) (i : nat) (l : StandardResults.Position) 
+>          (n : Network),
+>        e @ i .: n -> inPosNet l i n -> e = l
+> @inPos_pres_disc
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (a : ActDiscNet) (l : StandardResults.Position) 
+>          (i : nat),
+>        n -NA- a -NA> n' -> inPosNet l i n <-> inPosNet l i n'
+> @inPos_unique
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (l l' : StandardResults.Position) (i : nat) 
+>          (n : Network),
+>        inPosNet l i n -> inPosNet l' i n -> l = l'
+2614a2742,2824
+> @inRange_out_input
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (v : list LanguageFoundations.BaseType)
+>          (l : StandardResults.Position) (r x : GenBasics.Distance)
+>          (i j : nat) (e : Entity),
+>        n -NA- ([-v, l, r -]) /! i -NA> n' ->
+>        e @ j .: n ->
+>        i <> j ->
+>        distNet i j n' x ->
+>        Rdefinitions.Rle (RIneq.nonneg (GenBasics.distance x))
+>          (RIneq.nonneg (GenBasics.distance r)) ->
+>        exists e' : Entity, e -EA- ([-v, l, r -]) #? ->> e' /\ e' @ j .: n'
+> Inductive
+> incomingNet (PNames : SoftwareLanguage.ProcNames)
+> (v : list LanguageFoundations.BaseType) (i : nat) 
+> (n : Network) : Prop :=
+>     icWitness : forall (p : SoftwareLanguage.ProcTerm)
+>                   (l : StandardResults.Position)
+>                   (li : InterfaceLanguage.InputList)
+>                   (lo : InterfaceLanguage.OutputList)
+>                   (ln : InterfaceLanguage.NotifList)
+>                   (k : ModeStateLanguage.ModeState),
+>                 [|p, l,
+>                 {|
+>                   InterfaceLanguage.li := li;
+>                   InterfaceLanguage.lo := lo;
+>                   InterfaceLanguage.ln := ln
+>                 |}, k|] @ i .: n ->
+>                 List.In
+>                   {|
+>                     InterfaceLanguage.msg := v;
+>                     InterfaceLanguage.stamp := GenBasics.zeroTime
+>                   |} (InterfaceLanguage.inList li) ->
+>                 incomingNet v i n.
+> 
+> Arguments incomingNet {PNames} v%_list_scope i%_nat_scope n
+> Arguments icWitness {PNames} v%_list_scope i%_nat_scope n p l li lo ln k _ _
+> Inductive
+> incomingNetNotif (PNames : SoftwareLanguage.ProcNames)
+> (v : list LanguageFoundations.BaseType) (t : GenBasics.Time) 
+> (i : nat) (n : Network) : Prop :=
+>     icnWitness : forall (p : SoftwareLanguage.ProcTerm)
+>                    (l : StandardResults.Position)
+>                    (li : InterfaceLanguage.InputList)
+>                    (lo : InterfaceLanguage.OutputList)
+>                    (ln : InterfaceLanguage.NotifList)
+>                    (k : ModeStateLanguage.ModeState),
+>                  [|p, l,
+>                  {|
+>                    InterfaceLanguage.li := li;
+>                    InterfaceLanguage.lo := lo;
+>                    InterfaceLanguage.ln := ln
+>                  |}, k|] @ i .: n ->
+>                  List.In
+>                    {|
+>                      InterfaceLanguage.msg := v; InterfaceLanguage.stamp := t
+>                    |} (InterfaceLanguage.notifList ln) ->
+>                  incomingNetNotif v t i n.
+> 
+> Arguments incomingNetNotif {PNames} v%_list_scope t i%_nat_scope n
+> Arguments icnWitness {PNames} v%_list_scope t i%_nat_scope 
+>   n p l li lo ln k _ _
+> @incomingNetNotif_disc_pres
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (a : ActDiscNet) (v : list LanguageFoundations.BaseType)
+>          (t : GenBasics.Time) (i : nat),
+>        n -NA- a -NA> n' ->
+>        incomingNetNotif v t i n ->
+>        Rdefinitions.RbaseSymbolsImpl.Rlt (Rdefinitions.IZR BinNums.Z0)
+>          (RIneq.nonneg (GenBasics.time t)) ->
+>        incomingNetNotif v t i n'
+> @incoming_ent_net
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (v : list LanguageFoundations.BaseType) (e : Entity) 
+>          (i : nat) (n : Network),
+>        incomingEnt v e -> e @ i .: n -> incomingNet v i n
+> @incoming_net_ent
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (v : list LanguageFoundations.BaseType) (i : nat) 
+>          (n : Network),
+>        incomingNet v i n -> exists e : Entity, incomingEnt v e /\ e @ i .: n
+2619a2830,2836
+> Inductive
+> liftEntNet (PNames : SoftwareLanguage.ProcNames) (X : Entity -> Prop)
+> (i : nat) (n : Network) : Prop :=
+>     lenWitness : forall e : Entity, X e -> e @ i .: n -> liftEntNet X i n.
+> 
+> Arguments liftEntNet {PNames} X%_function_scope i%_nat_scope n
+> Arguments lenWitness {PNames} X%_function_scope i%_nat_scope n e _ _
+2672a2890,2911
+> @mState_disc_pres
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network) 
+>          (i : nat) (a : ActDiscNet) (k : ModeStateLanguage.ModeState),
+>        n -NA- a -NA> n' ->
+>        mState_in_net k i n ->
+>        exists k' : ModeStateLanguage.ModeState, mState_in_net k' i n'
+> Inductive
+> mState_in_net (PNames : SoftwareLanguage.ProcNames)
+> (k : ModeStateLanguage.ModeState) (i : nat) (n : Network) : Prop :=
+>     minet : forall (p : SoftwareLanguage.ProcTerm)
+>               (l : StandardResults.Position)
+>               (h : InterfaceLanguage.Interface),
+>             [|p, l, h, k|] @ i .: n -> mState_in_net k i n.
+> 
+> Arguments mState_in_net {PNames} k i%_nat_scope n
+> Arguments minet {PNames} k i%_nat_scope n p l h _
+> @mState_in_net_unique
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (k k' : ModeStateLanguage.ModeState) (i : nat) 
+>          (n : Network),
+>        mState_in_net k i n -> mState_in_net k' i n -> k = k'
+2691a2931,2993
+> @outNet_incomingNetNotif
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (v : list LanguageFoundations.BaseType) (r : GenBasics.Distance)
+>          (l : StandardResults.Position) (i : nat),
+>        n -NA- ([-v, l, r -]) /! i -NA> n' ->
+>        incomingNetNotif (LanguageFoundations.baseDistance r :: v)
+>          ComhBasics.adaptNotif i n'
+> Inductive
+> outgoing (PNames : SoftwareLanguage.ProcNames)
+> (v : list LanguageFoundations.BaseType) (t : GenBasics.Time) 
+> (i : nat) (n : Network) : Prop :=
+>     ogWitness : forall (p : SoftwareLanguage.ProcTerm)
+>                   (l : StandardResults.Position)
+>                   (li : InterfaceLanguage.InputList)
+>                   (lo : InterfaceLanguage.OutputList)
+>                   (ln : InterfaceLanguage.NotifList)
+>                   (k : ModeStateLanguage.ModeState),
+>                 [|p, l,
+>                 {|
+>                   InterfaceLanguage.li := li;
+>                   InterfaceLanguage.lo := lo;
+>                   InterfaceLanguage.ln := ln
+>                 |}, k|] @ i .: n ->
+>                 List.In
+>                   {|
+>                     InterfaceLanguage.msg := v; InterfaceLanguage.stamp := t
+>                   |} (InterfaceLanguage.outList lo) ->
+>                 outgoing v t i n.
+> 
+> Arguments outgoing {PNames} v%_list_scope t i%_nat_scope n
+> Arguments ogWitness {PNames} v%_list_scope t i%_nat_scope 
+>   n p l li lo ln k _ _
+> @outgoing_del
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (d : GenBasics.Delay) (v : list LanguageFoundations.BaseType)
+>          (t : GenBasics.Time) (i : nat),
+>        n -ND- d -ND> n' ->
+>        outgoing v t i n ->
+>        {p
+>        : Rdefinitions.Rle (RIneq.pos (GenBasics.delay d))
+>            (RIneq.nonneg (GenBasics.time t))
+>        | outgoing v
+>            (GenBasics.minusTime (RIneq.nonneg (GenBasics.time t))
+>               (RIneq.pos (GenBasics.delay d)) p)
+>            i n'}
+> @outgoing_del_contra
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (d : GenBasics.Delay) (v : list LanguageFoundations.BaseType)
+>          (i : nat),
+>        n -ND- d -ND> n' -> outgoing v GenBasics.zeroTime i n -> False
+> @outgoing_disc_pres
+>      : forall (PNames : SoftwareLanguage.ProcNames)
+>          (PDefs : SoftwareLanguage.ProcDefs) (n n' : Network)
+>          (a : ActDiscNet) (v : list LanguageFoundations.BaseType)
+>          (t : GenBasics.Time) (i : nat),
+>        n -NA- a -NA> n' ->
+>        outgoing v t i n ->
+>        Rdefinitions.RbaseSymbolsImpl.Rlt (Rdefinitions.IZR BinNums.Z0)
+>          (RIneq.nonneg (GenBasics.time t)) ->
+>        outgoing v t i n'
+2856a3159,3182
+> Inductive
+> transGuard (PNames : SoftwareLanguage.ProcNames) (t : GenBasics.Time)
+> (i : nat) (n : Network) : Prop :=
+>     tgWitness : forall (p : SoftwareLanguage.ProcTerm)
+>                   (l : StandardResults.Position)
+>                   (h : InterfaceLanguage.Interface) 
+>                   (m m' : ComhBasics.Mode),
+>                 [|p, l, h, ModeStateLanguage.transState m m' t|] @ i .: n ->
+>                 transGuard t i n.
+> 
+> Arguments transGuard {PNames} t i%_nat_scope n
+> Arguments tgWitness {PNames} t i%_nat_scope n p l h m m' _
+> @transGuard_elim
+>      : forall (PNames : SoftwareLanguage.ProcNames) 
+>          (t : GenBasics.Time) (i : nat) (n : Network),
+>        transGuard t i n ->
+>        exists m m' : ComhBasics.Mode,
+>          mState_in_net (ModeStateLanguage.transState m m' t) i n
+> @transGuard_intro
+>      : forall (PNames : SoftwareLanguage.ProcNames) 
+>          (t : GenBasics.Time) (i : nat) (n : Network)
+>          (m m' : ComhBasics.Mode),
+>        mState_in_net (ModeStateLanguage.transState m m' t) i n ->
+>        transGuard t i n
+17213c17539
+< == ComhCoq.protocol.EntAuxDefs (44 names)
+---
+> == ComhCoq.protocol.EntAuxDefs (43 names)
+17274,17291d17599
+< Inductive
+< incomingEnt (v : list LanguageFoundations.BaseType)
+<   : EntityLanguage.Entity -> Prop :=
+<     incent : forall (P : SoftwareLanguage.ProcTerm)
+<                (l : StandardResults.Position)
+<                (h : InterfaceLanguage.Interface)
+<                (K : ModeStateLanguage.ModeState),
+<              InterfaceLanguage.incomingInter v h ->
+<              incomingEnt v
+<                {|
+<                  EntityLanguage.procEnt := P;
+<                  EntityLanguage.posEnt := l;
+<                  EntityLanguage.interEnt := h;
+<                  EntityLanguage.mstEnt := K
+<                |}.
+< 
+< Arguments incomingEnt v%_list_scope _
+< Arguments incent v%_list_scope P l h K _
+17862c18170
+<        EntAuxDefs.incomingEnt v e'
+---
+>        EntityLanguage.incomingEnt v e'
+18228c18536
+<        NetAuxBasics.incomingNet v i n ->
+---
+>        NetworkLanguage.incomingNet v i n ->
+18235c18543
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+18261c18569
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+18263c18571
+<        NetAuxBasics.incomingNet
+---
+>        NetworkLanguage.incomingNet
+18273c18581
+<        NetAuxBasics.incomingNet
+---
+>        NetworkLanguage.incomingNet
+18283c18591
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+18285c18593
+<        NetAuxBasics.incomingNet
+---
+>        NetworkLanguage.incomingNet
+18295c18603
+<        NetAuxBasics.incomingNet
+---
+>        NetworkLanguage.incomingNet
+18305c18613
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+18331c18639
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+18344c18652
+<        NetAuxBasics.incomingNet
+---
+>        NetworkLanguage.incomingNet
+18354c18662
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+18367c18675
+<        NetAuxBasics.incomingNet
+---
+>        NetworkLanguage.incomingNet
+18450c18758
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18465,18466c18773,18774
+<        NetAuxBasics.incomingNetNotif v t i n ->
+<        NetAuxBasics.incomingNetNotif v
+---
+>        NetworkLanguage.incomingNetNotif v t i n ->
+>        NetworkLanguage.incomingNetNotif v
+18487c18795
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18511c18819
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18526c18834
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18531c18839
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18545c18853
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18550c18858
+<        NetAuxBasics.incomingNetNotif
+---
+>        NetworkLanguage.incomingNetNotif
+18683c18991
+<        NetAuxBasics.distNet i j n x ->
+---
+>        NetworkLanguage.distNet i j n x ->
+18831,18832c19139,19140
+<        NetAuxBasics.outgoing v GenBasics.zeroTime i n ->
+<        NetAuxBasics.outgoing v GenBasics.zeroTime i n' \/
+---
+>        NetworkLanguage.outgoing v GenBasics.zeroTime i n ->
+>        NetworkLanguage.outgoing v GenBasics.zeroTime i n' \/
+18934c19242
+<          NetAuxBasics.transGuard t' i n /\
+---
+>          NetworkLanguage.transGuard t' i n /\
+18957c19265
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+19035c19343
+<        NetAuxBasics.outgoing v GenBasics.zeroTime i n \/
+---
+>        NetworkLanguage.outgoing v GenBasics.zeroTime i n \/
+19052c19360
+<        NetAuxBasics.outgoing v
+---
+>        NetworkLanguage.outgoing v
+19067c19375
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+19240c19548
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+19330c19638
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+19428c19736
+<        NetAuxBasics.inPosNet l i n ->
+---
+>        NetworkLanguage.inPosNet l i n ->
+19459c19767
+< == ComhCoq.protocol.NetAuxBasics (135 names)
+---
+> == ComhCoq.protocol.NetAuxBasics (106 names)
+19462c19770
+< liftEntNet EntAuxDefs.badOvlpStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.badOvlpStateEnt
+19473c19781
+< liftEntNet (EntAuxDefs.bcReadyStateEnt m l)
+---
+> NetworkLanguage.liftEntNet (EntAuxDefs.bcReadyStateEnt m l)
+19487c19795
+< liftEntNet (EntAuxDefs.bcWaitStateEnt m x)
+---
+> NetworkLanguage.liftEntNet (EntAuxDefs.bcWaitStateEnt m x)
+19493c19801
+< liftEntNet EntAuxDefs.broadcastStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.broadcastStateEnt
+19499c19807
+< liftEntNet (EntAuxDefs.currCompStateEnt m'' r)
+---
+> NetworkLanguage.liftEntNet (EntAuxDefs.currCompStateEnt m'' r)
+19505c19813,19814
+< fun m m'' : ComhBasics.Mode => liftEntNet (EntAuxDefs.currEqStateEnt m m'')
+---
+> fun m m'' : ComhBasics.Mode =>
+> NetworkLanguage.liftEntNet (EntAuxDefs.currEqStateEnt m m'')
+19547,19561d19855
+< del_link_distNet_bkwd
+<      : forall (n n' : NetworkLanguage.Network) (d : GenBasics.Delay)
+<          (i j : nat) (x' : GenBasics.Distance),
+<        NetworkLanguage.stepTimedNet n d n' ->
+<        distNet i j n' x' ->
+<        exists x : GenBasics.Distance,
+<          distNet i j n x /\
+<          Rdefinitions.Rle (RIneq.nonneg (GenBasics.distance x))
+<            (Rdefinitions.RbaseSymbolsImpl.Rplus
+<               (RIneq.nonneg (GenBasics.distance x'))
+<               (Rdefinitions.RbaseSymbolsImpl.Rmult
+<                  (Rdefinitions.RbaseSymbolsImpl.Rmult
+<                     (Rdefinitions.IZR (BinInt.Z.pos (BinNums.xO BinNums.xH)))
+<                     (RIneq.nonneg ComhBasics.speedMax))
+<                  (RIneq.pos (GenBasics.delay d))))
+19578,19616d19871
+< disc_pres_distNet_bkwd
+<      : forall (n n' : NetworkLanguage.Network)
+<          (a : NetworkLanguage.ActDiscNet) (i j : nat)
+<          (x : GenBasics.Distance),
+<        NetworkLanguage.stepDiscNet n a n' ->
+<        distNet i j n' x -> distNet i j n x
+< Inductive
+< distNet (i i' : nat) (n : NetworkLanguage.Network)
+<   : GenBasics.Distance -> Prop :=
+<     dnWitness : forall l l' : StandardResults.Position,
+<                 inPosNet l i n ->
+<                 inPosNet l' i' n -> distNet i i' n (GenBasics.distFun l l').
+< 
+< Arguments distNet (i i')%_nat_scope n _
+< Arguments dnWitness (i i')%_nat_scope n l l' _ _
+< distNet_elim
+<      : forall (i j : nat) (n : NetworkLanguage.Network)
+<          (x : GenBasics.Distance),
+<        distNet i j n x ->
+<        exists e1 e2 : EntityLanguage.Entity,
+<          NetworkLanguage.entInNet e1 i n /\
+<          NetworkLanguage.entInNet e2 j n /\
+<          x =
+<          {|
+<            GenBasics.distance :=
+<              StandardResults.dist2d (EntityLanguage.posEnt e1)
+<                (EntityLanguage.posEnt e2)
+<          |}
+< distNet_intro
+<      : forall (e1 e2 : EntityLanguage.Entity) (i j : nat)
+<          (n : NetworkLanguage.Network) (x : GenBasics.Distance),
+<        NetworkLanguage.entInNet e1 i n ->
+<        NetworkLanguage.entInNet e2 j n ->
+<        x =
+<        {|
+<          GenBasics.distance :=
+<            StandardResults.dist2d (EntityLanguage.posEnt e1)
+<              (EntityLanguage.posEnt e2)
+<        |} -> distNet i j n x
+19618c19873
+< liftEntNet EntAuxDefs.dormantStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.dormantStateEnt
+19622,19649d19876
+< Inductive
+< inPosNet (l : StandardResults.Position) (i : nat)
+< (n : NetworkLanguage.Network) : Prop :=
+<     ipWitness : forall (p : SoftwareLanguage.ProcTerm)
+<                   (h : InterfaceLanguage.Interface)
+<                   (k : ModeStateLanguage.ModeState),
+<                 NetworkLanguage.entInNet
+<                   {|
+<                     EntityLanguage.procEnt := p;
+<                     EntityLanguage.posEnt := l;
+<                     EntityLanguage.interEnt := h;
+<                     EntityLanguage.mstEnt := k
+<                   |} i n ->
+<                 inPosNet l i n.
+< 
+< Arguments inPosNet l i%_nat_scope n
+< Arguments ipWitness l i%_nat_scope n p h k _
+< inPos_del_bound_bkwd
+<      : forall (n n' : NetworkLanguage.Network) (d : GenBasics.Delay)
+<          (l' : StandardResults.Position) (i : nat),
+<        inPosNet l' i n' ->
+<        NetworkLanguage.stepTimedNet n d n' ->
+<        exists l : StandardResults.Position,
+<          inPosNet l i n /\
+<          Rdefinitions.Rle (RIneq.nonneg (StandardResults.dist2d l l'))
+<            (Rdefinitions.RbaseSymbolsImpl.Rmult
+<               (RIneq.nonneg ComhBasics.speedMax)
+<               (RIneq.pos (GenBasics.delay d)))
+19654,19761c19881
+<        NetworkLanguage.entInNet e i n -> inPosNet l i n
+< inPos_ex
+<      : forall (i : nat) (n : NetworkLanguage.Network)
+<          (e : EntityLanguage.Entity),
+<        NetworkLanguage.entInNet e i n ->
+<        exists l : StandardResults.Position, inPosNet l i n
+< inPos_pos
+<      : forall (e : EntityLanguage.Entity) (i : nat)
+<          (l : StandardResults.Position) (n : NetworkLanguage.Network),
+<        NetworkLanguage.entInNet e i n ->
+<        inPosNet l i n -> EntityLanguage.posEnt e = l
+< inPos_pres_disc
+<      : forall (n n' : NetworkLanguage.Network)
+<          (a : NetworkLanguage.ActDiscNet) (l : StandardResults.Position)
+<          (i : nat),
+<        NetworkLanguage.stepDiscNet n a n' ->
+<        inPosNet l i n <-> inPosNet l i n'
+< inPos_unique
+<      : forall (l l' : StandardResults.Position) (i : nat)
+<          (n : NetworkLanguage.Network),
+<        inPosNet l i n -> inPosNet l' i n -> l = l'
+< inRange_out_input
+<      : forall (n n' : NetworkLanguage.Network)
+<          (v : list LanguageFoundations.BaseType)
+<          (l : StandardResults.Position) (r x : GenBasics.Distance)
+<          (i j : nat) (e : EntityLanguage.Entity),
+<        NetworkLanguage.stepDiscNet n
+<          (NetworkLanguage.anOut
+<             {|
+<               EntityLanguage.msgPayload := v;
+<               EntityLanguage.msgPos := l;
+<               EntityLanguage.msgCoverage := r
+<             |} i)
+<          n' ->
+<        NetworkLanguage.entInNet e j n ->
+<        i <> j ->
+<        distNet i j n' x ->
+<        Rdefinitions.Rle (RIneq.nonneg (GenBasics.distance x))
+<          (RIneq.nonneg (GenBasics.distance r)) ->
+<        exists e' : EntityLanguage.Entity,
+<          EntityLanguage.stepDiscEnt e
+<            (EntityLanguage.aeTagIn
+<               {|
+<                 EntityLanguage.msgPayload := v;
+<                 EntityLanguage.msgPos := l;
+<                 EntityLanguage.msgCoverage := r
+<               |})
+<            e' /\
+<          NetworkLanguage.entInNet e' j n'
+< Inductive
+< incomingNet (v : list LanguageFoundations.BaseType) 
+< (i : nat) (n : NetworkLanguage.Network) : Prop :=
+<     icWitness : forall (p : SoftwareLanguage.ProcTerm)
+<                   (l : StandardResults.Position)
+<                   (li : InterfaceLanguage.InputList)
+<                   (lo : InterfaceLanguage.OutputList)
+<                   (ln : InterfaceLanguage.NotifList)
+<                   (k : ModeStateLanguage.ModeState),
+<                 NetworkLanguage.entInNet
+<                   {|
+<                     EntityLanguage.procEnt := p;
+<                     EntityLanguage.posEnt := l;
+<                     EntityLanguage.interEnt :=
+<                       {|
+<                         InterfaceLanguage.li := li;
+<                         InterfaceLanguage.lo := lo;
+<                         InterfaceLanguage.ln := ln
+<                       |};
+<                     EntityLanguage.mstEnt := k
+<                   |} i n ->
+<                 List.In
+<                   {|
+<                     InterfaceLanguage.msg := v;
+<                     InterfaceLanguage.stamp := GenBasics.zeroTime
+<                   |} (InterfaceLanguage.inList li) ->
+<                 incomingNet v i n.
+< 
+< Arguments incomingNet v%_list_scope i%_nat_scope n
+< Arguments icWitness v%_list_scope i%_nat_scope n p l li lo ln k _ _
+< Inductive
+< incomingNetNotif (v : list LanguageFoundations.BaseType) 
+< (t : GenBasics.Time) (i : nat) (n : NetworkLanguage.Network) : Prop :=
+<     icnWitness : forall (p : SoftwareLanguage.ProcTerm)
+<                    (l : StandardResults.Position)
+<                    (li : InterfaceLanguage.InputList)
+<                    (lo : InterfaceLanguage.OutputList)
+<                    (ln : InterfaceLanguage.NotifList)
+<                    (k : ModeStateLanguage.ModeState),
+<                  NetworkLanguage.entInNet
+<                    {|
+<                      EntityLanguage.procEnt := p;
+<                      EntityLanguage.posEnt := l;
+<                      EntityLanguage.interEnt :=
+<                        {|
+<                          InterfaceLanguage.li := li;
+<                          InterfaceLanguage.lo := lo;
+<                          InterfaceLanguage.ln := ln
+<                        |};
+<                      EntityLanguage.mstEnt := k
+<                    |} i n ->
+<                  List.In
+<                    {|
+<                      InterfaceLanguage.msg := v; InterfaceLanguage.stamp := t
+<                    |} (InterfaceLanguage.notifList ln) ->
+<                  incomingNetNotif v t i n.
+< 
+< Arguments incomingNetNotif v%_list_scope t i%_nat_scope n
+< Arguments icnWitness v%_list_scope t i%_nat_scope n p l li lo ln k _ _
+---
+>        NetworkLanguage.entInNet e i n -> NetworkLanguage.inPosNet l i n
+19768c19888
+<        incomingNetNotif v t i n ->
+---
+>        NetworkLanguage.incomingNetNotif v t i n ->
+19773c19893
+<        | incomingNetNotif v
+---
+>        | NetworkLanguage.incomingNetNotif v
+19777,19797d19896
+< incomingNetNotif_disc_pres
+<      : forall (n n' : NetworkLanguage.Network)
+<          (a : NetworkLanguage.ActDiscNet)
+<          (v : list LanguageFoundations.BaseType) (t : GenBasics.Time)
+<          (i : nat),
+<        NetworkLanguage.stepDiscNet n a n' ->
+<        incomingNetNotif v t i n ->
+<        Rdefinitions.RbaseSymbolsImpl.Rlt (Rdefinitions.IZR BinNums.Z0)
+<          (RIneq.nonneg (GenBasics.time t)) ->
+<        incomingNetNotif v t i n'
+< incoming_ent_net
+<      : forall (v : list LanguageFoundations.BaseType)
+<          (e : EntityLanguage.Entity) (i : nat) (n : NetworkLanguage.Network),
+<        EntAuxDefs.incomingEnt v e ->
+<        NetworkLanguage.entInNet e i n -> incomingNet v i n
+< incoming_net_ent
+<      : forall (v : list LanguageFoundations.BaseType) 
+<          (i : nat) (n : NetworkLanguage.Network),
+<        incomingNet v i n ->
+<        exists e : EntityLanguage.Entity,
+<          EntAuxDefs.incomingEnt v e /\ NetworkLanguage.entInNet e i n
+19799c19898,19899
+< fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.initStateEnt m)
+---
+> fun m : ComhBasics.Mode =>
+> NetworkLanguage.liftEntNet (EntAuxDefs.initStateEnt m)
+19843,19850d19942
+< Inductive
+< liftEntNet (X : EntityLanguage.Entity -> Prop) (i : nat)
+< (n : NetworkLanguage.Network) : Prop :=
+<     lenWitness : forall e : EntityLanguage.Entity,
+<                  X e -> NetworkLanguage.entInNet e i n -> liftEntNet X i n.
+< 
+< Arguments liftEntNet X%_function_scope i%_nat_scope n
+< Arguments lenWitness X%_function_scope i%_nat_scope n e _ _
+19865c19957
+< liftEntNet EntAuxDefs.listenerStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.listenerStateEnt
+19870c19962
+< liftEntNet EntAuxDefs.listeningStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.listeningStateEnt
+19874,19900d19965
+< mState_disc_pres
+<      : forall (n n' : NetworkLanguage.Network) (i : nat)
+<          (a : NetworkLanguage.ActDiscNet) (k : ModeStateLanguage.ModeState),
+<        NetworkLanguage.stepDiscNet n a n' ->
+<        mState_in_net k i n ->
+<        exists k' : ModeStateLanguage.ModeState, mState_in_net k' i n'
+< Inductive
+< mState_in_net (k : ModeStateLanguage.ModeState) (i : nat)
+< (n : NetworkLanguage.Network) : Prop :=
+<     minet : forall (p : SoftwareLanguage.ProcTerm)
+<               (l : StandardResults.Position)
+<               (h : InterfaceLanguage.Interface),
+<             NetworkLanguage.entInNet
+<               {|
+<                 EntityLanguage.procEnt := p;
+<                 EntityLanguage.posEnt := l;
+<                 EntityLanguage.interEnt := h;
+<                 EntityLanguage.mstEnt := k
+<               |} i n ->
+<             mState_in_net k i n.
+< 
+< Arguments mState_in_net k i%_nat_scope n
+< Arguments minet k i%_nat_scope n p l h _
+< mState_in_net_unique
+<      : forall (k k' : ModeStateLanguage.ModeState) 
+<          (i : nat) (n : NetworkLanguage.Network),
+<        mState_in_net k i n -> mState_in_net k' i n -> k = k'
+19908,19909c19973,19974
+<        mState_in_net k i n ->
+<        mState_in_net k' i n' ->
+---
+>        NetworkLanguage.mState_in_net k i n ->
+>        NetworkLanguage.mState_in_net k' i n' ->
+19943c20008
+< liftEntNet EntAuxDefs.nextSinceStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.nextSinceStateEnt
+19956,20026d20020
+< outNet_incomingNetNotif
+<      : forall (n n' : NetworkLanguage.Network)
+<          (v : list LanguageFoundations.BaseType) (r : GenBasics.Distance)
+<          (l : StandardResults.Position) (i : nat),
+<        NetworkLanguage.stepDiscNet n
+<          (NetworkLanguage.anOut
+<             {|
+<               EntityLanguage.msgPayload := v;
+<               EntityLanguage.msgPos := l;
+<               EntityLanguage.msgCoverage := r
+<             |} i)
+<          n' ->
+<        incomingNetNotif (LanguageFoundations.baseDistance r :: v)
+<          ComhBasics.adaptNotif i n'
+< Inductive
+< outgoing (v : list LanguageFoundations.BaseType) (t : GenBasics.Time)
+< (i : nat) (n : NetworkLanguage.Network) : Prop :=
+<     ogWitness : forall (p : SoftwareLanguage.ProcTerm)
+<                   (l : StandardResults.Position)
+<                   (li : InterfaceLanguage.InputList)
+<                   (lo : InterfaceLanguage.OutputList)
+<                   (ln : InterfaceLanguage.NotifList)
+<                   (k : ModeStateLanguage.ModeState),
+<                 NetworkLanguage.entInNet
+<                   {|
+<                     EntityLanguage.procEnt := p;
+<                     EntityLanguage.posEnt := l;
+<                     EntityLanguage.interEnt :=
+<                       {|
+<                         InterfaceLanguage.li := li;
+<                         InterfaceLanguage.lo := lo;
+<                         InterfaceLanguage.ln := ln
+<                       |};
+<                     EntityLanguage.mstEnt := k
+<                   |} i n ->
+<                 List.In
+<                   {|
+<                     InterfaceLanguage.msg := v; InterfaceLanguage.stamp := t
+<                   |} (InterfaceLanguage.outList lo) ->
+<                 outgoing v t i n.
+< 
+< Arguments outgoing v%_list_scope t i%_nat_scope n
+< Arguments ogWitness v%_list_scope t i%_nat_scope n p l li lo ln k _ _
+< outgoing_del
+<      : forall (n n' : NetworkLanguage.Network) (d : GenBasics.Delay)
+<          (v : list LanguageFoundations.BaseType) (t : GenBasics.Time)
+<          (i : nat),
+<        NetworkLanguage.stepTimedNet n d n' ->
+<        outgoing v t i n ->
+<        {p
+<        : Rdefinitions.Rle (RIneq.pos (GenBasics.delay d))
+<            (RIneq.nonneg (GenBasics.time t))
+<        | outgoing v
+<            (GenBasics.minusTime (RIneq.nonneg (GenBasics.time t))
+<               (RIneq.pos (GenBasics.delay d)) p)
+<            i n'}
+< outgoing_del_contra
+<      : forall (n n' : NetworkLanguage.Network) (d : GenBasics.Delay)
+<          (v : list LanguageFoundations.BaseType) (i : nat),
+<        NetworkLanguage.stepTimedNet n d n' ->
+<        outgoing v GenBasics.zeroTime i n -> False
+< outgoing_disc_pres
+<      : forall (n n' : NetworkLanguage.Network)
+<          (a : NetworkLanguage.ActDiscNet)
+<          (v : list LanguageFoundations.BaseType) (t : GenBasics.Time)
+<          (i : nat),
+<        NetworkLanguage.stepDiscNet n a n' ->
+<        outgoing v t i n ->
+<        Rdefinitions.RbaseSymbolsImpl.Rlt (Rdefinitions.IZR BinNums.Z0)
+<          (RIneq.nonneg (GenBasics.time t)) ->
+<        outgoing v t i n'
+20028c20022
+< liftEntNet EntAuxDefs.ovAbortStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.ovAbortStateEnt
+20034c20028
+< liftEntNet (EntAuxDefs.ovReadyStateEnt m t l)
+---
+> NetworkLanguage.liftEntNet (EntAuxDefs.ovReadyStateEnt m t l)
+20081c20075
+< liftEntNet (EntAuxDefs.ovWaitStateEnt m t x y)
+---
+> NetworkLanguage.liftEntNet (EntAuxDefs.ovWaitStateEnt m t x y)
+20142c20136
+< liftEntNet EntAuxDefs.overlapStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.overlapStateEnt
+20147c20141
+< liftEntNet EntAuxDefs.pausedStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.pausedStateEnt
+20155c20149,20150
+< fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.rangeBadStateEnt m)
+---
+> fun m : ComhBasics.Mode =>
+> NetworkLanguage.liftEntNet (EntAuxDefs.rangeBadStateEnt m)
+20200c20195
+< liftEntNet EntAuxDefs.sleepingStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.sleepingStateEnt
+20205c20200,20201
+< fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.switchBcStateEnt m)
+---
+> fun m : ComhBasics.Mode =>
+> NetworkLanguage.liftEntNet (EntAuxDefs.switchBcStateEnt m)
+20210c20206
+< liftEntNet EntAuxDefs.switchCurrStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.switchCurrStateEnt
+20270c20266
+< liftEntNet EntAuxDefs.switchListenStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.switchListenStateEnt
+20275c20271
+< liftEntNet EntAuxDefs.switchStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.switchStateEnt
+20286c20282
+< liftEntNet EntAuxDefs.tfsBcStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.tfsBcStateEnt
+20302c20298
+< liftEntNet EntAuxDefs.tfsCurrStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.tfsCurrStateEnt
+20315c20311
+<           mState_in_net
+---
+>           NetworkLanguage.mState_in_net
+20333c20329
+< liftEntNet EntAuxDefs.tfsListenStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.tfsListenStateEnt
+20350c20346,20347
+< fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.tfsNextStateEnt m)
+---
+> fun m : ComhBasics.Mode =>
+> NetworkLanguage.liftEntNet (EntAuxDefs.tfsNextStateEnt m)
+20378c20375
+< liftEntNet EntAuxDefs.tfsStartStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.tfsStartStateEnt
+20405c20402
+< liftEntNet EntAuxDefs.tfsStateEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.tfsStateEnt
+20430,20448d20426
+< Inductive
+< transGuard (t : GenBasics.Time) (i : nat) (n : NetworkLanguage.Network)
+<   : Prop :=
+<     tgWitness : forall (p : SoftwareLanguage.ProcTerm)
+<                   (l : StandardResults.Position)
+<                   (h : InterfaceLanguage.Interface) 
+<                   (m m' : ComhBasics.Mode),
+<                 NetworkLanguage.entInNet
+<                   {|
+<                     EntityLanguage.procEnt := p;
+<                     EntityLanguage.posEnt := l;
+<                     EntityLanguage.interEnt := h;
+<                     EntityLanguage.mstEnt :=
+<                       ModeStateLanguage.transState m m' t
+<                   |} i n ->
+<                 transGuard t i n.
+< 
+< Arguments transGuard t i%_nat_scope n
+< Arguments tgWitness t i%_nat_scope n p l h m m' _
+20453c20431
+<        transGuard t i n ->
+---
+>        NetworkLanguage.transGuard t i n ->
+20457c20435
+<          transGuard
+---
+>          NetworkLanguage.transGuard
+20466,20476c20444
+<        transGuard t i n -> transGuard t i n'
+< transGuard_elim
+<      : forall (t : GenBasics.Time) (i : nat) (n : NetworkLanguage.Network),
+<        transGuard t i n ->
+<        exists m m' : ComhBasics.Mode,
+<          mState_in_net (ModeStateLanguage.transState m m' t) i n
+< transGuard_intro
+<      : forall (t : GenBasics.Time) (i : nat) (n : NetworkLanguage.Network)
+<          (m m' : ComhBasics.Mode),
+<        mState_in_net (ModeStateLanguage.transState m m' t) i n ->
+<        transGuard t i n
+---
+>        NetworkLanguage.transGuard t i n -> NetworkLanguage.transGuard t i n'
+20550c20518
+< NetAuxBasics.liftEntNet EntAuxDefs.msgAbortPathEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.msgAbortPathEnt
+20559c20527
+<        NetAuxBasics.mState_in_net k i n ->
+---
+>        NetworkLanguage.mState_in_net k i n ->
+20561c20529
+<        NetAuxBasics.mState_in_net k i n'
+---
+>        NetworkLanguage.mState_in_net k i n'
+20563c20531
+< NetAuxBasics.liftEntNet EntAuxDefs.msgBadPathEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.msgBadPathEnt
+20572c20540
+<        NetAuxBasics.mState_in_net k i n ->
+---
+>        NetworkLanguage.mState_in_net k i n ->
+20574c20542
+<        NetAuxBasics.mState_in_net k i n'
+---
+>        NetworkLanguage.mState_in_net k i n'
+20613c20581
+< NetAuxBasics.liftEntNet EntAuxDefs.notifAbortPathEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.notifAbortPathEnt
+20622c20590
+<        NetAuxBasics.mState_in_net k i n ->
+---
+>        NetworkLanguage.mState_in_net k i n ->
+20624c20592
+<        NetAuxBasics.mState_in_net k i n'
+---
+>        NetworkLanguage.mState_in_net k i n'
+20626c20594
+< NetAuxBasics.liftEntNet EntAuxDefs.notifBadPathEnt
+---
+> NetworkLanguage.liftEntNet EntAuxDefs.notifBadPathEnt
+20635c20603
+<        NetAuxBasics.mState_in_net k i n ->
+---
+>        NetworkLanguage.mState_in_net k i n ->
+20637c20605
+<        NetAuxBasics.mState_in_net k i n'
+---
+>        NetworkLanguage.mState_in_net k i n'
