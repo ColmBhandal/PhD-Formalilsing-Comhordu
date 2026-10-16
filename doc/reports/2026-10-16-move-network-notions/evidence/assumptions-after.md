@@ -9,7 +9,7 @@
 | Model axioms (ComhBasics, deliberate) | 25 |
 | Standard-library axioms | 6 |
 
-Whole codebase: **120** `Admitted`, **12** `Conjecture`.
+Whole codebase: **119** `Admitted`, **12** `Conjecture`.
 
 <details><summary>Unproved lemmas under safety, by file</summary>
 

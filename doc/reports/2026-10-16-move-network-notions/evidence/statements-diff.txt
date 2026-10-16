@@ -379,168 +379,209 @@
 < 
 < Arguments incomingEnt v%_list_scope _
 < Arguments incent v%_list_scope P l h K _
-17862c18170
+17628c17936
+< == ComhCoq.protocol.EntAuxResults (55 names)
+---
+> == ComhCoq.protocol.EntAuxResults (54 names)
+17862,17899c18170
 <        EntAuxDefs.incomingEnt v e'
+< link_ent_outList
+<      : forall (p p' : SoftwareLanguage.ProcTerm)
+<          (l l' : StandardResults.Position)
+<          (k k' : ModeStateLanguage.ModeState)
+<          (li li' : InterfaceLanguage.InputList)
+<          (lo lo' : InterfaceLanguage.OutputList)
+<          (ln ln' : InterfaceLanguage.NotifList)
+<          (b : EntityLanguage.ActDiscEnt),
+<        EntityLanguage.stepDiscEnt
+<          {|
+<            EntityLanguage.procEnt := p;
+<            EntityLanguage.posEnt := l;
+<            EntityLanguage.interEnt :=
+<              {|
+<                InterfaceLanguage.li := li;
+<                InterfaceLanguage.lo := lo;
+<                InterfaceLanguage.ln := ln
+<              |};
+<            EntityLanguage.mstEnt := k
+<          |} b
+<          {|
+<            EntityLanguage.procEnt := p';
+<            EntityLanguage.posEnt := l';
+<            EntityLanguage.interEnt :=
+<              {|
+<                InterfaceLanguage.li := li';
+<                InterfaceLanguage.lo := lo';
+<                InterfaceLanguage.ln := ln'
+<              |};
+<            EntityLanguage.mstEnt := k'
+<          |} ->
+<        lo = lo' \/
+<        (exists v : list LanguageFoundations.BaseType,
+<           InterfaceLanguage.stepTimedList (InterfaceLanguage.outList lo)
+<             (InterfaceLanguage.atlIn v) (InterfaceLanguage.outList lo') \/
+<           InterfaceLanguage.stepTimedList (InterfaceLanguage.outList lo)
+<             (InterfaceLanguage.atlOut v) (InterfaceLanguage.outList lo'))
 ---
 >        EntityLanguage.incomingEnt v e'
-18228c18536
+18228c18499
 <        NetAuxBasics.incomingNet v i n ->
 ---
 >        NetworkLanguage.incomingNet v i n ->
-18235c18543
+18235c18506
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-18261c18569
+18261c18532
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-18263c18571
+18263c18534
 <        NetAuxBasics.incomingNet
 ---
 >        NetworkLanguage.incomingNet
-18273c18581
+18273c18544
 <        NetAuxBasics.incomingNet
 ---
 >        NetworkLanguage.incomingNet
-18283c18591
+18283c18554
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-18285c18593
+18285c18556
 <        NetAuxBasics.incomingNet
 ---
 >        NetworkLanguage.incomingNet
-18295c18603
+18295c18566
 <        NetAuxBasics.incomingNet
 ---
 >        NetworkLanguage.incomingNet
-18305c18613
+18305c18576
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-18331c18639
+18331c18602
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-18344c18652
+18344c18615
 <        NetAuxBasics.incomingNet
 ---
 >        NetworkLanguage.incomingNet
-18354c18662
+18354c18625
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-18367c18675
+18367c18638
 <        NetAuxBasics.incomingNet
 ---
 >        NetworkLanguage.incomingNet
-18450c18758
+18450c18721
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18465,18466c18773,18774
+18465,18466c18736,18737
 <        NetAuxBasics.incomingNetNotif v t i n ->
 <        NetAuxBasics.incomingNetNotif v
 ---
 >        NetworkLanguage.incomingNetNotif v t i n ->
 >        NetworkLanguage.incomingNetNotif v
-18487c18795
+18487c18758
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18511c18819
+18511c18782
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18526c18834
+18526c18797
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18531c18839
+18531c18802
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18545c18853
+18545c18816
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18550c18858
+18550c18821
 <        NetAuxBasics.incomingNetNotif
 ---
 >        NetworkLanguage.incomingNetNotif
-18683c18991
+18683c18954
 <        NetAuxBasics.distNet i j n x ->
 ---
 >        NetworkLanguage.distNet i j n x ->
-18831,18832c19139,19140
+18831,18832c19102,19103
 <        NetAuxBasics.outgoing v GenBasics.zeroTime i n ->
 <        NetAuxBasics.outgoing v GenBasics.zeroTime i n' \/
 ---
 >        NetworkLanguage.outgoing v GenBasics.zeroTime i n ->
 >        NetworkLanguage.outgoing v GenBasics.zeroTime i n' \/
-18934c19242
+18934c19205
 <          NetAuxBasics.transGuard t' i n /\
 ---
 >          NetworkLanguage.transGuard t' i n /\
-18957c19265
+18957c19228
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-19035c19343
+19035c19306
 <        NetAuxBasics.outgoing v GenBasics.zeroTime i n \/
 ---
 >        NetworkLanguage.outgoing v GenBasics.zeroTime i n \/
-19052c19360
+19052c19323
 <        NetAuxBasics.outgoing v
 ---
 >        NetworkLanguage.outgoing v
-19067c19375
+19067c19338
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-19240c19548
+19240c19511
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-19330c19638
+19330c19601
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-19428c19736
+19428c19699
 <        NetAuxBasics.inPosNet l i n ->
 ---
 >        NetworkLanguage.inPosNet l i n ->
-19459c19767
+19459c19730
 < == ComhCoq.protocol.NetAuxBasics (135 names)
 ---
 > == ComhCoq.protocol.NetAuxBasics (106 names)
-19462c19770
+19462c19733
 < liftEntNet EntAuxDefs.badOvlpStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.badOvlpStateEnt
-19473c19781
+19473c19744
 < liftEntNet (EntAuxDefs.bcReadyStateEnt m l)
 ---
 > NetworkLanguage.liftEntNet (EntAuxDefs.bcReadyStateEnt m l)
-19487c19795
+19487c19758
 < liftEntNet (EntAuxDefs.bcWaitStateEnt m x)
 ---
 > NetworkLanguage.liftEntNet (EntAuxDefs.bcWaitStateEnt m x)
-19493c19801
+19493c19764
 < liftEntNet EntAuxDefs.broadcastStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.broadcastStateEnt
-19499c19807
+19499c19770
 < liftEntNet (EntAuxDefs.currCompStateEnt m'' r)
 ---
 > NetworkLanguage.liftEntNet (EntAuxDefs.currCompStateEnt m'' r)
-19505c19813,19814
+19505c19776,19777
 < fun m m'' : ComhBasics.Mode => liftEntNet (EntAuxDefs.currEqStateEnt m m'')
 ---
 > fun m m'' : ComhBasics.Mode =>
 > NetworkLanguage.liftEntNet (EntAuxDefs.currEqStateEnt m m'')
-19547,19561d19855
+19547,19561d19818
 < del_link_distNet_bkwd
 <      : forall (n n' : NetworkLanguage.Network) (d : GenBasics.Delay)
 <          (i j : nat) (x' : GenBasics.Distance),
@@ -556,7 +597,7 @@
 <                     (Rdefinitions.IZR (BinInt.Z.pos (BinNums.xO BinNums.xH)))
 <                     (RIneq.nonneg ComhBasics.speedMax))
 <                  (RIneq.pos (GenBasics.delay d))))
-19578,19616d19871
+19578,19616d19834
 < disc_pres_distNet_bkwd
 <      : forall (n n' : NetworkLanguage.Network)
 <          (a : NetworkLanguage.ActDiscNet) (i j : nat)
@@ -596,11 +637,11 @@
 <            StandardResults.dist2d (EntityLanguage.posEnt e1)
 <              (EntityLanguage.posEnt e2)
 <        |} -> distNet i j n x
-19618c19873
+19618c19836
 < liftEntNet EntAuxDefs.dormantStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.dormantStateEnt
-19622,19649d19876
+19622,19649d19839
 < Inductive
 < inPosNet (l : StandardResults.Position) (i : nat)
 < (n : NetworkLanguage.Network) : Prop :=
@@ -629,7 +670,7 @@
 <            (Rdefinitions.RbaseSymbolsImpl.Rmult
 <               (RIneq.nonneg ComhBasics.speedMax)
 <               (RIneq.pos (GenBasics.delay d)))
-19654,19761c19881
+19654,19761c19844
 <        NetworkLanguage.entInNet e i n -> inPosNet l i n
 < inPos_ex
 <      : forall (i : nat) (n : NetworkLanguage.Network)
@@ -740,15 +781,15 @@
 < Arguments icnWitness v%_list_scope t i%_nat_scope n p l li lo ln k _ _
 ---
 >        NetworkLanguage.entInNet e i n -> NetworkLanguage.inPosNet l i n
-19768c19888
+19768c19851
 <        incomingNetNotif v t i n ->
 ---
 >        NetworkLanguage.incomingNetNotif v t i n ->
-19773c19893
+19773c19856
 <        | incomingNetNotif v
 ---
 >        | NetworkLanguage.incomingNetNotif v
-19777,19797d19896
+19777,19797d19859
 < incomingNetNotif_disc_pres
 <      : forall (n n' : NetworkLanguage.Network)
 <          (a : NetworkLanguage.ActDiscNet)
@@ -770,12 +811,12 @@
 <        incomingNet v i n ->
 <        exists e : EntityLanguage.Entity,
 <          EntAuxDefs.incomingEnt v e /\ NetworkLanguage.entInNet e i n
-19799c19898,19899
+19799c19861,19862
 < fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.initStateEnt m)
 ---
 > fun m : ComhBasics.Mode =>
 > NetworkLanguage.liftEntNet (EntAuxDefs.initStateEnt m)
-19843,19850d19942
+19843,19850d19905
 < Inductive
 < liftEntNet (X : EntityLanguage.Entity -> Prop) (i : nat)
 < (n : NetworkLanguage.Network) : Prop :=
@@ -784,15 +825,15 @@
 < 
 < Arguments liftEntNet X%_function_scope i%_nat_scope n
 < Arguments lenWitness X%_function_scope i%_nat_scope n e _ _
-19865c19957
+19865c19920
 < liftEntNet EntAuxDefs.listenerStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.listenerStateEnt
-19870c19962
+19870c19925
 < liftEntNet EntAuxDefs.listeningStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.listeningStateEnt
-19874,19900d19965
+19874,19900d19928
 < mState_disc_pres
 <      : forall (n n' : NetworkLanguage.Network) (i : nat)
 <          (a : NetworkLanguage.ActDiscNet) (k : ModeStateLanguage.ModeState),
@@ -820,17 +861,17 @@
 <      : forall (k k' : ModeStateLanguage.ModeState) 
 <          (i : nat) (n : NetworkLanguage.Network),
 <        mState_in_net k i n -> mState_in_net k' i n -> k = k'
-19908,19909c19973,19974
+19908,19909c19936,19937
 <        mState_in_net k i n ->
 <        mState_in_net k' i n' ->
 ---
 >        NetworkLanguage.mState_in_net k i n ->
 >        NetworkLanguage.mState_in_net k' i n' ->
-19943c20008
+19943c19971
 < liftEntNet EntAuxDefs.nextSinceStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.nextSinceStateEnt
-19956,20026d20020
+19956,20026d19983
 < outNet_incomingNetNotif
 <      : forall (n n' : NetworkLanguage.Network)
 <          (v : list LanguageFoundations.BaseType) (r : GenBasics.Distance)
@@ -902,82 +943,82 @@
 <        Rdefinitions.RbaseSymbolsImpl.Rlt (Rdefinitions.IZR BinNums.Z0)
 <          (RIneq.nonneg (GenBasics.time t)) ->
 <        outgoing v t i n'
-20028c20022
+20028c19985
 < liftEntNet EntAuxDefs.ovAbortStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.ovAbortStateEnt
-20034c20028
+20034c19991
 < liftEntNet (EntAuxDefs.ovReadyStateEnt m t l)
 ---
 > NetworkLanguage.liftEntNet (EntAuxDefs.ovReadyStateEnt m t l)
-20081c20075
+20081c20038
 < liftEntNet (EntAuxDefs.ovWaitStateEnt m t x y)
 ---
 > NetworkLanguage.liftEntNet (EntAuxDefs.ovWaitStateEnt m t x y)
-20142c20136
+20142c20099
 < liftEntNet EntAuxDefs.overlapStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.overlapStateEnt
-20147c20141
+20147c20104
 < liftEntNet EntAuxDefs.pausedStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.pausedStateEnt
-20155c20149,20150
+20155c20112,20113
 < fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.rangeBadStateEnt m)
 ---
 > fun m : ComhBasics.Mode =>
 > NetworkLanguage.liftEntNet (EntAuxDefs.rangeBadStateEnt m)
-20200c20195
+20200c20158
 < liftEntNet EntAuxDefs.sleepingStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.sleepingStateEnt
-20205c20200,20201
+20205c20163,20164
 < fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.switchBcStateEnt m)
 ---
 > fun m : ComhBasics.Mode =>
 > NetworkLanguage.liftEntNet (EntAuxDefs.switchBcStateEnt m)
-20210c20206
+20210c20169
 < liftEntNet EntAuxDefs.switchCurrStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.switchCurrStateEnt
-20270c20266
+20270c20229
 < liftEntNet EntAuxDefs.switchListenStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.switchListenStateEnt
-20275c20271
+20275c20234
 < liftEntNet EntAuxDefs.switchStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.switchStateEnt
-20286c20282
+20286c20245
 < liftEntNet EntAuxDefs.tfsBcStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.tfsBcStateEnt
-20302c20298
+20302c20261
 < liftEntNet EntAuxDefs.tfsCurrStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.tfsCurrStateEnt
-20315c20311
+20315c20274
 <           mState_in_net
 ---
 >           NetworkLanguage.mState_in_net
-20333c20329
+20333c20292
 < liftEntNet EntAuxDefs.tfsListenStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.tfsListenStateEnt
-20350c20346,20347
+20350c20309,20310
 < fun m : ComhBasics.Mode => liftEntNet (EntAuxDefs.tfsNextStateEnt m)
 ---
 > fun m : ComhBasics.Mode =>
 > NetworkLanguage.liftEntNet (EntAuxDefs.tfsNextStateEnt m)
-20378c20375
+20378c20338
 < liftEntNet EntAuxDefs.tfsStartStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.tfsStartStateEnt
-20405c20402
+20405c20365
 < liftEntNet EntAuxDefs.tfsStateEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.tfsStateEnt
-20430,20448d20426
+20430,20448d20389
 < Inductive
 < transGuard (t : GenBasics.Time) (i : nat) (n : NetworkLanguage.Network)
 <   : Prop :=
@@ -997,15 +1038,15 @@
 < 
 < Arguments transGuard t i%_nat_scope n
 < Arguments tgWitness t i%_nat_scope n p l h m m' _
-20453c20431
+20453c20394
 <        transGuard t i n ->
 ---
 >        NetworkLanguage.transGuard t i n ->
-20457c20435
+20457c20398
 <          transGuard
 ---
 >          NetworkLanguage.transGuard
-20466,20476c20444
+20466,20476c20407
 <        transGuard t i n -> transGuard t i n'
 < transGuard_elim
 <      : forall (t : GenBasics.Time) (i : nat) (n : NetworkLanguage.Network),
@@ -1019,51 +1060,51 @@
 <        transGuard t i n
 ---
 >        NetworkLanguage.transGuard t i n -> NetworkLanguage.transGuard t i n'
-20550c20518
+20550c20481
 < NetAuxBasics.liftEntNet EntAuxDefs.msgAbortPathEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.msgAbortPathEnt
-20559c20527
+20559c20490
 <        NetAuxBasics.mState_in_net k i n ->
 ---
 >        NetworkLanguage.mState_in_net k i n ->
-20561c20529
+20561c20492
 <        NetAuxBasics.mState_in_net k i n'
 ---
 >        NetworkLanguage.mState_in_net k i n'
-20563c20531
+20563c20494
 < NetAuxBasics.liftEntNet EntAuxDefs.msgBadPathEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.msgBadPathEnt
-20572c20540
+20572c20503
 <        NetAuxBasics.mState_in_net k i n ->
 ---
 >        NetworkLanguage.mState_in_net k i n ->
-20574c20542
+20574c20505
 <        NetAuxBasics.mState_in_net k i n'
 ---
 >        NetworkLanguage.mState_in_net k i n'
-20613c20581
+20613c20544
 < NetAuxBasics.liftEntNet EntAuxDefs.notifAbortPathEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.notifAbortPathEnt
-20622c20590
+20622c20553
 <        NetAuxBasics.mState_in_net k i n ->
 ---
 >        NetworkLanguage.mState_in_net k i n ->
-20624c20592
+20624c20555
 <        NetAuxBasics.mState_in_net k i n'
 ---
 >        NetworkLanguage.mState_in_net k i n'
-20626c20594
+20626c20557
 < NetAuxBasics.liftEntNet EntAuxDefs.notifBadPathEnt
 ---
 > NetworkLanguage.liftEntNet EntAuxDefs.notifBadPathEnt
-20635c20603
+20635c20566
 <        NetAuxBasics.mState_in_net k i n ->
 ---
 >        NetworkLanguage.mState_in_net k i n ->
-20637c20605
+20637c20568
 <        NetAuxBasics.mState_in_net k i n'
 ---
 >        NetworkLanguage.mState_in_net k i n'
