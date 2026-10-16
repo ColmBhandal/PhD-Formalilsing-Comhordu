@@ -22,6 +22,7 @@
 ## Toolchain and build
 
 - Use Rocq **9.2.0** with `rocq-stdlib`. Dependencies are declared in `rocq-comhordu.opam`. The reference environment is the Docker image `rocq/rocq-prover:9.2.0`, the same one CI uses.
+- If `rocq` isn't on the `PATH`, run `helper-scripts/install_rocq.sh` and then `export PATH=/home/rocq/.opam/4.14.2+flambda/bin:$PATH`. It unpacks the reference image's Rocq from Docker Hub, with no Docker daemon and no opam, which is the only route that works in a Claude Code cloud session (no daemon there, and opam's repository is blocked). Cloud sessions run it before they start, through `.claude/hooks/session-start.sh`; check `rocq --version` before assuming it hasn't.
 - `make` builds everything (`_CoqProject` → `rocq makefile` → `Makefile.coq`).
 - `make assumptions` prints what `safety` still rests on.
 - `make clean` removes build products.

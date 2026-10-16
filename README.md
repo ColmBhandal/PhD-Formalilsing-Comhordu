@@ -31,6 +31,8 @@ Project documentation lives under [`doc/`](doc):
 
    ``docker run --rm -it -v "$PWD:/work" -w /work --user root -e OPAMROOT=/home/rocq/.opam -e PATH=/home/rocq/.opam/4.14.2+flambda/bin:/usr/local/bin:/usr/bin:/bin rocq/rocq-prover:9.2.0 make``
 
+ - **Neither:** `helper-scripts/install_rocq.sh` downloads that image's layers straight from Docker Hub and unpacks its Rocq to `/home/rocq/.opam/4.14.2+flambda`, the path it has in the image. It needs root, `curl`, `tar` and `python3`, and about 2 GB of disk. Then `export PATH=/home/rocq/.opam/4.14.2+flambda/bin:$PATH`. This is what Claude Code cloud sessions use, through the [session-start hook](.claude/hooks/session-start.sh), since they have no Docker daemon and can't reach opam's repository.
+
 ### Local Build
 
 From the repository root, run:
