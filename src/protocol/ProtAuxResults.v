@@ -966,18 +966,68 @@ Qed.
 (*Proof: lift delay preservation results in a similar fashion to del_pres_nextSinceState*)
 
 (****************** Linking ******************)
+(** The protocol's software is a triple of components. The language's results about the
+n-ary composition parAll apply to it once the triple is written as parAll p1 [p2, p3], and
+one tactic, triple_pos, turns the positions those results speak of back into the three
+components. The tactics after it rebuild the triple-shaped facts the proofs below use.*)
+
+(** Writes every triple of components in H as an n-ary composition.*)
+Ltac triple_parAll H :=
+  repeat match type of H with context [?p1 $||$ ?p2 $||$ ?p3] =>
+    change (p1 $||$ p2 $||$ p3) with (parAll p1 [p2, p3]) in H end.
+
+(** Turns a position in the three components into the named component: inverts the stepAt
+and Forall2 facts an n-ary result gives on the three-element lists, computes the triple a
+derived composition is, and closes the cases where two positions meant to differ coincide.*)
+Ltac triple_pos :=
+  positions_inv;
+  repeat match goal with [E : _ = parAll _ _ |- _] =>
+    cbn [parAll] in E; inversion E; subst; clear E end;
+  try match goal with [N : ?x <> ?x |- _] => exfalso; exact (N eq_refl) end.
+
+(** Inverts a discrete step H of a triple into its cases: one component steps, or two
+synchronise.*)
+Ltac triple_disc_inv H :=
+  triple_parAll H; apply parAll_disc_inv in H;
+  destruct H as [? [? [? [[? H] | [? [? [? [? [? [? [? [H ?]]]]]]]]]]]]; triple_pos.
+
+(** Inverts a step H of a triple on an action other than tau: exactly one component steps.*)
+Ltac triple_disc_nonTau H :=
+  triple_parAll H; apply parAll_disc_nonTau in H; [ | discriminate];
+  destruct H as [? [? [? [? H]]]]; triple_pos.
+
+(** From a discrete step H of a triple, each component is unchanged or steps.*)
+Ltac triple_disc_weak H :=
+  triple_parAll H; apply parAll_disc_weak in H;
+  destruct H as [? [? [? H]]]; triple_pos.
+
+(** Inverts a delay H of a triple into the delays of its components.*)
+Ltac triple_del_inv H :=
+  triple_parAll H; apply parAll_del_inv in H;
+  destruct H as [? [? [? H]]]; triple_pos.
+
+(** Asserts Q : the target of a step or delay H of a triple is a triple.*)
+Ltac triple_shape H Q :=
+  match type of H with
+  | _ $||$ _ $||$ _ -PA- _ -PA> ?p' =>
+    assert (Q : exists q1 q2 q3, p' = q1 $||$ q2 $||$ q3) by
+      (triple_disc_weak H; do 3 eexists; reflexivity)
+  | _ $||$ _ $||$ _ -PD- _ -PD> ?p' =>
+    assert (Q : exists q1 q2 q3, p' = q1 $||$ q2 $||$ q3) by
+      (triple_del_inv H; do 3 eexists; reflexivity)
+  end.
 
 Ltac link_partripdiscex_tac U p1' p2' p3' :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?a -PA> ?p' |- _] =>
-  let Q1 := fresh in lets Q1 : link_par_triple_discEx H;
+  let Q1 := fresh in triple_shape H Q1;
   let U1 := fresh U in decompEx3 Q1 p1' p2' p3' U1
   end.
 
 Ltac link_partripdiscex_tac2 p1' p2' p3' :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?a -PA> ?p' |- _] =>
-  let Q1 := fresh in lets Q1 : link_par_triple_discEx H;
+  let Q1 := fresh in triple_shape H Q1;
   let U1 := fresh in decompEx3 Q1 p1' p2' p3' U1;
   rewrite U1 in H; clear U1
   end.
@@ -985,31 +1035,81 @@ Ltac link_partripdiscex_tac2 p1' p2' p3' :=
 Ltac link_partripdelex_tac U p1' p2' p3' :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PD- ?d -PD> ?p' |- _] =>
-  let Q1 := fresh in lets Q1 : link_par_triple_delEx H;
+  let Q1 := fresh in triple_shape H Q1;
   let U1 := fresh U in decompEx3 Q1 p1' p2' p3' U1
   end.
 
 Ltac link_partripdelex_tac2 p1' p2' p3' :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PD- ?d -PD> ?p' |- _] =>
-  let Q1 := fresh in lets Q1 : link_par_triple_delEx H;
+  let Q1 := fresh in triple_shape H Q1;
   let U1 := fresh in decompEx3 Q1 p1' p2' p3' U1;
   rewrite U1 in H; clear U1
   end.
 
+(** An output of a triple is an output of one component, the other two unchanged; the
+three cases become goals, with the facts of each flattened into U names.*)
 Ltac link_partripout_tac U :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?c ;! ?v -PA> ?p1' $||$ ?p2' $||$ ?p3' |- _] =>
-  let H1 := fresh in lets H1 : link_par_triple_out H;
+  let H1 := fresh in
+  assert (H1 : p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
+    p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
+    p3 -PA- c ;! v -PA> p3' /\ p1 = p1' /\ p2 = p2') by
+    (triple_disc_nonTau H; eauto 7);
   let H2 := fresh in elimOr3 H1 H2; andflat U
   end.
 
+(** The same for an input.*)
 Ltac link_partripin_tac U :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?c ;? ?v -PA> ?p1' $||$ ?p2' $||$ ?p3' |- _] =>
-  let H1 := fresh in lets H1 : link_par_triple_in H;
+  let H1 := fresh in
+  assert (H1 : p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3' \/
+    p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3' \/
+    p3 -PA- c ;? v -PA> p3' /\ p1 = p1' /\ p2 = p2') by
+    (triple_disc_nonTau H; eauto 7);
   let H2 := fresh in elimOr3 H1 H2; andflat U
   end.
+
+(** From a discrete step H between triples, W : the first, second or third component is
+unchanged or does some action.*)
+Ltac link_partripdiscW_tac H W G :=
+  assert (W : G); [triple_disc_weak H; assumption | ].
+Ltac link_partripdiscW1_tac H W :=
+  match type of H with ?p1 $||$ _ $||$ _ -PA- _ -PA> ?p1' $||$ _ $||$ _ =>
+    link_partripdiscW_tac H W (p1 = p1' \/ exists b, p1 -PA- b -PA> p1') end.
+Ltac link_partripdiscW2_tac H W :=
+  match type of H with _ $||$ ?p2 $||$ _ -PA- _ -PA> _ $||$ ?p2' $||$ _ =>
+    link_partripdiscW_tac H W (p2 = p2' \/ exists b, p2 -PA- b -PA> p2') end.
+Ltac link_partripdiscW3_tac H W :=
+  match type of H with _ $||$ _ $||$ ?p3 -PA- _ -PA> _ $||$ _ $||$ ?p3' =>
+    link_partripdiscW_tac H W (p3 = p3' \/ exists b, p3 -PA- b -PA> p3') end.
+
+(** The triple is enabled on an action its broadcast, overlap or listener component is
+enabled on.*)
+Ltac dae_component pos :=
+  match goal with [ |- discActEnabled (?p1 $||$ ?p2 $||$ ?p3) _ ] =>
+    change (p1 $||$ p2 $||$ p3) with (parAll p1 [p2, p3]);
+    eapply parAll_dae_intro; [pos | ] end.
+Ltac dae_broadcast := dae_component ltac:(left; reflexivity).
+Ltac dae_overlap := dae_component ltac:(right; left; reflexivity).
+Ltac dae_listener := dae_component ltac:(right; right; left; reflexivity).
+
+(** The position of a component q among p1, p2 and p3.*)
+Ltac triple_index p1 p2 p3 q :=
+  lazymatch q with p1 => constr:(0%nat) | p2 => constr:(1%nat) | p3 => constr:(2%nat) end.
+
+(** Closes the goal from a delay DP of a triple, D1 : one component is enabled on an action
+and D2 : another is enabled on its complement.*)
+Ltac triple_del_sync_not DP D1 D2 :=
+  match type of DP with ?p1 $||$ ?p2 $||$ ?p3 -PD- _ -PD> _ =>
+  match type of D1 with discActEnabled ?qi _ =>
+  match type of D2 with discActEnabled ?qj _ =>
+    let i := triple_index p1 p2 p3 qi in let j := triple_index p1 p2 p3 qj in
+    exact (parAll_del_sync_not p1 [p2, p3] _ _ i j _ _ _ DP ltac:(discriminate)
+      eq_refl eq_refl D1 D2 ltac:(discriminate))
+  end end end.
 
 (* begin helpers for link_reach_triple_tau *)
 Lemma link_reach_triple_tau_bc p p' :
@@ -1043,11 +1143,14 @@ Lemma link_reach_triple_tau (p1 p2 p3 p1' p2' p3' : ProcTerm) :
   (p2 -PA- c ;? v -PA> p2' /\ p3 -PA- c ;! v -PA> p3' /\ p1 = p1').
 Proof.
   intros T P. inversion P as [? ? ? BS OS LS]; subst.
-  apply parTriple_disc_inv in T.
-  destruct T as [x1 [x2 [x3 [E [[T _] | [[T _] | [[T _] | [_ C]]]]]]]];
-    injection E as ? ? ?; subst;
-    [destruct (link_reach_triple_tau_bc _ _ BS T) | destruct (link_reach_triple_tau_ov _ _ OS T) |
-     destruct (link_reach_triple_tau_ls _ _ LS T) | exact C].
+  triple_disc_inv T;
+    try match goal with [K : p1 -PA- tauAct -PA> _ |- _] =>
+      destruct (link_reach_triple_tau_bc _ _ BS K) end;
+    try match goal with [K : p2 -PA- tauAct -PA> _ |- _] =>
+      destruct (link_reach_triple_tau_ov _ _ OS K) end;
+    try match goal with [K : p3 -PA- tauAct -PA> _ |- _] =>
+      destruct (link_reach_triple_tau_ls _ _ LS K) end;
+    do 2 eexists; eauto 9.
 Qed.
 (**Prove more general result including taus and then eliminate the taus by anti-activation
   on each broadcast, listener and overlap process?
@@ -1065,10 +1168,14 @@ Ltac link_partriptau_tac c v U :=
   let H2 := fresh in elimOr6 Q1 H2; andflat U
   end.
 
+(** A delay of a triple to a triple is a delay of each component, flattened into U names.*)
 Ltac link_partripdel_tac U :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PD- ?d -PD> ?p1' $||$ ?p2' $||$ ?p3' |- _] =>
-  let Q1 := fresh in lets Q1 : link_par_triple_del H; andflat U
+  let Q1 := fresh in
+  assert (Q1 : p1 -PD- d -PD> p1' /\ p2 -PD- d -PD> p2' /\ p3 -PD- d -PD> p3') by
+    (triple_del_inv H; auto);
+  andflat U
   end.
 
 (****************** Reachability Results ******************)
@@ -1242,7 +1349,7 @@ Ltac link_entsoftdisc_tac :=
 Ltac link_partripdiscex_tac_subst p1' p2' p3' :=
   match goal with
   [H : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?a -PA> ?p' |- _] =>
-  let Q1 := fresh in lets Q1 : link_par_triple_discEx H;
+  let Q1 := fresh in triple_shape H Q1;
   let U1 := fresh in decompEx3 Q1 p1' p2' p3' U1; subst
   end.
 
@@ -1251,29 +1358,32 @@ Ltac link_partripdiscex_tac_norm :=
   let p3' := fresh "p3'" in
   link_partripdiscex_tac_subst p1' p2' p3'.
 
+(** An output of a triple that changes one component, V1 : pk <> pk', is an output of that
+component alone: LPO, flattened into AND names.*)
 Ltac link_partripneq_out_tac :=
   let LPO := fresh "LPO" in
   match goal with
   [V : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?c ;! ?v -PA> ?p1' $||$ ?p2' $||$ ?p3' |- _] =>
   match goal with
-  | [V1 :  p1 <> p1' |- _ ] => lets LPO : link_par_triple_out_neq1 V1 V
-  | [V1 :  p2 <> p2' |- _ ] => lets LPO : link_par_triple_out_neq2 V1 V
-  | [V1 :  p3 <> p3' |- _ ] => lets LPO : link_par_triple_out_neq3 V1 V
-  end;
+  | [V1 :  p1 <> p1' |- _ ] => assert (LPO : p1 -PA- c ;! v -PA> p1' /\ p2 = p2' /\ p3 = p3')
+  | [V1 :  p2 <> p2' |- _ ] => assert (LPO : p2 -PA- c ;! v -PA> p2' /\ p1 = p1' /\ p3 = p3')
+  | [V1 :  p3 <> p3' |- _ ] => assert (LPO : p3 -PA- c ;! v -PA> p3' /\ p1 = p1' /\ p2 = p2')
+  end; [triple_disc_nonTau V; auto | ];
   and_flat
   end.
 
+(** The same for an input.*)
 Ltac link_partripneq_in_tac :=
   let LPO := fresh "LPO" in
   match goal with
   [V : ?p1 $||$ ?p2 $||$ ?p3 -PA- ?c ;? ?v -PA> ?p1' $||$ ?p2' $||$ ?p3' |- _] =>
   match goal with
-  | [V1 :  p1 <> p1' |- _ ] => lets LPO : link_par_triple_in_neq1 V1 V
-  | [V1 :  p2 <> p2' |- _ ] => lets LPO : link_par_triple_in_neq2 V1 V
-  | [V1 :  p3 <> p3' |- _ ] => lets LPO : link_par_triple_in_neq3 V1 V
-  end;
+  | [V1 :  p1 <> p1' |- _ ] => assert (LPO : p1 -PA- c ;? v -PA> p1' /\ p2 = p2' /\ p3 = p3')
+  | [V1 :  p2 <> p2' |- _ ] => assert (LPO : p2 -PA- c ;? v -PA> p2' /\ p1 = p1' /\ p3 = p3')
+  | [V1 :  p3 <> p3' |- _ ] => assert (LPO : p3 -PA- c ;? v -PA> p3' /\ p1 = p1' /\ p2 = p2')
+  end; [triple_disc_nonTau V; auto | ];
   and_flat
-  end.  
+  end.
 
 Ltac link_partripneq_tac := first [link_partripneq_in_tac | link_partripneq_out_tac].
 

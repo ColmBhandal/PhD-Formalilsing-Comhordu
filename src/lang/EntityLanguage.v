@@ -540,14 +540,3 @@ Ltac noSyncNow_tac := match goal with
 Ltac invertDel_ent_proc := match goal with
   [U1 : [|?p0, _, _, _|] -ED- ?d ->> [|?p, _, _, _|] |- _ ]
   => assert (p0 -PD- d -PD> p) as PD; [inversion U1; assumption | ] end.
-
-(** Creates a hypothesis PD saying that some process delays to another process,
-then rewrites TR, an equality identifying the process with a triple of processes,
-then creates three hypotheses saying that the sort relations of the three processes
-are distinct, called SORT1_2, SORT1_3 and SORT2_3.*)
-Ltac del_triple_sort_tac :=
-  (try invertDel_ent_proc); match goal with
-  [TR : ?p = ?p1 $||$ ?p2 $||$ ?p3, PD : ?p -PD- ?d -PD> ?p' |- _] =>
-  rewrite TR in PD; let U := fresh in let x := fresh "SORT1_2" in
-  let y := fresh "SORT1_3" in let z := fresh "SORT2_3" in
-  (lets U : del_triple_sort PD; decompAnd3 U x y z) end.

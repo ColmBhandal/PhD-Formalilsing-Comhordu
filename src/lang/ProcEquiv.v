@@ -649,12 +649,15 @@ Corollary par_bisim_context_strong p p' q q' :
   intros. eapply bisim_trans. apply par_bisim_context.
   eassumption. apply par_bisim_context2. assumption. Qed.
 
-Corollary par_bisim_triple p1 p1' p2 p2' p3 p3' :
-  p1 ~p~ p1' -> p2 ~p~ p2' -> p3 ~p~ p3' ->
-  p1 $||$ p2 $||$ p3 ~p~ p1' $||$ p2' $||$ p3'.
-  introz U. apply par_bisim_context_strong.
-  assumption. apply par_bisim_context_strong;
-  assumption. Qed.
+(** Bisimilarity is a congruence for the parallel composition of any number of processes.*)
+Lemma parAll_bisim_context p ps p' ps' :
+  Forall2 bisimulation (p :: ps) (p' :: ps') -> parAll p ps ~p~ parAll p' ps'.
+Proof.
+  revert p p' ps'. induction ps as [ |q qs IH]; intros p p' ps' F;
+    inversion F as [ | ? ? ? ? B F']; subst; inversion F'; subst; simpl.
+  - assumption.
+  - apply par_bisim_context_strong; [assumption | ]. apply IH. assumption.
+Qed.
 
 Lemma cond_bisim_true p b : evalBoolExp b true ->
   b $> p ~p~ p. introz U.

@@ -526,3 +526,52 @@ Lemma set_inter_nil_in2 {X : Type}
   generalize H0. eapply set_inter_nil_in1. apply H. assumption. Qed.
 
 (*****END : Set stuff******)
+
+
+(*****Steps at a position in a list******)
+
+(** Two lists that agree except at position i, where their elements are related by R.*)
+Inductive stepAt {A : Type} (R : A -> A -> Prop) : nat -> list A -> list A -> Prop :=
+  | stepAtHd (x x' : A) (l : list A) : R x x' -> stepAt R 0 (x :: l) (x' :: l)
+  | stepAtTl (i : nat) (x : A) (l l' : list A) :
+    stepAt R i l l' -> stepAt R (S i) (x :: l) (x :: l').
+
+(** Each position is unchanged or related.*)
+Lemma stepAt_Forall2 {A : Type} (R : A -> A -> Prop) i l l' :
+  stepAt R i l l' -> Forall2 (fun x x' => x = x' \/ R x x') l l'.
+Proof.
+  intro S. induction S as [x x' l H | i x l l' S IH].
+  - constructor; [right; assumption | ].
+    induction l; constructor; [left; reflexivity | assumption].
+  - constructor; [left; reflexivity | assumption].
+Qed.
+
+(** After steps at two different positions, each position is unchanged or related by one
+of the two.*)
+Lemma stepAt_stepAt_Forall2 {A : Type} (R1 R2 : A -> A -> Prop) i j l l' l'' :
+  i <> j -> stepAt R1 i l l' -> stepAt R2 j l' l'' ->
+  Forall2 (fun x x' => x = x' \/ R1 x x' \/ R2 x x') l l''.
+Proof.
+  intros N S1. revert j l'' N. induction S1 as [x x' l H | i x l l' S1 IH]; intros j l'' N S2;
+    inversion S2; subst.
+  - exfalso. apply N. reflexivity.
+  - constructor; [auto | ].
+    match goal with [K : stepAt _ _ ?m ?m' |- Forall2 _ ?m ?m'] =>
+      apply stepAt_Forall2 in K; revert K; apply Forall2_impl; simpl; tauto end.
+  - constructor; [auto | ]. apply stepAt_Forall2 in S1. revert S1. apply Forall2_impl.
+    simpl. tauto.
+  - constructor; [auto | ].
+    match goal with [K : stepAt _ _ l' _ |- _] => eapply IH; [ | exact K] end.
+    intro E. apply N. f_equal. assumption.
+Qed.
+
+(** Inverts every stepAt and Forall2 hypothesis over a list of known shape, splitting a step
+at an unknown position into one case per position, until the lists are explicit.*)
+Ltac positions_inv := repeat match goal with
+  | [H : stepAt _ _ [] _ |- _] => inversion H
+  | [H : stepAt _ _ (_ :: _) _ |- _] => inversion H; subst; clear H
+  | [H : Forall2 _ [] _ |- _] => inversion H; subst; clear H
+  | [H : Forall2 _ (_ :: _) _ |- _] => inversion H; subst; clear H
+  end; cbv beta in *.
+
+(*****END : Steps at a position in a list******)

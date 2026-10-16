@@ -17,6 +17,7 @@
 - `Admitted (* UPGRADE-BROKEN *)` marks a proof that broke in a toolchain upgrade and couldn't be fixed on the spot.
 - Trailing labels such as `Admitted (*4*)`, `(*R*)`, `(*D- foo*)` and `(*#tag*)` are the 2015 triage labels; see the workstream appendix. Remove a label together with its `Admitted` when the proof lands.
 - Read the `(*Proof: …*)` sketch comments before proving. Keep them.
+- Write an intro pattern with a space after its bracket, as `[ | x]`: `[|` is a token of the entity notation `[| p, l, h, k |]`, so `[|x]` fails to parse once `EntityLanguage` is imported.
 - **Helper lemmas** go immediately before the lemma that first needs them. Name them after it (`<lemma>_aux`, `<lemma>_aux2`, …). Make them `Local` if nothing else uses them.
 
 ## Libraries and tactics

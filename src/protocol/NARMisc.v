@@ -235,9 +235,11 @@ Theorem nextSince_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
   netprottrip IHU U q l h k.
   (*Then we show that delay preserves this state predicate
   (...del_pres_nextSinceState...).*)
-  lets DX : net_del_elim U0 w. decompEx6 DX q' q0' q1' l' h' k' DE.
-  andflat Q. dofirst3 econstructor. eapply del_pres_nextSinceState.
-  apply U1. apply Q0. apply Q. Qed.
+  lets DX : net_del_elim U0 w. decompEx4 DX q' l' h' k' DE.
+  andflat Q.
+  match goal with [PD : _ $||$ _ $||$ _ -PD- _ -PD> _ |- _] => triple_del_inv PD end.
+  dofirst3 econstructor. eapply del_pres_nextSinceState.
+  apply U1. eassumption. apply Q. Qed.
 
 Lemma nextSince_next : forall (m : Mode) (t : Time) (i : nat)
   (n : Network) (p : reachableNet n),
@@ -495,7 +497,7 @@ Proof.
   intros RB ED. inversion RB as [p1 p2 p3 RB3 EQ]; subst.
   noSyncNow_tac.
   destruct (NS (chanMCurr ;? [baseMode (currModeMState k)])) as [_ DM].
-  - apply parTriple_dae_intro3.
+  - dae_listener.
     exact (notifAbortPathNet_urgent_rangeBad_in m (currModeMState k) p3 RB3).
   - apply DM. exact (modeState_curr_enabled k).
 Qed.
@@ -509,7 +511,7 @@ Proof.
   intros CO NM ED. inversion CO as [p1 p2 p3 CO3 EQ]; subst.
   noSyncNow_tac.
   destruct (NS (chanMNext ;? [baseMode m'])) as [_ DM].
-  - apply parTriple_dae_intro3.
+  - dae_listener.
     exact (notifAbortPathNet_urgent_currOK_in m m' p3 CO3).
   - apply DM. destruct k as [m0 | m0 m1 t0]; simpl in NM; inversion NM; subst.
     econstructor. apply stepMsOutNext.

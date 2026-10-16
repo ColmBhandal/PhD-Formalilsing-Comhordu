@@ -383,9 +383,9 @@ Proof.
     destruct (link_ent_soft_disc p p' l l' h h' k k' a' Ste) as [Peq | [b Stp]].
     + subst. left. econstructor; [ | exact E'in]. constructor. exact Bp.
     + destruct Bp as [p1 p2 p3 B3].
-      destruct (link_par_triple_discEx p1 p2 p3 p' b Stp) as [p1' [p2' [p3' Peq]]].
+      link_partripdiscex_tac Peq p1' p2' p3'.
       subst p'.
-      destruct (link_par_triple_discW_3 p1 p1' p2 p2' p3 p3' b Stp) as [E3 | [a3 St3]].
+      link_partripdiscW3_tac Stp W. destruct W as [E3 | [a3 St3]].
       * subst. left. econstructor; [ | exact E'in]. constructor. constructor. exact B3.
       * right. econstructor; [ | exact E'in]. constructor. constructor.
         eapply badOvlp_next; eassumption.
@@ -1326,10 +1326,10 @@ Proof.
     by (rewrite EQ; apply failSafeSucc_successor).
   destruct (mState_stable_next_enabled _ _ FS) as [MS | MS].
   - eapply ent_del_sync_mState_not with (a := chanMStable *!); [ | exact MS | exact ED].
-    apply parTriple_dae_intro2. eapply tfsNext_mStable_out. exact TS.
+    dae_overlap. eapply tfsNext_mStable_out. exact TS.
   - eapply ent_del_sync_mState_not with (a := chanMNext ;! [baseMode (failSafeSucc m)]);
       [ | exact MS | exact ED].
-    apply parTriple_dae_intro2. apply tfsNext_mNext_out. exact TS.
+    dae_overlap. apply tfsNext_mNext_out. exact TS.
 Qed.
 
 Lemma tfsStart_urgent_net i n n' d :
@@ -1341,7 +1341,7 @@ Proof.
   inversion TP as [p1 p2 p3 TS Hp]. subst p.
   eapply ent_del_sync_mState_not with (a := chanMCurr ;? [baseMode (currModeMState k)]);
     [ | apply modeState_curr_enabled | exact ED].
-  apply parTriple_dae_intro2. apply tfsStart_mCurr_in. exact TS.
+  dae_overlap. apply tfsStart_mCurr_in. exact TS.
 Qed.
 
 Lemma ovReady_wait_track_net m t l i m' t' x y n n' a :

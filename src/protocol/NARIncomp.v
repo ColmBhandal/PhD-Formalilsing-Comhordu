@@ -124,7 +124,7 @@ Theorem msgAbort_not_nextSince (n n' : Network) (a : ActDiscNet)
   thing with tracking etc.*)
   inversion H6; subst.
   link_partripdiscex_tac_norm. 
-  lets LPT : link_par_triple_discW_3 H1. elim_intro LPT EQP EXP.
+  link_partripdiscW3_tac H1 LPT. elim_intro LPT EQP EXP.
   (*EQ case, LHS follows directly*)
   left. subst. econstructor;[ | apply U1].
   eapply mapMsg; try eassumption. econstructor. eassumption.
@@ -148,7 +148,7 @@ Theorem msgAbort_not_nextSince (n n' : Network) (a : ActDiscNet)
   thing with tracking etc.*)
   inversion H6; subst.
   link_partripdiscex_tac_norm. 
-  lets LPT : link_par_triple_discW_3 H1. elim_intro LPT EQP EXP.
+  link_partripdiscW3_tac H1 LPT. elim_intro LPT EQP EXP.
   (*EQ case, LHS follows directly*)
   left. subst. econstructor;[ | apply U1].
   eapply mapGrng; try eassumption. econstructor. eassumption.
@@ -171,7 +171,7 @@ Theorem msgAbort_not_nextSince (n n' : Network) (a : ActDiscNet)
   thing with tracking etc.*)
   inversion H5; subst.
   link_partripdiscex_tac_norm. 
-  lets LPT : link_par_triple_discW_3 H1. elim_intro LPT EQP EXP.
+  link_partripdiscW3_tac H1 LPT. elim_intro LPT EQP EXP.
   (*EQ case, LHS follows directly*)
   left. subst. econstructor;[ | apply U1].
   eapply mapCuco; try eassumption. econstructor. eassumption.
@@ -204,7 +204,7 @@ Theorem msgAbort_not_nextSince (n n' : Network) (a : ActDiscNet)
   (*---------------------Case 4: abortOvlp, final case -----------------*) 
   (** This case is almost identical to the case for notifAbortPath_not_nextSince.*)
   inversion H3; subst. link_partripdiscex_tac_norm. swapRename H1 H2.
-  lets LPT : link_par_triple_discW_3 H2. elim_intro LPT EQP EXP.
+  link_partripdiscW3_tac H2 LPT. elim_intro LPT EQP EXP.
   (*EQ case, LHS follows directly*)
   left. subst. econstructor;[ | apply U1].
   eapply mapAbort. econstructor. eassumption.
