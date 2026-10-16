@@ -18,7 +18,7 @@ Project documentation lives under [`doc/`](doc):
  - [`doc/reports/`](doc/reports): detailed reports, written when one is asked for, such as the results of a proving pass.
  - [`doc/adr/`](doc/adr): architecture decision records.
  - [`doc/archive/`](doc/archive): superseded historical documents, e.g. the original 2015 project plan.
- - [`doc/thesis/`](doc/thesis): the [PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf) itself, and the corrections to it.
+ - [`doc/thesis/`](doc/thesis): the [PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf) itself, the corrections to it and the remarks on it.
 
 ## Building the Project
 

@@ -153,30 +153,6 @@ Ltac bisim_contra V1 :=
 
 (*-TIDY?*)
 
-(*TIDY*)
-
-(*Generates a bisimilarity via transitivity by combining two hypotheses
-with the bisim_trans result. Works even if the order of one of the 
-bisimilarities in the hypotheses is flipped- uses symmetry in this case.
-The new bisimilarity is named "BT"- or a fresh instance thereof.*)
-Ltac bisim_trans_tac BT :=
-  match goal with
-  | [V : ?p ~p~ ?x, V1 : ?p ~p~ ?y |- _] =>
-    assert (x ~p~ y) as BT; [eapply bisim_trans; [apply bisim_symm | ];
-    eassumption | ]
-  | [V : ?x ~p~ ?p, V1 : ?p ~p~ ?y |- _] =>
-    assert (x ~p~ y) as BT; [eapply bisim_trans; eassumption | ]
-  end.
-  
-(*Every time something of the form P -P- a -P> P' is encountered as a
-hypotheses it is inverted and cleared, leaving the underlying discrete
-or timed transition that gave rise to it.*)
-Ltac invert_steps := repeat
-  (match goal with [V : _ -P- _ -P> _ |- _] =>
-  invertClear V end; subst).
-
-(*-TIDY*)
-
 (****************** Activation ******************)
 (**Results about whether certain actions are enabled or not.
 Activation results take a p and a predicate on p, and infer
@@ -281,6 +257,17 @@ Lemma tfsBc_trans_out p : tfsBcState p -> discActEnabled p (chanTrans *!).
 Lemma bcWait_trans_in p m x : bcWaitState m x p -> discActEnabled p (chanTrans *?).
   activation_tac. Qed.
 
+(** The same, for a broadcast component with any received values; see the component
+shapes below.*)
+Lemma bcWait_trans_in_shape (v : BaseType) (e : Exp) p : p ~p~ bcWait v e ->
+  discActEnabled p (chanTrans *?). activation_tac. Qed.
+
+Lemma bcWait_wake_in_shape m (v : BaseType) (e : Exp) p : p ~p~ bcWait v e ->
+  discActEnabled p (chanWake ;? [baseMode m]). activation_tac. Qed.
+
+Lemma bcReady_outProc_out_shape (v1 v2 : BaseType) p : p ~p~ bcReady v1 v2 ->
+  discActEnabled p (chanOutProc ;! [v1, v2]). activation_tac. Qed.
+
 Lemma sleep_trans_in p : sleepingState p -> discActEnabled p (chanTrans *?).
   activation_tac. Qed.
 
@@ -341,10 +328,261 @@ Ltac prot_outProc_in_not_contra :=
   end.
 (* end helpers *)
 
+(****************** Component shapes ******************)
+(** broadcastState, overlapState and listenerState say that a component is reachable from
+its initial process. Up to bisimilarity, such a component is in one of the named states.
+The modes and positions it holds are base values, because they arrived by input; its timers
+are expressions, because they are computed. Inputs are untyped, so a mode may be any base
+value, and a computed timer may be ill formed. One exception: ovWait's pause timer is well
+formed only if its mode is a mode, so switchBc, which that timer guards, always holds a
+mode. The listener's conditional states resolve at once to the branch their condition
+selects, or to nilProc when the condition is ill formed. The lemmas below prove these
+shapes, and the brute-force results about the components follow from them by case
+analysis.*)
+
+Inductive broadcastShape (p : ProcTerm) : Prop :=
+  | shSleeping : p ~p~ sleeping -> broadcastShape p
+  | shBcWait (v : BaseType) (e : Exp) : p ~p~ bcWait v e -> broadcastShape p
+  | shBcReady (v1 v2 : BaseType) : p ~p~ bcReady v1 v2 -> broadcastShape p.
+
+Inductive overlapShape (p : ProcTerm) : Prop :=
+  | shDormant : p ~p~ dormant -> overlapShape p
+  | shInit (v : BaseType) : p ~p~ init v -> overlapShape p
+  | shOvWait (v : BaseType) (e2 e3 e4 : Exp) : p ~p~ ovWait v e2 e3 e4 ->
+    (evalExpFunTime e3 <> None -> exists m, v = baseMode m) -> overlapShape p
+  | shOvReady (v1 : BaseType) (e2 : Exp) (v3 : BaseType) :
+    p ~p~ ovReady v1 e2 v3 -> overlapShape p
+  | shSwitchBc (m : Mode) : p ~p~ switchBc m -> overlapShape p
+  | shSwitchCurr : p ~p~ switchCurr -> overlapShape p
+  | shSwitchListen : p ~p~ switchListen -> overlapShape p
+  | shOvAbort : p ~p~ ovAbort -> overlapShape p
+  | shTfsStart : p ~p~ tfsStart -> overlapShape p
+  | shTfsNext (v : BaseType) : p ~p~ tfsNext v -> overlapShape p
+  | shTfsCurr : p ~p~ tfsCurr -> overlapShape p
+  | shTfsBc : p ~p~ tfsBc -> overlapShape p
+  | shTfsListen : p ~p~ tfsListen -> overlapShape p.
+
+Inductive listenerShape (p : ProcTerm) : Prop :=
+  | shListening : p ~p~ listening -> listenerShape p
+  | shRangeBad (v : BaseType) : p ~p~ rangeBad v -> listenerShape p
+  | shBadOvlp : p ~p~ badOvlp -> listenerShape p
+  | shCurrOK (v : BaseType) : p ~p~ currOK v -> listenerShape p
+  | shAbortOvlp : p ~p~ abortOvlp -> listenerShape p
+  | shGotMsg (v1 v2 : BaseType) : p ~p~ gotMsg v1 v2 -> listenerShape p
+  | shGotRange (v1 : BaseType) (e2 : Exp) : p ~p~ gotRange v1 e2 -> listenerShape p
+  | shCurrComp (v1 : BaseType) (e2 : Exp) : p ~p~ currComp v1 e2 -> listenerShape p
+  | shPaused : p ~p~ paused -> listenerShape p
+  | shStuck : p ~p~ nilProc -> listenerShape p.
+
+(*** Tactics ***)
+
+(** Unfolds the applications and the bodies of the protocol's processes.*)
+Ltac unfold_def_cbn := cbn [unfoldApp def protocolDefs protocolDef fst snd listsToSub
+  liftVarList liftExpList subProcTerm subExp subBoolExp listSub map liftNameProc
+  listBaselistExp bcWait sleeping bcReady dormant init ovWait ovReady switchBc switchCurr
+  switchListen tfsStart tfsNext tfsCurr tfsBc tfsListen ovAbort listening checkRange
+  rangeBad currEq badOvlp currOK nextEq abortOvlp gotMsg gotRange currPincCheck currComp
+  nextPincCheck paused].
+
+(** Rewrites a goal [app N args ~p~ T] into [body[args/vars] ~p~ T], with the substitution
+computed away.*)
+Ltac unfold_app_bisim := eapply bisim_trans; [apply app_bisim | ]; unfold_def_cbn; clean_proc.
+
+(** Closes [p ~p~ X] from [B : p ~p~ q], where q is X, an application whose unfolding is X,
+or nilProc.*)
+Ltac shape_body B := solve [eapply bisim_trans; [exact B | ];
+  first [apply bisim_refl | unfold_app_bisim; apply bisim_refl]].
+
+(** Makes an input list of known length explicit.*)
+Ltac explicit_input_list := repeat match goal with [L : length ?l = ?n |- _] =>
+  is_var l; destruct l as [ | ?b l]; simpl in L; try discriminate L;
+  try (injection L as L) end.
+
+(** From [H : p ~p~ X] and [T : p -PA- a -PA> p'], the matching step of X and its derivative
+q with [B : p' ~p~ q]; then inverts the step on X's body, makes the input explicit and
+computes the substitution in B.*)
+Ltac shape_step_pre B :=
+  match goal with [H : ?p ~p~ _, T : ?p -PA- _ -PA> _ |- _] =>
+    let q := fresh "q" in let TQ := fresh "TQ" in
+    destruct (bisim_step_disc _ _ _ _ H T) as [q [TQ B]]; clear H T end;
+  prot_outProc_in_not_body; invert_disc_prefixes; explicit_input_list; clean_proc_hyp B.
+
+(** From [B : p ~p~ (b $> P) $+$ (!~ b $> Q)], in either order, the branch b selects:
+[B : p ~p~ P], [p ~p~ Q], or [p ~p~ nilProc] when b is ill formed.*)
+Ltac resolve_cond B :=
+  let E := fresh "E" in let B2 := fresh B in
+  match type of B with
+  | _ ~p~ (!~ ?b $> ?Q) $+$ (?b $> ?P) =>
+    lets B2 : bisim_trans B (choice_bisim_symm (!~ b $> Q) (b $> P)); clear B; rename B2 into B
+  | _ => idtac end;
+  match type of B with _ ~p~ (?b $> ?P) $+$ (!~ ?b $> ?Q) =>
+    destruct (evalBoolExpFun b) as [ [ | ] | ] eqn:E;
+    [ lets B2 : bisim_trans B (if_then_bisim_true b P Q (evalBoolExpFunRel _ _ E))
+    | lets B2 : bisim_trans B (if_then_bisim_false b P Q (evalBoolExpFunRel _ _ E))
+    | lets B2 : bisim_trans B (if_then_bisim_none b P Q E)];
+    clear B E; rename B2 into B
+  end.
+
+(** Unfolds the application on the right of B, computing the substitution away.*)
+Ltac unfold_app_hyp B :=
+  let B2 := fresh B in
+  pose proof (bisim_trans _ _ _ B (app_bisim _ _)) as B2; clear B; rename B2 into B;
+  gen_app_intro unfold_def_cbn B; clean_proc_hyp B.
+
+Ltac broadcast_shape_of B := first [
+    eapply shSleeping; shape_body B | eapply shBcWait; shape_body B
+  | eapply shBcReady; shape_body B ].
+
+(** Solves [evalExpFunTime e <> None -> exists m, v = baseMode m] for a timer e the overlap
+component computes from v: e is ill formed unless v is a mode.*)
+Ltac timer_mode :=
+  let N := fresh "N" in intro N;
+  match goal with [ |- exists m, ?v = baseMode m] =>
+    destruct v as [m | | | | | ]; [exists m; reflexivity | | | | | ];
+    exfalso; apply N; clear N; unfold evalExpFunTime; simpl;
+    repeat match goal with
+      | [ b : BaseType |- _ ] => destruct b; simpl
+      | [ |- context [evalExpFun ?e] ] => destruct (evalExpFun e); simpl
+      end; reflexivity
+  end.
+
+Ltac overlap_shape_of B := first [
+    eapply shDormant; shape_body B | eapply shInit; shape_body B
+  | eapply shOvWait; [shape_body B | timer_mode] | eapply shOvReady; shape_body B
+  | eapply shSwitchBc; shape_body B | eapply shSwitchCurr; shape_body B
+  | eapply shSwitchListen; shape_body B | eapply shOvAbort; shape_body B
+  | eapply shTfsStart; shape_body B | eapply shTfsNext; shape_body B
+  | eapply shTfsCurr; shape_body B | eapply shTfsBc; shape_body B
+  | eapply shTfsListen; shape_body B ].
+
+Ltac listener_shape_of B := first [
+    eapply shStuck; exact B
+  | eapply shListening; shape_body B | eapply shRangeBad; shape_body B
+  | eapply shBadOvlp; shape_body B | eapply shCurrOK; shape_body B
+  | eapply shAbortOvlp; shape_body B | eapply shGotMsg; shape_body B
+  | eapply shGotRange; shape_body B | eapply shCurrComp; shape_body B
+  | eapply shPaused; shape_body B
+  | unfold_app_hyp B; resolve_cond B; listener_shape_of B ].
+
+(** Solves [forall d q, X -PD- d -PD> q -> q = X] for a named state X without timers.*)
+Ltac del_self_body := prot_outProc_in_not_body; del_self_tac.
+
+(** Repeatedly inverts a delay of nilProc, a prefix, a sum or a delay guard.*)
+Ltac invert_del_prefixes := repeat match goal with
+  | [H : nilProc -PD- _ -PD> _ |- _] => inversion H; clear H; subst
+  | [H : outPrefix _ _ _ -PD- _ -PD> _ |- _] => inversion H; clear H; subst
+  | [H : inPrefix _ _ _ -PD- _ -PD> _ |- _] => inversion H; clear H; subst
+  | [H : sum _ _ -PD- _ -PD> _ |- _] => inversion H; clear H; subst
+  | [H : del _ _ -PD- _ -PD> _ |- _] => inversion H; clear H; subst
+  end.
+
+(** Closes [q ~p~ X e1 .. en] where q is X's body after a delay: each timer is the same, has
+counted down, or has run out, in which case it is bisimilar to a zero timer.*)
+Ltac del_timers_bisim := repeat apply choice_bisim_context;
+  first [apply bisim_refl
+    | apply bisim_symm; apply (del_zero_bisim (liftTimeExp zeroTime)); reflexivity].
+
+(*** The shapes are preserved ***)
+
+Lemma bcWait_del_shape v e q d : bcWait v e -PD- d -PD> q -> exists e', q ~p~ bcWait v e'.
+Proof.
+  unfold bcWait. intro D. invert_del_prefixes; eexists; del_timers_bisim.
+Qed.
+
+(** The pause timer after a delay is well formed only if it was before.*)
+Ltac timer_carries := first [ exact (fun N => N)
+  | intros _; match goal with [E : evalExpFunTime ?e = Some _ |- evalExpFunTime ?e <> None] =>
+      rewrite E; discriminate end ].
+
+Lemma ovWait_del_shape v e2 e3 e4 q d : ovWait v e2 e3 e4 -PD- d -PD> q ->
+  exists e3' e4', q ~p~ ovWait v e2 e3' e4' /\
+  (evalExpFunTime e3' <> None -> evalExpFunTime e3 <> None).
+Proof.
+  unfold ovWait. intro D. invert_del_prefixes; do 2 eexists;
+    (split; [del_timers_bisim | timer_carries]).
+Qed.
+
+Lemma broadcastShape_disc p p' a : broadcastShape p -> p -PA- a -PA> p' -> broadcastShape p'.
+Proof.
+  intros S T. destruct S as [H | v e H | v1 v2 H]; shape_step_pre B; broadcast_shape_of B.
+Qed.
+
+Lemma broadcastShape_del p p' d : broadcastShape p -> p -PD- d -PD> p' -> broadcastShape p'.
+Proof.
+  intros S T. destruct S as [H | v e H | v1 v2 H].
+  - apply shSleeping. eapply bisim_del_pres; [del_self_body | exact H | exact T].
+  - destruct (bisim_step_del _ _ _ _ H T) as [q [TQ B]].
+    destruct (bcWait_del_shape _ _ _ _ TQ) as [e' B'].
+    eapply shBcWait. eapply bisim_trans; [exact B | exact B'].
+  - eapply shBcReady. eapply bisim_del_pres; [del_self_body | exact H | exact T].
+Qed.
+
+Lemma overlapShape_disc p p' a : overlapShape p -> p -PA- a -PA> p' -> overlapShape p'.
+Proof.
+  intros S T.
+  destruct S as [H | v H | v e2 e3 e4 H SC | v1 e2 v3 H | m H | H | H | H | H | v H | H | H | H];
+    shape_step_pre B; try overlap_shape_of B.
+  (* ovWait's pause timer has run out, so its mode is a mode: the step is into switchBc.*)
+  match goal with [E : evalExpFunTime e3 = Some zeroTime |- _] =>
+    destruct (SC ltac:(rewrite E; discriminate)) as [m Ev]; subst v end.
+  overlap_shape_of B.
+Qed.
+
+Lemma overlapShape_del p p' d : overlapShape p -> p -PD- d -PD> p' -> overlapShape p'.
+Proof.
+  intros S T.
+  destruct S as [H | v H | v e2 e3 e4 H SC | v1 e2 v3 H | m H | H | H | H | H | v H | H | H | H];
+    [eapply shDormant | eapply shInit | idtac | eapply shOvReady | eapply shSwitchBc
+    | eapply shSwitchCurr | eapply shSwitchListen | eapply shOvAbort | eapply shTfsStart
+    | eapply shTfsNext | eapply shTfsCurr | eapply shTfsBc | eapply shTfsListen];
+    try solve [eapply bisim_del_pres; [del_self_body | exact H | exact T]].
+  destruct (bisim_step_del _ _ _ _ H T) as [q [TQ B]].
+  destruct (ovWait_del_shape _ _ _ _ _ _ TQ) as [e3' [e4' [B' I]]].
+  eapply shOvWait; [eapply bisim_trans; [exact B | exact B'] | intro N; apply SC, I, N].
+Qed.
+
+Lemma listenerShape_disc p p' a : listenerShape p -> p -PA- a -PA> p' -> listenerShape p'.
+Proof.
+  intros S T. destruct S as [H | v H | H | v H | H | v1 v2 H | v1 e2 H | v1 e2 H | H | H];
+    shape_step_pre B; listener_shape_of B.
+Qed.
+
+Lemma listenerShape_del p p' d : listenerShape p -> p -PD- d -PD> p' -> listenerShape p'.
+Proof.
+  intros S T. destruct S as [H | v H | H | v H | H | v1 v2 H | v1 e2 H | v1 e2 H | H | H];
+    [eapply shListening | eapply shRangeBad | eapply shBadOvlp | eapply shCurrOK
+    | eapply shAbortOvlp | eapply shGotMsg | eapply shGotRange | eapply shCurrComp
+    | eapply shPaused | eapply shStuck];
+    (eapply bisim_del_pres; [del_self_body | exact H | exact T]).
+Qed.
+
+(*** The shape lemmas ***)
+
+Lemma broadcastState_shape p : broadcastState p -> broadcastShape p.
+Proof.
+  apply reachableFrom_invariant; [apply shSleeping, bisim_refl | | ].
+  - intros q q' a. apply broadcastShape_disc.
+  - intros q q' d. apply broadcastShape_del.
+Qed.
+
+Lemma overlapState_shape p : overlapState p -> overlapShape p.
+Proof.
+  apply reachableFrom_invariant; [apply shDormant, bisim_refl | | ].
+  - intros q q' a. apply overlapShape_disc.
+  - intros q q' d. apply overlapShape_del.
+Qed.
+
+Lemma listenerState_shape p : listenerState p -> listenerShape p.
+Proof.
+  apply reachableFrom_invariant; [apply shListening, bisim_refl | | ].
+  - intros q q' a. apply listenerShape_disc.
+  - intros q q' d. apply listenerShape_del.
+Qed.
+
 Theorem listener_outProc_out_not (p p' : ProcTerm) (v : list BaseType) : 
   listenerState p -> p -PA- chanOutProc ;! v -PA> p' -> False.
 Proof.
-  intros LS TR. inversion LS; prot_outProc_in_not_contra.
+  intros LS TR. destruct (listenerState_shape _ LS); prot_outProc_in_not_contra.
 Qed.
 (**Proof sketch: Because none of its constituents can output on said channel.*)
 
@@ -468,35 +706,6 @@ Proof.
   reflexivity.
 Qed.
 
-(*** Tactics ***)
-
-(**Does some pre-processing on a back-tracking result, in the form of
-some transition followed by two state predicates as premises. TR2 is
-just a hypothesis that needs to be cleared.*)
-Ltac backtrack_pre p TR2 :=
-  let TR1 := fresh "TR" in
-  let SP1 := fresh "SP" in let SP2 := fresh "SP" in
-  intros TR1 SP1 SP2; cbv in SP2; apply stepPDisc in TR1;
-  lets TR2 : TR1;
-  invertClear SP1; match goal with [V : _ p |- _] =>
-  apply V in TR1 end; exand_flat.
-
-(** Given a context already pre-processed by backtrack_pre, this tactic
-attempts to generate a contradiction via bisimilarities that are set up.
-TR2 is just a hypothesis that needs to be cleared.*)
-Ltac backtrack_post TR2 :=
-  clear TR2; let BT := fresh "BT" in
-  bisim_trans_tac BT; invert_steps;
-  (*This bit may be a bit susceptible to freezing the whole thing-
-  so I'd say just be prepared to change it if need be.*)
-  repeat invert_trans; try bisim_contra BT;
-  try (apply bisim_symm in BT; bisim_contra BT).
-
-(*Weeds out contradictions for a back-tracking result, leaving only
-the valid transition(s).*)
-Ltac backtrack_weed p := let TR := fresh in
-  backtrack_pre p TR; backtrack_post TR.
-
 (*** Results ***)
 
 (*Assuming we've already been through m existentials, this tactic works
@@ -505,69 +714,171 @@ converts the required amount of arguments to existentials.*)
 
 (*** Back tracking ***)
 
+(** Searches a sum of prefixes and zero timers for a step with the goal's action. An input
+whose values are left open takes any values of the right length.*)
+Ltac step_search := first [ apply stepDpIn; reflexivity
+  | match goal with [ |- inPrefix _ ?xs _ -PA- _ -PA> _ ] =>
+      apply (stepDpIn _ (genBaseList (length xs)) xs _ (genBaseList_length _ xs)) end
+  | solve [apply stepDpOut; repeat constructor]
+  | apply stepDpTimeOut; [step_search | reflexivity]
+  | apply stepDpChoiceL; step_search
+  | apply stepDpChoiceR; step_search ].
+
+(** A step of an application N(args) with the goal's action, found by unfolding it.*)
+Ltac app_step := eapply stepDpApp; [reflexivity | ]; clean_proc; step_search.
+
+(** Unfolds the application on the left of B, computing the substitution away.*)
+Ltac unfold_app_hyp_l B :=
+  let B2 := fresh B in
+  pose proof (bisim_trans _ _ _ (bisim_symm _ _ (app_bisim _ _)) B) as B2; clear B;
+  rename B2 into B; gen_app_intro unfold_def_cbn B; clean_proc_hyp B.
+
+(** Refutes [BT : q ~p~ X], for bodies q and X with no application outside a prefix, by an
+action one of them can do on a channel the other does not mention (step_chans). Each
+channel is tried as a witness, in each direction.*)
+Ltac chan_witness q c S :=
+  first [ assert (S : exists v q', q -PA- c ;? v -PA> q') by (do 2 eexists; step_search)
+        | assert (S : exists v q', q -PA- c ;! v -PA> q') by (do 2 eexists; step_search) ];
+  let v := fresh "v" in let q' := fresh "q'" in destruct S as [v [q' S]].
+
+(** Closes the goal from I : In cd l, computed to a disjunction of equalities, for a concrete
+list l that does not hold cd.*)
+Ltac chan_notin I := solve [decompose [or] I; first [discriminate | contradiction]].
+
+Ltac refute_one q BT c :=
+  let S := fresh "S" in let r := fresh "r" in let R := fresh "R" in let I := fresh "I" in
+  chan_witness q c S;
+  destruct (bisim_disc_match _ _ _ _ BT S) as [r R];
+  pose proof (step_chans _ _ _ R) as I; specialize (I eq_refl); specialize (I _ eq_refl);
+  simpl in I; chan_notin I.
+
+Ltac refute_with_chans q BT cs :=
+  lazymatch cs with
+  | ?c :: ?cs' => first [ refute_one q BT c | refute_with_chans q BT cs' ]
+  end.
+
+Ltac refute_by_chan BT :=
+  let cs := constr:(chanAN :: chanMStable :: chanMCurr :: chanMNext :: chanPos
+    :: chanOutProc :: chanInProc :: chanIOEnv :: chanTrans :: chanWake :: chanPause
+    :: chanUnpause :: chanBad :: chanAbort :: nil) in
+  match type of BT with ?q ~p~ ?X =>
+    first [ refute_with_chans q BT cs
+          | let BT' := fresh "BT" in pose proof (bisim_symm _ _ BT) as BT';
+            refute_with_chans X BT' cs ] end.
+
+(** Pre-processing for a back-tracking result, with [TR : p -PA- a -PA> p'],
+[O : overlapState p] and [SP : p' ~p~ X] in the context. For each shape of p, the matching
+step of its body into q, with [BT : q ~p~ X], the input made explicit and the substitution
+computed; then the shapes whose derivative is not bisimilar to X are refuted.*)
+Ltac backtrack_shape SP :=
+  match goal with [TR : ?p -PA- _ -PA> _, O : overlapState ?p |- _] =>
+    destruct (overlapState_shape _ O)
+      as [B | v B | v e2 e3 e4 B SC | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
+    let q := fresh "q" in let TQ := fresh "TQ" in let BQ := fresh "BQ" in
+    let BT := fresh "BT" in
+    destruct (bisim_step_disc _ _ _ _ B TR) as [q [TQ BQ]];
+    pose proof (bisim_trans _ _ _ (bisim_symm _ _ BQ) SP) as BT;
+    prot_outProc_in_not_body; invert_disc_prefixes; explicit_input_list; clean_proc_hyp BT;
+    unfold liftNameProc in BT; try unfold_app_hyp_l BT; prot_outProc_in_not_body;
+    try solve [refute_by_chan BT]
+  end.
+
+(** Asserts S : q -PA- act -PA> q' for the source q of BT, a body or an application, and the
+derivative q' the search finds.*)
+Ltac bt_step BT act S := match type of BT with ?q ~p~ _ =>
+  eassert (S : q -PA- act -PA> _) by first [step_search | app_step] end.
+
+(** Inverts the output lists of the steps found so far, so that the values output are the
+values the prefixes hold.*)
+Ltac output_values := repeat match goal with
+  | [H : evalExpLists (liftExpList _) _ |- _] => unfold liftExpList in H
+  | [H : evalExpLists (_ :: _) _ |- _] => inversion H; subst; clear H
+  | [H : evalExpLists [] _ |- _] => inversion H; subst; clear H
+  | [H : evalExp (eBase _) _ |- _] => inversion H; subst; clear H end.
+
+(** After a step into tfsNext, the overlap component was tfsStart, or was tfsNext already:
+tfsNext loops when it writes on mStable.*)
 Theorem tfsNext_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) :
   p -PA- a -PA> p' -> overlapState p -> tfsNextState m p' ->
-  tfsStartState p. backtrack_weed p. Qed. 
+  tfsStartState p \/ tfsNextState m p.
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP.
+  - left. exact B.
+  - right. red. eapply bisim_trans; [exact B | ]. eapply bisim_trans; [ | exact BT].
+    apply bisim_refl.
+Qed.
 
+(** After a step into ovWait, the overlap component was init, or was ovReady and the step
+was its broadcast. The mode and position of that ovReady are whatever values it held: tying
+them to m and to the output takes a timing argument, since ovWait's parameters are only
+observable through its timers.*)
 Theorem ovWait_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t x y : Time) :
   p -PA- a -PA> p' -> overlapState p -> ovWaitState m t x y p' ->
-  initStateProt m p \/ exists l,
-  ovReadyState m (addTime t (period m)) l p /\ x = t
-  /\ y = period m /\ a = (chanOutProc ;! [baseMode m, basePosition l]).
-  backtrack_weed p. Qed.
+  initState m p \/ exists (v l : BaseType) (u : Exp),
+  p ~p~ ovReady v u l /\ a = chanOutProc ;! [v, l].
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP.
+  - (* init: its derivative can read its position at once, so ovWait m t x y can too, and
+       both derivatives then broadcast their modes, which therefore agree.*)
+    bt_step BT (chanPos ;? [baseTime zeroTime]) S1.
+    destruct (bisim_step_disc _ _ _ _ BT S1) as [r1 [R1 BR1]].
+    invert_disc_prefixes. clean_proc_hyp BR1.
+    bt_step BR1 (chanOutProc ;! [v, baseTime zeroTime]) S2.
+    destruct (bisim_step_disc _ _ _ _ BR1 S2) as [r2 [R2 _]].
+    invert_app_trans. invert_disc_prefixes. output_values.
+    left. exact B.
+  - right. output_values. do 3 eexists. split; [exact B | reflexivity].
+Qed.
 
+(** After a step into ovReady, the overlap component was ovWait with its position timer run
+out.*)
 Theorem ovReady_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t : Time) (l : Position) :
   p -PA- a -PA> p' -> overlapState p -> ovReadyState m t l p' ->
-  exists x, ovWaitState m t x zeroTime p.
+  exists u x, ovWaitStateExp m u x zeroTime p.
 Proof.
-  backtrack_weed p.
-  match goal with [H : evalExpFunTime _ = Some zeroTime |- _] =>
-    unfold liftTimeExp, evalExpFunTime in H end.
-  match goal with [H : context [evalExpFun (eBase (baseTime ?x))] |- _] =>
-    destruct x as [xr]; simpl in H; inversion H; subst end.
-  match goal with [B : chanOutProc $< ?es >$ ! ?W ~p~ ?R |- _] =>
-    assert (T0 : chanOutProc $< es >$ ! W -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> W)
-      by (repeat constructor);
-    destruct (bisim_step_disc _ _ _ _ B T0) as [q [TQ BQ]]; clear T0
-  end.
-  clean_proc_hyp TQ. invert_app_trans. repeat invert_trans.
-  match goal with [H : evalExpLists _ _ |- _] =>
-    let E1 := fresh in let E2 := fresh in
-    inversion H as [ | ? ? ? ? E1 E2]; subst; inversion E1; subst end.
-  exists x. unfold ovWaitState in *.
-  eapply bisim_trans; [exact H0 | ]. unfold ovWait.
-  repeat apply choice_bisim_context; try apply bisim_refl.
-  apply del_bisim_context. apply inPrefix_bisim_context.
-  intros l2 Len. destruct l2 as [ | b [ | b' l2]]; simpl in Len; try discriminate.
-  clean_proc.
-  eapply bisim_trans; [apply app_bisim_def; reflexivity | ].
-  eapply bisim_trans; [ | apply bisim_symm, app_bisim_def; reflexivity].
-  clean_proc. apply outPrefix_bisim_context. apply bisim_symm. exact BQ.
+  intros TR O SP. red in SP. backtrack_shape SP.
+  (* ovWait: its derivative broadcasts its mode and the position it read, so ovReady m t l
+     matches that output, which fixes the mode.*)
+  match type of BT with outPrefix _ (_ :: eBase ?b :: nil) _ ~p~ _ =>
+    bt_step BT (chanOutProc ;! [v, b]) S2 end.
+  destruct (bisim_step_disc _ _ _ _ BT S2) as [r2 [R2 _]].
+  invert_disc_prefixes. output_values.
+  exists e2 e3. red. eapply bisim_trans; [exact B | ]. unfold ovWait.
+  repeat apply choice_bisim_context;
+    first [apply bisim_refl
+      | apply del_bisim_guard;
+        match goal with [E : evalExpFunTime _ = Some zeroTime |- _] => rewrite E end;
+        reflexivity].
 Qed.
 
+(** After a step into switchBc, the overlap component was ovWait with its pause timer run
+out.*)
 Theorem switchBc_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) :
   p -PA- a -PA> p' -> overlapState p -> switchBcState m p' ->
-  exists t, exists y, ovWaitState m t zeroTime y p.
+  exists t y, ovWaitStateExp m t zeroTime y p.
 Proof.
-  backtrack_weed p.
-  match goal with [H : evalExpFunTime _ = Some zeroTime |- _] =>
-    unfold liftTimeExp, evalExpFunTime in H end.
-  match goal with [H : context [evalExpFun (eBase (baseTime ?x))] |- _] =>
-    destruct x as [xr]; simpl in H; inversion H; subst end.
-  match goal with [B : ?X ~p~ switchBcN $( _ )$ |- _] =>
-    assert (T0 : exists q, X -PA- chanWake ;! [baseMode m] -PA> q)
-      by (eexists; repeat constructor);
-    destruct T0 as [q T0]; destruct (bisim_disc_match _ _ _ _ B T0) as [q' T1]; clear T0 end.
-  invert_app_trans. repeat invert_trans.
-  match goal with [H : evalExpLists [_] [_] |- _] =>
-    let E1 := fresh in let E2 := fresh in
-    inversion H as [ | ? ? ? ? E1 E2]; subst; inversion E1; subst end.
-  do 2 eexists. eassumption.
+  intros TR O SP. red in SP. backtrack_shape SP.
+  (* ovWait: its derivative wakes the broadcaster with its mode, so switchBc m matches that
+     output, which fixes the mode.*)
+  bt_step BT (chanWake ;! [v]) S2.
+  destruct (bisim_step_disc _ _ _ _ BT S2) as [r2 [R2 _]].
+  invert_disc_prefixes. output_values.
+  exists e2 e4. red. eapply bisim_trans; [exact B | ]. unfold ovWait.
+  repeat apply choice_bisim_context;
+    first [apply bisim_refl
+      | apply del_bisim_guard;
+        match goal with [E : evalExpFunTime _ = Some zeroTime |- _] => rewrite E end;
+        reflexivity].
 Qed.
 
+(** After a step into switchCurr, the overlap component was switchBc.*)
 Theorem switchCurr_prev (p p' : ProcTerm) (a : DiscAct) :
   p -PA- a -PA> p' -> overlapState p -> switchCurrState p' ->
-  exists m, switchBcState m p. backtrack_weed p. Qed. 
+  exists m, switchBcState m p.
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP.
+  exists m0. exact B.
+Qed.
 
 (*** Fwd tracking ***)
 
@@ -1115,19 +1426,19 @@ Ltac triple_del_sync_not DP D1 D2 :=
 Lemma link_reach_triple_tau_bc p p' :
   broadcastState p -> p -PA- tauAct -PA> p' -> False.
 Proof.
-  intros S T. inversion S; prot_outProc_in_not_contra.
+  intros S T. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
 Lemma link_reach_triple_tau_ov p p' :
   overlapState p -> p -PA- tauAct -PA> p' -> False.
 Proof.
-  intros S T. inversion S; prot_outProc_in_not_contra.
+  intros S T. destruct (overlapState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
 Lemma link_reach_triple_tau_ls p p' :
   listenerState p -> p -PA- tauAct -PA> p' -> False.
 Proof.
-  intros S T. inversion S; prot_outProc_in_not_contra.
+  intros S T. destruct (listenerState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
 (* end helpers *)
@@ -1198,10 +1509,16 @@ false. This is all evident on inspection of the overlap and listener component d
 the semantics, then it has the "shape" of a protocol process.*)
 Theorem reachableProt_triple (p : ProcTerm) : 
   reachableProt p -> protocolState p.
-  intro.
-  (*Need support lemmas: disc pres & del pres for ovlp, broadcast, listener state components.*)
-  Admitted. (*5*)
-(**Proof: Induction on reachable and use results that show broadcast, overlap and listener processes are closed under transitions*)
+Proof.
+  intro R.
+  assert (RF : reachableFrom (parAll sleeping [dormant, listening]) p).
+  { induction R; eauto using reachableFromBase, reachableFromDisc, reachableFromDel. }
+  apply reachableFrom_parAll in RF. destruct RF as [p1 [ps [E F]]]. positions_inv. subst.
+  constructor; assumption.
+Qed.
+(**Proof: The components of a parallel composition each stay reachable from where they
+started (reachableFrom_parAll), and reachable from the initial component is what each
+component-state predicate says.*)
 
 Ltac reachprot U :=
   match goal with
@@ -1218,7 +1535,8 @@ Theorem bc_outProc_out (p p' : ProcTerm) (m : Mode) (l : Position) :
   p -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> p' -> broadcastState p ->
   bcReadyState m l p /\ bcWaitState m (period m) p'.
 Proof.
-  intros T B. inversion B as [? ? S | S | m0 l0 S]; try solve [prot_outProc_in_not_contra].
+  intros T B. destruct (broadcastState_shape _ B) as [S | v e S | v1 v2 S];
+    try solve [prot_outProc_in_not_contra].
   destruct (bisim_step_disc _ _ _ _ S T) as [q [TQ BQ]]. unfold bcReady in TQ.
   invert_disc_prefixes.
   repeat match goal with [H : evalExpLists (_ :: _) _ |- _] => inversion H; subst; clear H end.
@@ -1232,12 +1550,23 @@ Proof.
 Qed.
 (**Proof: Brute force try all the other possible broadcast states (auto tactic) and this is the only one that matches*)
 
+(** Only ovReady outputs on outProc. Its timer is a computed expression, which may be ill
+formed when the mode read on mCurr was not a mode, so the lemma leaves it as an expression
+rather than a time.*)
 Theorem ovlp_outProc_out (p p' : ProcTerm) (m : Mode) (l : Position) : 
   p -PA- chanOutProc ;! [baseMode m, basePosition l] -PA> p' -> overlapState p ->
-  exists t f, ovReadyState m t l p /\ 
-  ovWaitState m (minusTime t (period m) f) (minusTime t (period m) f) (period m) p'.
+  exists t, ovReadyStateExp m t l p /\
+  ovWaitStateExp m (t (-) ePeriod m) (t (-) ePeriod m) (ePeriod m) p'.
 Proof.
-  intros T O. exfalso. inversion O; prot_outProc_in_not_contra.
+  intros T O. destruct (overlapState_shape _ O)
+    as [S | v S | v e2 e3 e4 S SC | v1 e2 v3 S | m0 S | S | S | S | S | v S | S | S | S];
+    try solve [prot_outProc_in_not_contra].
+  destruct (bisim_step_disc _ _ _ _ S T) as [q [TQ BQ]]. unfold ovReady in TQ.
+  invert_disc_prefixes.
+  repeat match goal with [H : evalExpLists (_ :: _) _ |- _] => inversion H; subst; clear H end.
+  repeat match goal with [H : evalExp (eBase _) _ |- _] => inversion H; subst; clear H end.
+  exists e2. split; [exact S | ]. red.
+  eapply bisim_trans; [exact BQ | ]. unfold_app_bisim. apply bisim_refl.
 Qed.
 (**Proof: Brute force. Analogous to bc_outProc_out but with overlap states*)
 
@@ -1247,32 +1576,32 @@ Theorem prot_outProc_in_not (p p' : ProcTerm) (v : list BaseType) :
 Proof.
   intros TR PS. inversion PS as [p1 p2 p3 BS OS LS]; subst; clear PS.
   inversion TR; subst; clear TR.
-  - inversion BS; prot_outProc_in_not_contra.
+  - destruct (broadcastState_shape _ BS); prot_outProc_in_not_contra.
   - match goal with [V : p2 $||$ p3 -PA- _ -PA> _ |- _] =>
       inversion V; subst; clear V end.
-    + inversion OS; prot_outProc_in_not_contra.
-    + inversion LS; prot_outProc_in_not_contra.
+    + destruct (overlapState_shape _ OS); prot_outProc_in_not_contra.
+    + destruct (listenerState_shape _ LS); prot_outProc_in_not_contra.
 Qed.
 (**Proof sketch: Brute force. Because none of its constituents can input on said channel.*)
 
 Theorem bc_mCurr_out_not (p p' : ProcTerm) : 
   p -PA- chanMCurr ;! [] -PA> p' -> broadcastState p -> False.
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 (**Proof: Brute force analysis of all broadcast states and none of them are enabled on this action*)
 
 Theorem bc_abort_in_not (p p' : ProcTerm) : 
   p -PA- chanAbort*? -PA> p' -> broadcastState p -> False.
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 (**Proof: Brute force analysis of all broadcast states and none of them are enabled on this action*)
 
 Theorem listen_mCurr_out_not (p p' : ProcTerm) : 
   p -PA- chanMCurr ;! [] -PA> p' -> listenerState p -> False.
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (listenerState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 (**Proof: Brute force analysis of all listener states and none of them are enabled on this action*)
 
@@ -1282,20 +1611,26 @@ Theorem ovlp_mCurr_out (p p' : ProcTerm) :
   (switchCurrState p /\ switchListenState p') \/
   (tfsCurrState p /\ tfsBcState p').
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (overlapState_shape _ S)
+    as [B | v B | v e2 e3 e4 B SC | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
+    try solve [prot_outProc_in_not_contra];
+    destruct (bisim_step_disc _ _ _ _ B TR) as [q [TQ BQ]];
+    [unfold switchCurr in TQ | unfold tfsCurr in TQ]; invert_disc_prefixes;
+    [left | right]; (split; [exact B | ]); red;
+    (eapply bisim_trans; [exact BQ | ]); apply app_bisim_nil; reflexivity.
 Qed.
 (**Proof: Brute force analysis on overlap states and show that these are the only two matches*)
 
 Lemma bc_abort_out_not (p p' : ProcTerm) : 
   p -PA- chanAbort;! [] -PA> p' -> broadcastState p -> False.
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
 Lemma ovlp_abort_out_not (p p' : ProcTerm) : 
   p -PA- chanAbort;! [] -PA> p' -> overlapState p -> False.
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (overlapState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
 (**The two cases where the overlap component can output on mCurr.*)
@@ -1306,24 +1641,40 @@ Theorem ovlp_abort_in (p p' : ProcTerm) (m : Mode) :
   (tfsCurrState p /\ tfsCurrState p') \/
   (tfsListenState p /\ tfsListenState p').
 Proof.
-  intros TR OS. inversion OS as [B | m0 t x y B]; prot_outProc_in_not_unfold;
+  intros TR OS. destruct (overlapState_shape _ OS)
+    as [B | v B | v e2 e3 e4 B SC | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
+    try solve [prot_outProc_in_not_contra];
     destruct (bisim_step_disc _ _ _ _ B TR) as [q' [TQ BQ]];
-    [unfold dormant in TQ | unfold ovWait in TQ]; invert_disc_prefixes;
-    [left; split; [assumption | ] | right; left];
-    (eapply bisim_trans; [exact BQ | ]); apply app_bisim_nil; reflexivity.
+    [unfold dormant in TQ | unfold ovWait in TQ | unfold tfsCurr in TQ | unfold tfsListen in TQ];
+    invert_disc_prefixes;
+    [left; split; [exact B | ] | right; left | right; right; left; split; [exact B | ]
+      | right; right; right; split; [exact B | ]];
+    red; (eapply bisim_trans; [exact BQ | ]); apply app_bisim_nil; reflexivity.
 Qed.
 (**Proof: Brute force analysis of overlap states and these are the only ones that fit the transition*)
 
 Theorem bc_mStable_out_not (p p' : ProcTerm) : 
   p -PA- chanMStable*! -PA> p' -> broadcastState p -> False.
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
-Theorem ovlp_mStable_out_not (p p' : ProcTerm) : 
-  p -PA- chanMStable*! -PA> p' -> overlapState p -> False.
+(**The two cases where the overlap component can output on mStable: aborting an overlap,
+and the self-loop of tfsNext. The value tfsNext holds is whatever was read on mCurr.*)
+Theorem ovlp_mStable_out (p p' : ProcTerm) : 
+  p -PA- chanMStable*! -PA> p' -> overlapState p ->
+  (ovAbortState p /\ dormantState p') \/
+  (exists (v : BaseType), p ~p~ tfsNext v /\ p' ~p~ tfsNext v).
 Proof.
-  intros TR S. inversion S; prot_outProc_in_not_contra.
+  intros TR S. destruct (overlapState_shape _ S)
+    as [B | v B | v e2 e3 e4 B SC | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
+    try solve [prot_outProc_in_not_contra];
+    destruct (bisim_step_disc _ _ _ _ B TR) as [q [TQ BQ]];
+    [unfold ovAbort in TQ | unfold tfsNext in TQ]; invert_disc_prefixes.
+  - left. split; [exact B | ]. red. eapply bisim_trans; [exact BQ | ].
+    apply app_bisim_nil; reflexivity.
+  - right. exists v. split; [exact B | ]. eapply bisim_trans; [exact BQ | ].
+    unfold_app_bisim. apply bisim_refl.
 Qed.
 
 (*NEEDS TO BE EDITED! PROTOCOL PROCESS HYPOTHESIS DOESN'T LOOK LIKE IT'S THERE.
@@ -1387,56 +1738,20 @@ Ltac link_partripneq_in_tac :=
 
 Ltac link_partripneq_tac := first [link_partripneq_in_tac | link_partripneq_out_tac].
 
-(* begin helpers for ovlp_abort_in_notNextSince *)
-(** Search a sum of prefixes for an enabled input prefix. *)
-Ltac ovlp_abort_in_notNextSince_step :=
-  first [ apply stepDpIn; reflexivity
-        | apply stepDpChoiceL; ovlp_abort_in_notNextSince_step
-        | apply stepDpChoiceR; ovlp_abort_in_notNextSince_step ].
-
-(** The dormant state can input a mode on mNext. *)
-Lemma ovlp_abort_in_notNextSince_dorm m :
-  exists r, liftNameProc dormantN -PA- chanMNext;? [baseMode m] -PA> r.
-Proof.
-  eexists. eapply stepDpApp; [reflexivity | ]. simpl.
-  ovlp_abort_in_notNextSince_step.
-Qed.
-
-(** The ovAbort state can output on mStable. *)
-Lemma ovlp_abort_in_notNextSince_ovab :
-  exists r, liftNameProc ovAbortN -PA- chanMStable *! -PA> r.
-Proof.
-  eexists. eapply stepDpApp; [reflexivity | ]. simpl.
-  apply stepDpOut. constructor.
-Qed.
-
-Ltac ovlp_abort_in_notNextSince_ns X S' :=
-  try unfold ovWaitState in X; try unfold ovReadyState in X;
-  try unfold switchBcState in X; try unfold switchCurrState in X;
-  try unfold ovWait in S'; try unfold ovReady in S';
-  try unfold switchBc in S'; try unfold switchCurr in S';
-  invert_disc_prefixes.
-(* end helpers *)
-
 Lemma ovlp_abort_in_notNextSince p p' :
   p -PA- chanAbort;? [] -PA> p' -> overlapState p -> ~ nextSinceState p'.
 Proof.
-  intros P O N.
-  destruct O as [D | m t x y D]; red in D;
+  intros P O N. destruct (overlapState_shape _ O)
+    as [D | v D | v e2 e3 e4 D SC | v1 e2 v3 D | m0 D | D | D | D | D | v D | D | D | D];
+    try solve [prot_outProc_in_not_contra];
     destruct (bisim_step_disc _ _ _ _ D P) as [q' [Q B]];
-    [unfold dormant in Q | unfold ovWait in Q]; invert_disc_prefixes.
-  - (* dormant: the only abort input leads back to dormant, which can
-       input on mNext, unlike every nextSince state. *)
-    destruct N as [m0 t0 x0 y0 X | m0 t0 l0 X | m0 X | m0 X];
-    destruct (ovlp_abort_in_notNextSince_dorm m0) as [r S];
-    destruct (bisim_disc_match _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ B) X) S) as [r' S'];
-    clear S; ovlp_abort_in_notNextSince_ns X S'.
-  - (* ovWait: the only abort input leads to ovAbort, which can output on
-       mStable, unlike every nextSince state. *)
-    destruct N as [m0 t0 x0 y0 X | m0 t0 l0 X | m0 X | m0 X];
-    destruct ovlp_abort_in_notNextSince_ovab as [r S];
-    destruct (bisim_disc_match _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ B) X) S) as [r' S'];
-    clear S; ovlp_abort_in_notNextSince_ns X S'.
+    prot_outProc_in_not_body; invert_disc_prefixes;
+    (* The derivative is dormant, ovAbort, tfsCurr or tfsListen. Each acts on a channel no
+       nextSince state mentions: mNext, mStable, mCurr or abort, and unpause.*)
+    destruct N as [m1 t1 x1 y1 X | m1 t1 l1 X | m1 X | m1 X]; red in X;
+    pose proof (bisim_trans _ _ _ (bisim_symm _ _ B) X) as BT; clear B X;
+    clean_proc_hyp BT; unfold liftNameProc in BT; unfold_app_hyp_l BT;
+    prot_outProc_in_not_body; refute_by_chan BT.
 Qed.
 
 Lemma listening_abort_contra p :

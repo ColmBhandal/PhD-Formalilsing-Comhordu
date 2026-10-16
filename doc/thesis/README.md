@@ -4,4 +4,4 @@
 
 The PDF's page numbers run 12 ahead of the printed ones: printed p.122 is PDF page 134. Older documents, such as the [pass-1 report](../reports/2026-10-14-proof-completion-pass-1/README.md), cite PDF pages.
 
-Where the formalisation departs from the thesis, [`thesis-corrections.md`](thesis-corrections.md) says how and why.
+Where the formalisation departs from the thesis, [`thesis-corrections.md`](thesis-corrections.md) says how and why. Notable observations about the thesis that are not errors in it are in [`thesis-remarks.md`](thesis-remarks.md).

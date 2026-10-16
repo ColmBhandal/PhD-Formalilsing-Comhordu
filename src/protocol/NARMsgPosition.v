@@ -254,9 +254,9 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   apply Q. rewrite H10. rewrite dist2D_refl. simpl. rewrite Rmult_0_r. apply Rle_refl.
   assumption.
   (*We use an analogous argument for the overlap case using (ovlp_outProc_out)*)
-  lets OO : ovlp_outProc_out Y H6. decompEx2 OO u r OO'.
+  lets OO : ovlp_outProc_out Y H6. destruct OO as [u [OO' _]].
   remember ([|q, l1, h, k|]) as e. assert (reachableEnt e). eapply reachable_net_ent.
-  apply p. apply H. assert (ovReadyStateEnt m u l0 e).
+  apply p. apply H. assert (ovReadyStateExpEnt m u l0 e).
   rewrite Heqe. constructor. rewrite H8. constructor. apply OO'.
   lets OP : ovReady_pos H4 H9. eapply inPos_ent_net in OP.
   assert (l0 = l). eapply inPos_unique. apply OP. apply Q. rewrite H10.

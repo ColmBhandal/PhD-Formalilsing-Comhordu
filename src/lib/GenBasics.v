@@ -574,4 +574,22 @@ Ltac positions_inv := repeat match goal with
   | [H : Forall2 _ (_ :: _) _ |- _] => inversion H; subst; clear H
   end; cbv beta in *.
 
+(** A relation that holds between each element and itself holds pointwise along a list.*)
+Lemma Forall2_diag {A : Type} (R : A -> A -> Prop) (l : list A) :
+  (forall x, In x l -> R x x) -> Forall2 R l l.
+Proof.
+  induction l as [ |x l IH]; intro H; constructor.
+  - apply H. left. reflexivity.
+  - apply IH. intros y I. apply H. right. assumption.
+Qed.
+
+(** Two pointwise relations compose along lists.*)
+Lemma Forall2_compose {A B C : Type} (R : A -> B -> Prop) (S : B -> C -> Prop)
+  (l1 : list A) (l2 : list B) (l3 : list C) :
+  Forall2 R l1 l2 -> Forall2 S l2 l3 -> Forall2 (fun x z => exists y, R x y /\ S y z) l1 l3.
+Proof.
+  intro F. revert l3. induction F as [ |x y l1 l2 Rxy F IH]; intros l3 G;
+    inversion G; subst; constructor; eauto.
+Qed.
+
 (*****END : Steps at a position in a list******)
