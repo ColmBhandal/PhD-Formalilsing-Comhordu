@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Started** | 2026-10-13 |
-| **Status** | 🧑 Phase 5: step 16 in review |
+| **Status** | 🧑 Phase 5: step 17 in review |
 | **Branch** | One per PR |
 | **Goal** | Port the Comhordú formalisation to **Rocq 9.2.0**, then close every assumption under `safety` that can be closed, and write up the ones that can't. |
-| **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in the [Appendix](#appendix-carried-over-from-the-2015-plan). |
+| **Supersedes** | [2015 project plan](../archive/2015-05-08-coq-project-plan.pdf). What was carried over is in [`doc/archive/README.md`](../archive/README.md). |
 
 **Legend:** 🤖 Agent · 🧑 Human-in-the-loop · ✅ / `[x]` done · `[ ]` to do
 
@@ -29,7 +29,7 @@ The rules live in `AGENTS.md` files, each in the directory it governs: [`doc/`](
 
 ## Phase 0: Docs scaffolding
 
-- [x] 🤖 **0.1 Archive and scaffolding.** ✅ 2026-10-13. Moved `coq_proj.pdf` to `doc/archive/2015-05-08-coq-project-plan.pdf` and checked it against the code and current tooling ([Appendix](#appendix-carried-over-from-the-2015-plan)). Created `doc/{workstreams,reports,adr,archive}` with an `AGENTS.md` in `doc/` and in each subfolder, this tracker and the [reals ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md). Added a "Project docs" section to README.
+- [x] 🤖 **0.1 Archive and scaffolding.** ✅ 2026-10-13. Moved `coq_proj.pdf` to `doc/archive/2015-05-08-coq-project-plan.pdf` and checked it against the code and current tooling ([`doc/archive/README.md`](../archive/README.md)). Created `doc/{workstreams,reports,adr,archive}` with an `AGENTS.md` in `doc/` and in each subfolder, this tracker and the [reals ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md). Added a "Project docs" section to README.
 
 ## Phase 1: Upgrade (🤖 agent only)
 
@@ -70,11 +70,11 @@ This phase runs as a loop: pick an item, agree the fix, open a PR, review and me
 - [x] 🧑 **12. Listener arity** ([root cause 4](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#4-listener-notification-arity-also-in-the-thesis)). ✅ 2026-10-14. The listener now reads all 3 notification fields, a [thesis correction](../thesis/thesis-corrections.md#1-the-listener-reads-too-few-fields-from-a-notification). `listening_AN_prot` is proved. `incomingNetNotif_del` gains a length hypothesis. [#2](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/2).
 - [x] 🤖 **13. Make the language generic.** ✅ 2026-10-15. The code built the protocol's process names and their definitions into the language. Now the language takes them as parameters, and its results hold for any guarded definitions, a weaker form of Remark 4.2 (p.69) and a [thesis correction](../thesis/thesis-corrections.md#2-patience-needs-guarded-definitions). `ProtocolBridge.v` proves that the protocol's definitions are guarded. The statement of `safety` and its 84 assumptions are unchanged. The protocol-only channels are left for step 29. [#3](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/3).
 - [x] 🤖 **14. Split `src/` into `lib/`, `model/`, `lang/` and `protocol/`.** ✅ 2026-10-15. Each folder depends only on the ones before it, and has a README and its own `AGENTS.md`. `ComhBasics.v` keeps the model, and its general helpers move to `lib/GenBasics.v`. Only code moves: printing every statement and definition before and after shows no change, and `safety` still rests on the same 84 assumptions. [#4](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/4).
-- [x] 🤖 **15. Extract language results from the proved results.** ✅ 2026-10-15. Every proved protocol result about the language now rests on a general result in `lang/`: 63 language results added, 63 protocol lemmas removed, each called out in the [report](../reports/2026-10-15-extract-language-results/README.md). A few abstractions did most of the work, such as the inversion of a parallel triple's step and the entity's no-synchronisation principle. Every definition and statement that stays is unchanged, checked by `helper-scripts/print_statements.py`, and `safety` still rests on 84 assumptions. The generic network notions defined in `NetAuxBasics.v` move to `lang/` in step 17. [#5](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/5).
-- [x] 🤖 **16. N-ary parallel composition.** ✅ 2026-10-15. `parAll p ps` in `lang/SoftwareLanguage.v` computes to the right-nested pairs `$||$` parses to, so the protocol's triples are instances of it and no protocol statement changes. The n-ary results are proved once by induction on the list, with a step at a position as a `stepAt` in `lib/GenBasics.v`. The 28 triple-shaped lemmas are gone, each listed with its replacement in the [report](../reports/2026-10-15-n-ary-parallel-composition/README.md), `net_del_elim` is restated over an entity with no process structure, and the protocol reaches its three components through one tactic, `triple_pos`. `safety` still rests on 84 assumptions. [#6](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/6).
-- [ ] 🤖 **17. Move the generic network notions to `lang/`.** `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard` and `liftEntNet` are defined in `protocol/NetAuxBasics.v`, but nothing in them is about Comhordú. Move them to `lang/NetworkLanguage.v` with the results about them, both unchanged, and re-prove from the language whatever their proofs still take from the protocol. Decided on step 15's [report](../reports/2026-10-15-extract-language-results/README.md#decisions).
+- [x] 🤖 **15. Extract language results from the proved results.** ✅ 2026-10-15. Every proved protocol result about the language now rests on a general result in `lang/`: 63 language results added, 63 protocol lemmas removed ([report](../reports/2026-10-15-extract-language-results/README.md)). A few abstractions did most of the work, such as the inversion of a parallel triple's step and the entity's no-synchronisation principle. Every definition and statement that stays is unchanged, and `safety` still rests on 84 assumptions. The generic network notions defined in `NetAuxBasics.v` move to `lang/` in step 17. [#5](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/5).
+- [x] 🤖 **16. N-ary parallel composition.** ✅ 2026-10-15. `parAll p ps` in `lang/SoftwareLanguage.v` computes to the right-nested pairs `$||$` parses to, so the protocol's triples are instances of it and no protocol statement changes. The n-ary results are proved once by induction on the list, with a step at a position as a `stepAt` in `lib/GenBasics.v`. The 28 triple-shaped lemmas are gone ([report](../reports/2026-10-15-n-ary-parallel-composition/README.md)), `net_del_elim` is restated over an entity with no process structure, and the protocol reaches its three components through one tactic, `triple_pos`. `safety` still rests on 84 assumptions. [#6](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/6).
+- [x] 🤖 **17. Move the generic network notions to `lang/`.** ✅ 2026-10-16. `inPosNet`, `distNet`, `outgoing`, `incomingNet`, `incomingNetNotif`, `mState_in_net`, `transGuard`, `liftEntNet` and `incomingEnt` are in `lang/` with the 21 proved results about them, every statement unchanged; the unproved results about them wait in the protocol for steps 21 and 22. `outgoing_disc_pres` is re-proved from the language, so the false `link_ent_outList` left the cone and was deleted with approval: `safety` rests on 83 assumptions, down from 84. [#7](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/7).
 - [ ] 🧑 **18. Component-state predicates** ([root cause 1](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#1-incomplete-component-state-predicates)). Fixes `reachableProt_triple`, the most structural problem.
-- [ ] 🧑 **19. Quick fixes in the cone:** `link_ent_outList` and `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
+- [ ] 🧑 **19. Quick fixes in the cone:** `outgoing_timeout_disc` ([root cause 12](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#12-small-statement-bugs)), and `ovWait_del_pres` ([root cause 10](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#10-parameter-tracking-under-bisimulation)).
 - [ ] 🧑 **20. Reachability hypotheses and `noSyncNow`** ([root causes 2](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#2-missing-reachability-hypotheses) and [6](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#6-nosyncnow-is-missing-the-thesiss-position-read-clause)).
 - [ ] 🧑 **21. `Parameter` stubs** ([suggestions](../reports/2026-10-14-proof-completion-pass-1/root-causes-and-fixes.md#parameter-stubs)), then add `reachableNet n` to `tfsListen_failSafe_net`. This breaks the [pair that makes `safety` trivial](../reports/2026-10-14-proof-completion-pass-1/why-safety-is-vacuous.md#2-a-pair-that-makes-safety-trivial).
 
@@ -88,10 +88,12 @@ Step 12 and steps 18–21 cover every known reason `safety` is vacuous today. Af
 - [ ] 🧑 **27. Non-triviality.** Decide whether to prove that, without the protocol, an unsafe state is reachable. This is a 2015 "future extension".
 - [ ] 🧑 **28. Initial interfaces.** Decide whether `initialEnt` should constrain an entity's interface, for example to start empty. Today it allows any contents, which is why step 12 needed a length hypothesis.
 - [ ] 🧑 **29. Protocol-only channels.** Decide whether the 5 channels that only the protocol uses (`chanTrans`, `chanWake`, `chanPause`, `chanUnpause` and `chanBad`) should be supplied by the protocol instead of built into the language. The expression operators stay: they wrap the model's functions, so they belong with the model.
+- [ ] 🤖 **Delete `parStructPres` and `parStructPres2`** in `lang/SoftwareLanguage.v`: pair-shaped, unused since step 16, and instances of `parAll_disc_weak` and `parAll_del_inv`.
 - [ ] 🧑 _Placeholder: anything else the first pass couldn't decide._
 
 ## Log
 
+- **2026-10-16:** Process: the PR is the record of a step, reports are only written when asked for, and the human reviewing a PR is the check that nothing claimed changed without approval. Agents in sandboxes install Rocq with `helper-scripts/install_rocq.sh`, and nothing specific to one agent or vendor goes in the repository.
 - **2026-10-15:** Step 16 done: results about the parallel composition of any number of components replace the triple-shaped lemmas, `net_del_elim` is restated, 84 assumptions as before.
 - **2026-10-15:** New step 16: n-ary parallel composition, so that `lang/` states results once for any number of components and the triple-shaped lemmas go. The network-notions move is now step 17, and old steps 17–28 are 18–29.
 - **2026-10-15:** New step 16: move the generic network notions in `NetAuxBasics.v` to `lang/`, decided on step 15's report. Old steps 16–27 are now 17–28. Deleting a proved result that a general one replaces is now encouraged by `src/AGENTS.md`.
@@ -105,48 +107,3 @@ Step 12 and steps 18–21 cover every known reason `safety` is vacuous today. Af
 - **2026-10-14:** Pass 1 complete. 123 targets proved, 25 held back, 108 written up and audited. `Print Assumptions safety` went from 134 to 85, but `safety` is vacuous until the inconsistent admits are fixed. Reals modernised. PR opened for review.
 - **2026-10-13:** Upgrade to Rocq 9.2.0 done with no broken proofs; assumption set unchanged. Standard tooling and CI added. Rules moved into `AGENTS.md` files.
 - **2026-10-13:** Workstream started. Coq 8.15 baseline is green; Rocq 9.2.0 breaks on `elimtype`. Reals [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md) accepted: option (c), stdlib reals with the `Rstruct` bridge. 2015 plan archived.
-
----
-
-## Appendix: Carried over from the 2015 plan
-
-Source: [`doc/archive/2015-05-08-coq-project-plan.pdf`](../archive/2015-05-08-coq-project-plan.pdf), *"Comhordú in Coq: Documentation and Project Plan"*, 8 May 2015. Each item was checked against `src/` and current Rocq tooling on 2026-10-13, and only what still holds is kept.
-
-### A.1 Admitted labels (still in use)
-
-The convention is still live in the code: **173 of the 228** live `Admitted` carry a trailing `(*label*)` comment. They are useful hints, but the 2015 counts are stale.
-
-| Label | Meaning (2015) | 2015 | Now | How to use it now |
-|---|---|---|---|---|
-| `C` | The statement must change first, usually by adding a hypothesis. | 3 | 4 | Expect a step-8 write-up rather than a proof. The comment next to it often names the fix. |
-| `D- X` | Depends on `X` being proved or defined first. | 4 | 13 | 7 × `D- reachableEnt` are blocked on a `Parameter` stub (step 9). `D- rangeBad_next_ent` and `D- badOvlp_next_ent` name entity-level lemmas that **don't exist**, so the prover must create them; the process-level `rangeBad_next`/`badOvlp_next` in `ProtAuxResults.v` exist. The other 4 are bare `D`. |
-| `R` | The proof predates the switch to bisimulation-based state predicates. The old proof is **commented out just above** the `Admitted`. | 13 | 13 | Start from the commented-out proof and adapt it. `state_pred_elim` still exists (`GenTacs.v`). |
-| `#tag` | A category of similar proofs that one shared tactic could solve. | 45 | 45 | Give a whole tag group to one prover chunk (see A.2). Main tags: `#fwd-track` (8), `#complexNetLift` (8), `#lift-track-net` (6), `#tfsNetLift`, `#fwd-track-lift-ent` (5 each), `#state-pred-elim`, `#delay-pres` (4 each), `#timeSplit-timedList` (3). |
-| `1`–`10` | Estimated difficulty. **1 = hardest, 10 = easiest.** | 162 | 98 | For sizing chunks. Today's spread: 1:8, 2:7, 3:15, 4:20, 5:16, 6:22, 7:9, 9:1. Rough 2015 sizing: levels 1–3 take about 100–200 lines and 5–10 auxiliary lemmas; 4–6 take about 5 auxiliary lemmas; 7–10 are routine. |
-| *(none)* | | | 55 | Triage from scratch. |
-
-> **Counting gotcha:** `grep -c 'Admitted\.'` happens to give the right total (228), but only because two errors cancel. It **misses** `Admitted (*9*).` at `NARNonFS_currSince.v:27`, and it **counts** an `Admitted.` inside a commented-out block at `NARNonFS_currSince.v:76`. Count outside comments.
-
-### A.2 Other guidance carried over
-
-| 2015 item | Status now |
-|---|---|
-| §3.1 Tactic development per `#tag` | **Kept**, folded into step 7. Prove one lemma interactively, factor its proof into a tactic that doesn't depend on hypothesis names or order, then apply it to the rest of the group. Reuse what exists: `state_pred_elim` (`GenTacs.v`), `state_pred_elim_net`, `fwd_track_net_tac`, `backtrack_net_pre`, `initNet_contra` (`NetAuxBasics.v`), `backtrack_pre`/`_post`/`_weed`, `fwd_track_pre`, `link_partripout_tac` (`ProtAuxResults.v`). A new shared tactic goes to the lead to splice in, because provers don't edit `src/`. |
-| In-file proof sketches | **Kept.** There are ~170 `(*Proof: …*)` comments next to lemmas. Read them before proving. |
-| §3.2 "Garbage collection" of unneeded admits | **Kept** as a Phase 5 🧑 decision. It is now mechanical: `Print Assumptions safety` shows which admits are actually used. |
-| §4 "General survey": recount what's left, revise the plan | **Kept**, now automated: the CI assumption report (step 4) plus this tracker's Log. |
-| §4 "Tidying": recompile after moving code | **Kept.** The lead rebuilds after every splice (step 7). |
-| §5 Axiom soundness check | **Kept** as Phase 2 step 6. It is a relative-consistency proof by building a model inside Rocq, so the 2015 doc's Gödel worry doesn't apply: we are not proving Rocq's own consistency. |
-| §5 Show that an unsafe state is reachable without the protocol | **Kept** as a Phase 5 🧑 decision. |
-| §1 Category definitions (Parameter = stub, Axiom = deliberately uninterpreted, Conjecture = assumed as "obvious") | **Kept** in [Starting point](#starting-point-2026-10-13). |
-
-### A.3 Dropped, and why
-
-| 2015 item | Why it was dropped |
-|---|---|
-| Table 1 (statistics) and Table 2 (label counts) | **Stale.** Replaced by [Starting point](#starting-point-2026-10-13) and A.1. Then vs now: lines 13,459 → ~15.6k; `Admitted` 226 → 228; Conjecture, Axiom and Parameter unchanged at 28/28/5; proved (`Qed`/`Defined`) 693 → 679; Definitions 259 → 259; Inductives 92 → 89; `Ltac` 225 → 221. |
-| "Conjectures are not a priority", "`R` proofs are not a priority" | **Superseded.** Both are in scope in step 7. |
-| §3.2 Lemma/Theorem demotion and promotion, renaming, statement standardisation, explicit typing, re-documenting | **Out of scope.** These are cosmetic. They would churn the diff and conflict with serial splicing. They could be revisited later as a 🧑 call. |
-| §4 Find and replace with Notepad++; "Coq search can't match part of a name" | **Obsolete.** Use `grep`/`rg`. Rocq's `Search "fragment"` matches name substrings. |
-| §4 Researching via the Coq website and the Coq-Club mailing list | **Obsolete pointers.** Use the Rocq reference manual and the Rocq Zulip and Discourse. |
-| §4 "Use tactics" (generic) | **Replaced.** The 2015 doc names no specific tactics, and the code never used `omega`/`fourier` (0 hits). Real-number reasoning was done with hand-rolled lemmas (`RInequalities.v`, `StandardResults.v`). The modern answer is `lra`/`nra`/`Psatz` on `rocq-stdlib`, per the [ADR](../adr/2026-10-13-stdlib-reals-with-mathcomp-bridge.md). `elimtype`, used in the vendored LibTactics, is gone in Rocq 9. |

@@ -1,5 +1,8 @@
 CoqDoc/
 
+# Vendor-specific agent folders never belong in the repository; see AGENTS.md.
+.claude/
+
 #Coq Build Output to Ignore
 *.aux
 *.glob

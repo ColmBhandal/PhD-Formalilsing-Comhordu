@@ -14,8 +14,8 @@ In its current state, this code is not recommended for inclusion in any downstre
 
 Project documentation lives under [`doc/`](doc):
 
- - [`doc/workstreams/`](doc/workstreams): living trackers for ongoing work, e.g. the [Rocq upgrade & proof completion](doc/workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md) workstream.
- - [`doc/reports/`](doc/reports): point-in-time reports, e.g. the results of a proving pass.
+ - [`doc/workstreams/`](doc/workstreams): living trackers for ongoing work, deleted when they finish.
+ - [`doc/reports/`](doc/reports): detailed reports, written when one is asked for, such as the results of a proving pass.
  - [`doc/adr/`](doc/adr): architecture decision records.
  - [`doc/archive/`](doc/archive): superseded historical documents, e.g. the original 2015 project plan.
  - [`doc/thesis/`](doc/thesis): the [PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf) itself, and the corrections to it.
@@ -30,6 +30,8 @@ Project documentation lives under [`doc/`](doc):
  - **Docker:** use the official image `rocq/rocq-prover:9.2.0`, the same one CI uses. For example:
 
    ``docker run --rm -it -v "$PWD:/work" -w /work --user root -e OPAMROOT=/home/rocq/.opam -e PATH=/home/rocq/.opam/4.14.2+flambda/bin:/usr/local/bin:/usr/bin:/bin rocq/rocq-prover:9.2.0 make``
+
+ - **Neither:** `helper-scripts/install_rocq.sh` downloads that image's layers straight from Docker Hub and unpacks its Rocq to `/home/rocq/.opam/4.14.2+flambda`, the path it has in the image. It needs root, `curl`, `tar` and `python3`, and about 2 GB of disk. Then `export PATH=/home/rocq/.opam/4.14.2+flambda/bin:$PATH`. This is the route for a sandboxed environment, such as an agent session, that has no Docker daemon and can't reach opam's repository.
 
 ### Local Build
 

@@ -597,14 +597,6 @@ Lemma inter_abort_in_not h h' :
   h -i- chanAbort {?[] -i> h' -> False.
   introz U. inversion U. Qed.
 
-Lemma outList_in_input_pres v u t lo lo' :
-  <( v, t )> _: outList lo -> outList lo -tl- u ?? -tl> outList lo' ->
-  <( v, t )> _: outList lo'.
-Proof.
-  intros H1 H2. inversion H2.
-Qed.
-(*Prove in bulk: #interface-linking*)
-
 (* begin helpers for outList_in_output_pres *)
 From Stdlib Require Import Lra.
 Lemma outList_in_output_pres_aux : forall l a l', l -tl- a -tl> l' ->
@@ -634,5 +626,14 @@ Proof.
   - injection Hy as Hv Ht. subst t. simpl in H3. lra.
 Qed.
 (*Prove in bulk: #interface-linking*)
+
+(** Buffering a message into an output list keeps every element.*)
+Lemma outList_buff_pres lo lo' w x :
+  lo -ol- w ?? -ol> lo' -> x _: outList lo -> x _: outList lo'.
+Proof.
+  intros H Hin. inversion H; subst.
+  - simpl. right. assumption.
+  - match goal with [Ht : _ -tl- _ -tl> _ |- _] => inversion Ht end.
+Qed.
 
 (*-LOCAL TIDY*)

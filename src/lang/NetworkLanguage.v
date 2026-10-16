@@ -710,6 +710,312 @@ Proof.
   simpl in BM. rewrite Rmult_comm. exact BM.
 Qed.
 
+
+(***************Positions, queues and mode states of a network's entities*********************)
+
+(** inPosNet l i n says that the entity number i in n has position l.*)
+Inductive inPosNet (l : Position) (i : nat) (n : Network) : Prop :=
+  | ipWitness (p : ProcTerm) (h : Interface) (k : ModeState) :
+    [| p , l , h , k |] @ i .: n -> inPosNet l i n.
+
+(** distNet i i' n x says that the entities i and i' are separated by x in n.*)
+Inductive distNet (i i' : nat) (n : Network) : Distance -> Prop :=
+  | dnWitness (l l' : Position) : inPosNet l i n -> inPosNet l' i' n ->
+    distNet i i' n (distFun l l').
+
+(** outgoing v t i n says that the message v with timestamp t is in the output queue of
+the interface component of the entity i in the network n.*)
+Inductive outgoing (v : list BaseType) (t : Time) (i : nat) (n : Network) : Prop :=
+  | ogWitness (p : ProcTerm) (l : Position) (li : InputList) (lo : OutputList) (ln : NotifList) (k : ModeState) :
+    [| p , l , (mkInterface li lo ln) , k |] @ i .: n -> In (<( v , t )>) (outList lo) -> outgoing v t i n.
+
+(** incomingNet v i n says that the message v is in the input queue of the interface
+component of the entity i in the network n. Even though the input queue is effectively
+untimed messages, it is modelled as a timed list, with timestamps simply set to 0, hence
+"v in Li" becomes "<v, 0> in Li" to be more pedantic about it.*)
+Inductive incomingNet (v : list BaseType) (i : nat) (n : Network) : Prop :=
+  | icWitness (p : ProcTerm) (l : Position) (li : InputList) (lo : OutputList) (ln : NotifList) (k : ModeState) :
+    [| p , l , (mkInterface li lo ln) , k |] @ i .: n -> In (<( v , zeroTime )>) (inList li) -> incomingNet v i n.
+
+(** incomingNetNotif v t i n says that the message v with timestamp t is in the
+notification queue of the interface component of the entity i in the network n.*)
+Inductive incomingNetNotif (v : list BaseType) (t : Time) (i : nat) (n : Network) : Prop :=
+  | icnWitness (p : ProcTerm) (l : Position) (li : InputList) (lo : OutputList) (ln : NotifList) (k : ModeState) :
+    [| p , l , (mkInterface li lo ln) , k |] @ i .: n -> In (<( v , t )>) (notifList ln) -> incomingNetNotif v t i n.
+
+(** mState_in_net k i n says that the entity number i in n has mode state k.*)
+Inductive mState_in_net (k : ModeState) (i : nat) (n : Network) : Prop :=
+  minet (p : ProcTerm) (l : Position) (h : Interface) :
+  [|p, l, h, k|] @ i .: n -> mState_in_net k i n.
+
+(** transGuard t i n says that the entity at position i in n is transitioning
+from one mode to another and the guard on the transition is t.*)
+Inductive transGuard (t : Time) (i : nat) (n : Network) : Prop :=
+  | tgWitness (p : ProcTerm) (l : Position) (h : Interface) (m m' : Mode) :
+    [| p , l , h , <| m , m' , t |> |] @ i .: n -> transGuard t i n.
+
+(** The lifting function we use to lift predicates from the entity level to the
+network level.*)
+Inductive liftEntNet (X : Entity -> Prop) (i : nat) (n : Network) : Prop :=
+  | lenWitness (e : Entity) : X e -> e @ i .: n -> liftEntNet X i n.
+
+(** If the entity i is in position l in either network across a discrete transition,
+then it is also in this position in the other network.*)
+Theorem inPos_pres_disc (n n' : Network) (a : ActDiscNet) (l : Position) (i : nat) :
+  n -NA- a -NA> n' ->
+  (inPosNet l i n <-> inPosNet l i n').
+Proof.
+  intros ST. split; intros IP; destruct IP as [p h k E].
+  - destruct (link_net_ent_disc_fwd _ _ _ _ _ ST E) as [e' [E' [EQ | [b S]]]].
+    + subst. econstructor; eassumption.
+    + inversion S; subst; econstructor; eassumption.
+  - destruct (link_net_ent_disc_bkwd _ _ _ _ _ ST E) as [e [E0 [EQ | [b S]]]].
+    + subst. econstructor; eassumption.
+    + inversion S; subst; econstructor; eassumption.
+Qed.
+(**Proof: Follows directly from the entity semantics*)
+
+(** If v is outgoing with timestamp t, and the network can delay, then in
+the derivative network v is outgoing with timestamp t - d.
+A useful corollary of this is that if t = 0, then delay is impossible.*)
+Theorem outgoing_del (n n' : Network) (d : Delay) (v : list BaseType) (t : Time) (i : nat) :
+  n -ND- d -ND> n' -> outgoing v t i n ->
+  {p : d <= t | outgoing v (minusTime t d p) i n'}.
+Proof.
+  intros ND OG. destruct OG as [p l li lo ln k EIN INO].
+  destruct (link_net_ent_del_fwd _ _ _ _ _ ND EIN) as [e' [Y Y0]].
+  destr_ent_inter e' p' l' k' li' lo' ln'.
+  lets Y1 : link_ent_inter_del Y0.
+  inversion Y1 as [? ? ? ? ? ? ? IL OL NL | | | | | ]; subst.
+  inversion OL as [ | ? ? ? TL]; subst.
+  exists (timedList_del_ge _ _ _ _ _ TL INO). econstructor. apply Y. simpl.
+  eapply timedList_del_le; [apply TL | apply INO].
+Qed.
+(**Proof: Idea is to invert/destruct outgoing to [p, l, {li, lo, ln}, k] @ i.: n & v, t : lo
+apply ent-interface del linking tactic
+apply interface-list del linkiing tactic
+*now we have that lo delays to some lo'*
+result & accompanying tactic about timed lists v, t : l & l -d- l' then d <= t &
+v (t - d) : l'
+contstructor & assumption
+.*)
+
+Corollary outgoing_del_contra (n n' : Network) (d : Delay)
+  (v : list BaseType) (i : nat) : n -ND- d -ND> n' ->  outgoing v zeroTime i n -> False.
+Proof.
+  intros. addHyp (outgoing_del n n' d v zeroTime i H H0). invertClear H1.
+  eapply Rle_not_lt. apply x. simpl. delPos.
+Qed.
+
+(** If v is outgoing with non-zero timestamp t, and the network performs a
+discrete action, then v is still outgoing in the derivative network.*)
+Theorem outgoing_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time) (i : nat) :
+  n -NA- a -NA> n' -> outgoing v t i n -> 0 < t ->
+  outgoing v t i n'.
+Proof.
+  intros ST OG POS. destruct OG as [p l li lo ln k EIN INO].
+  destruct (link_net_ent_disc_fwd _ _ _ _ _ ST EIN) as [e' [EIN' [EQ | [b S]]]].
+  - subst. econstructor; eassumption.
+  - destr_ent_inter e' p' l' k' li' lo' ln'.
+    econstructor. eassumption.
+    eapply stepEnt_disc_pres_out_pos; eassumption.
+Qed.
+
+(** If v is incomingNetNotif with non-zero timestamp t, and the network performs a discrete
+action, then v is still incomingNetNotif in the derivative network.*)
+Theorem incomingNetNotif_disc_pres (n n' : Network) (a : ActDiscNet) (v : list BaseType) (t : Time) (i : nat) :
+  n -NA- a -NA> n' -> incomingNetNotif v t i n -> 0 < t ->
+  incomingNetNotif v t i n'.
+Proof.
+  intros ST IN POS. destruct IN as [p l li lo ln k EIN INN].
+  destruct (link_net_ent_disc_fwd _ _ _ _ _ ST EIN) as [e' [EIN' [EQ | [b S]]]].
+  - subst. econstructor; eassumption.
+  - destr_ent_inter e' p' l' k' li' lo' ln'.
+    econstructor. eassumption.
+    eapply stepEnt_disc_pres_notif_pos; eassumption.
+Qed.
+(**Proof: Analogous to (outgoing_disc_pres).*)
+
+(** If an entity is inPosNet l' i n', and there is some n such that it delays to n' via d,
+then i is in inPosNet l i n for some l and the difference between the positions is at most
+speedMax*d*)
+Lemma inPos_del_bound_bkwd (n n' : Network) (d : Delay) (l' : Position) (i : nat) :
+  inPosNet l' i n' -> n -ND- d -ND> n' -> exists l,
+  inPosNet l i n /\ dist2d l l' <= speedMax * d.
+Proof.
+  intros IP ND. destruct IP as [p h k EIN].
+  destruct (link_net_ent_del_bkwd _ _ _ _ _ ND EIN) as [e [Y Y0]].
+  lets BM : boundedMovement Y0.
+  destruct e as [p0 l0 h0 k0]. exists l0. split.
+  - econstructor. eassumption.
+  - simpl in BM. rewrite Rmult_comm. destruct d as [[dr dp]]. simpl in *. exact BM.
+Qed.
+(**Proof: Salvaged from old Coq model (pos_bound?).*)
+
+Lemma inPos_ex : forall (i : nat) (n : Network) (e : Entity),
+  e @ i .: n -> exists l, inPosNet l i n.
+Proof.
+  intros i n e EIN. destruct e as [p l h k]. exists l. econstructor. eassumption.
+Qed.
+(**Proof: Obvious- every entity has a position*)
+
+Lemma distNet_intro : forall (e1 e2 : Entity) (i j : nat) (n : Network) (x : Distance),
+  e1 @ i .: n -> e2 @ j .: n -> x = mkDistance (dist2d e1 e2) -> distNet i j n x.
+Proof.
+  intros e1 e2 i j n x E1 E2 EQ. subst x.
+  destruct e1 as [p1 l1 h1 k1]. destruct e2 as [p2 l2 h2 k2].
+  change (distNet i j n (distFun l1 l2)).
+  apply dnWitness; econstructor; eassumption.
+Qed.
+(**Proof: Obvious from definitions of things*)
+
+Lemma inPos_pos : forall (e : Entity) (i : nat) (l : Position) (n : Network),
+  e @ i .: n -> inPosNet l i n -> posEnt e = l.
+Proof.
+  intros e i l n EIN IP. destruct IP as [p h k EIN'].
+  lets EQ : entInNetUnique EIN EIN'. subst e. reflexivity.
+Qed.
+(**Proof: Obvious- invert/deconstruct inPostNet*)
+
+Lemma disc_pres_distNet_bkwd : forall (n n' : Network) (a : ActDiscNet)
+  (i j : nat) (x : Distance),
+  n -NA- a -NA> n' -> distNet i j n' x -> distNet i j n x.
+Proof.
+  intros n n' a i j x ST DN. destruct DN as [l l' IP IP'].
+  apply dnWitness.
+  - apply (proj2 (inPos_pres_disc n n' a l i ST)). assumption.
+  - apply (proj2 (inPos_pres_disc n n' a l' j ST)). assumption.
+Qed.
+(**Proof: Obvious- Lift other proofs which say essentially the same thing and apply constructor for distNet*)
+
+Lemma del_link_distNet_bkwd : forall (n n' : Network) (d : Delay)
+  (i j : nat) (x' : Distance),
+  n -ND- d -ND> n' -> distNet i j n' x' ->
+  exists x, distNet i j n x /\ x <= x' + 2*speedMax*d.
+Proof.
+  intros n n' d i j x' ND DN.
+  destruct DN as [l1 l2 IP1 IP2].
+  destruct IP1 as [p1 h1 k1 E1]. destruct IP2 as [p2 h2 k2 E2].
+  destruct (link_net_ent_del_bkwd n n' _ i d ND E1) as [e1 [E1n D1]].
+  destruct (link_net_ent_del_bkwd n n' _ j d ND E2) as [e2 [E2n D2]].
+  exists (distFun (posEnt e1) (posEnt e2)). split.
+  - destruct e1 as [q1 m1 g1 r1]. destruct e2 as [q2 m2 g2 r2].
+    apply dnWitness; econstructor; eassumption.
+  - pose proof (bndDistLwr n n' e1 e2 _ _ i j d ND E1n E1 E2n E2) as B.
+    unfold distFun. cbn [distance]. simpl posEnt in B. lra.
+Qed.
+(**Proof: Obvious- Lift similar proofs & apply distNet constructor*)
+
+Lemma distNet_elim : forall (i j : nat) (n : Network) (x : Distance),
+  distNet i j n x -> exists e1 e2,
+  e1 @ i .: n /\ e2 @ j .: n /\ x = {| distance := dist2d e1 e2 |}.
+Proof.
+  intros i j n x H. destruct H as [l l' H1 H2].
+  destruct H1 as [p h k H1]. destruct H2 as [p' h' k' H2].
+  exists ([|p, l, h, k|]) ([|p', l', h', k'|]).
+  split; [assumption | split; [assumption | reflexivity]].
+Qed.
+
+(** Any entity within range of a broadcast inputs that broadcast.*)
+Lemma inRange_out_input (n n' : Network) (v : list BaseType) (l : Position)
+  (r x: Distance) (i j : nat) (e : Entity) :
+  n -NA- ([-v, l, r-]) /! i -NA> n' -> e @ j .: n -> i <> j -> distNet i j n' x ->
+  x <= r -> exists e', e -EA- ([-v, l, r-]) #? ->> e' /\ e' @ j .: n'.
+Proof.
+  intros OUT EJ NEQ DN XR.
+  destruct (outputMatch n n' i ([-v, l, r-]) OUT) as [ei [ei' [EI [EI' STI]]]].
+  assert (PL : posEnt ei' = l) by (inversion STI; subst; reflexivity).
+  destruct DN as [la lb IPa IPb].
+  destruct IPa as [pa ha ka Ea]. destruct IPb as [pb hb kb Eb].
+  assert (LA : la = l).
+  { rewrite <- (entInNetUnique _ _ _ _ Ea EI') in PL. simpl in PL. exact PL. }
+  subst la.
+  destruct (outputMismatch n n' _ i j ([-v, l, r-]) OUT Eb NEQ) as [e0 [E0 ST]].
+  assert (EQ0 : e0 = e) by (eapply entInNetUnique; eassumption).
+  subst e0.
+  destruct ST as [ST | ST].
+  - exists ([|pb, lb, hb, kb|]). split; assumption.
+  - exfalso. inversion ST; subst.
+    unfold distFun in XR. cbn [distance] in XR.
+    rewrite distSymmetric in XR. lra.
+Qed.
+
+Lemma transGuard_elim : forall (t : Time) (i : nat) (n : Network),
+  transGuard t i n -> exists m m',
+  mState_in_net (<| m, m', t |>) i n.
+Proof.
+  intros t i n H. destruct H as [p l h m m' H].
+  exists m m'. econstructor. exact H.
+Qed.
+(**Proof: Obvious: transGuard definition*)
+
+Lemma transGuard_intro : forall (t : Time) (i : nat) (n : Network)
+  (m m' : Mode), mState_in_net (<| m, m', t |>) i n ->
+  transGuard t i n.
+Proof.
+  intros t i n m m' H. destruct H as [p l h H].
+  econstructor. exact H.
+Qed.
+(**Proof: Immediate from definition of transGuard*)
+
+Lemma mState_disc_pres : forall (n n' : Network) (i : nat)
+  (a : ActDiscNet) (k  : ModeState), n -NA- a -NA> n' -> mState_in_net k i n ->
+  exists k', mState_in_net k' i n'.
+Proof.
+  intros n n' i a k STEP MS. destruct MS as [p l h E].
+  destruct (link_net_ent_disc_fwd_ex n n' a STEP _ i E) as [e' E'].
+  destruct e' as [p' l' h' k']. exists k'. econstructor. exact E'.
+Qed.
+(**Proof: Obvious- inversion on mState_in_net, get that there's an entity, apply linking tactic to get entity in derivative,
+then once there's an entity there's going to be a mode state, so mState_in_net is satisfied.*)
+
+Lemma mState_in_net_unique k k' i n :
+  mState_in_net k i n -> mState_in_net k' i n -> k = k'.
+Proof.
+  intros MS MS'. destruct MS as [p l h E]. destruct MS' as [p' l' h' E'].
+  lets EN : entInNetUnique E E'. inversion EN. reflexivity.
+Qed.
+
+Lemma inPos_unique : forall (l l' : Position) (i : nat) (n : Network),
+  inPosNet l i n -> inPosNet l' i n -> l = l'.
+Proof.
+  intros l l' i n H H0. destruct H as [p h k E]. destruct H0 as [p0 h0 k0 E0].
+  lets EQ : entInNetUnique E E0. inversion EQ. reflexivity.
+Qed.
+(**Proof: Obvious- inversion and apply entInNetUnique*)
+
+(** An output by entity i from the network n means that the message is now pending
+notification with timestamp AN.*)
+Lemma outNet_incomingNetNotif (n n' : Network) (v : list BaseType) (r : Distance)
+  (l : Position) (i : nat) : n -NA- ([-v, l, r-]) /! i -NA> n' ->
+  incomingNetNotif ((baseDistance r)::v) adaptNotif i n'.
+Proof.
+  intros H.
+  destruct (outputMatch n n' i ([-v, l, r-]) H) as [e [e' [E [E' S]]]].
+  inversion S; subst.
+  match goal with [HI : _ -i- chanIOEnv _! _ !_ _ -i> _ |- _] => inversion HI; subst end.
+  econstructor; [eassumption | ].
+  eapply notifList_in_hd. eassumption.
+Qed.
+(**Proof: Follows from interface semantics.*)
+
+(** Linking theorem.*)
+Lemma incoming_net_ent (v : list BaseType) (i : nat) (n : Network) :
+  incomingNet v i n -> exists e, incomingEnt v e /\ e @ i .: n.
+Proof.
+  intro U. invertClear U. exists ([|p, l, {| li := li; lo := lo; ln := ln |}, k|]).
+  split. repeat constructor. assumption. assumption.
+Qed.
+
+(** Linking theorem.*)
+Lemma incoming_ent_net (v : list BaseType) (e : Entity) (i : nat) (n : Network) :
+  incomingEnt v e -> e @ i .: n -> incomingNet v i n.
+Proof.
+  intros U E. destruct U as [p l h k IH]. destruct h as [li lo ln].
+  inversion IH; subst. econstructor; eassumption.
+Qed.
+(**Proof: Follows directly from the definition*)
+
 End NetworkLanguage.
 
 (** A section's notations and tactics end with it. So that later files can use them, the
@@ -816,4 +1122,10 @@ Ltac link_netinterdel_tac U :=
     H1 : [|?p', ?l', ?h', ?k'|] @ ?i .: ?n' |- _] =>
     let U1 := fresh U in lets U1 : link_net_ent_delW H H0 H1;
     apply link_ent_inter_del in U1
+  end.
+
+Ltac inposdp :=
+  match goal with
+  [ w : ?n -NA- _ -NA> ?n', H : inPosNet ?l ?i ?n' |- inPosNet ?l ?i ?n] =>
+  eapply inPos_pres_disc; [apply w | assumption]
   end.

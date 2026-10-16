@@ -673,15 +673,4 @@ Proof.
   exact (tfsCurr_next_ent_lift tfsListenState dormantState _ _ _ tfsListen_next_ent_aux S T).
 Qed.
 
-(*A simpl linking theorem from entity to output list, saying that either
-interfaces are equal or one transitions to the other by some input or
-some output.*)
-Lemma link_ent_outList p p' l l' k k' li li' lo lo' ln ln' b :
-  [|p, l, {| li := li; lo := lo; ln := ln |}, k|] -EA- b ->>
-  [|p', l', {| li := li'; lo := lo'; ln := ln' |}, k'|] ->
-  lo = lo' \/ exists v, outList lo -tl- v ?? -tl> outList lo'
-  \/ outList lo -tl- v !! -tl> outList lo'. Admitted. (*5*)
-  (*Proof idea: Use existing ent_inter link, use some auto tactic to eliminate
-  a load of cases, then prove the rest by some interface linking tactic. #interface-linking*)
-
 (*- LOCAL TIDY*)
