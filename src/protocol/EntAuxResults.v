@@ -32,42 +32,60 @@ Lemma nextModeEnt_not_stable m1 m2 p l h :
   nextModeEnt m1 ([|p, l, h, m2|]) -> False. intros. Admitted. (*D*)
 (*Proof: immediate once nextModeEnt is defined.*)
 
+(***************************** Steps to a component *****************************)
+(** The language takes an entity step down to the components of its software, for any
+number of them (ent_disc_comps and its kin in EntityLanguage.v). Here the software is the
+protocol's triple.*)
+
+(** A discrete step between triples: each component is unchanged or stepped once.*)
+Lemma triple_disc_ent p1 p2 p3 p1' p2' p3' l l' h h' k k' a :
+  [|p1 $||$ p2 $||$ p3, l, h, k|] -EA- a ->> [|p1' $||$ p2' $||$ p3', l', h', k'|] ->
+  (p1 = p1' \/ exists b, p1 -PA- b -PA> p1') /\ (p2 = p2' \/ exists b, p2 -PA- b -PA> p2') /\
+  (p3 = p3' \/ exists b, p3 -PA- b -PA> p3').
+Proof.
+  intro S. change (p1 $||$ p2 $||$ p3) with (parAll p1 [p2, p3]) in S.
+  change (p1' $||$ p2' $||$ p3') with (parAll p1' [p2', p3']) in S.
+  lets F : ent_disc_comps S. specialize (F eq_refl). triple_pos. repeat split; assumption.
+Qed.
+
+(** A discrete step from a triple leads to a triple, each component unchanged or stepped
+once.*)
+Lemma triple_disc_ent_fwd p1 p2 p3 l h k e' a :
+  [|p1 $||$ p2 $||$ p3, l, h, k|] -EA- a ->> e' ->
+  exists p1' p2' p3' l' h' k', e' = [|p1' $||$ p2' $||$ p3', l', h', k'|] /\
+  (p1 = p1' \/ exists b, p1 -PA- b -PA> p1') /\ (p2 = p2' \/ exists b, p2 -PA- b -PA> p2') /\
+  (p3 = p3' \/ exists b, p3 -PA- b -PA> p3').
+Proof.
+  intro S. change (p1 $||$ p2 $||$ p3) with (parAll p1 [p2, p3]) in S.
+  destruct (ent_disc_comps_fwd _ _ _ _ _ _ _ S) as [p1' [qs' [l' [h' [k' [E F]]]]]].
+  positions_inv. do 6 eexists. split; [reflexivity | ]. repeat split; assumption.
+Qed.
+
+(** Takes an entity state predicate H apart, for a predicate lifted from one component:
+the entity becomes [|p1 $||$ p2 $||$ p3, l, h, k|] and H the component's predicate.*)
+Ltac ent_state_destr H p1 p2 p3 l h k :=
+  let p := fresh "p" in let H' := fresh H in
+  inversion H as [p l h k H']; subst; clear H;
+  let H'' := fresh H in inversion H' as [p1 p2 p3 H'']; subst; clear H'; rename H'' into H.
+
+(** From H : X_Ent [|p1 $||$ p2 $||$ p3, l, h, k|], the component's predicate, as H.*)
+Ltac ent_state_comp H :=
+  let H' := fresh H in inversion H as [? ? ? ? H']; subst; clear H;
+  let H'' := fresh H in inversion H' as [? ? ? H'']; subst; clear H'; rename H'' into H.
+
 (***************************** Lifted tracking *****************************)
 
-(*Most results here should be provable with a simple enough lifting tactic-
-and should be tagged accordingly with "back-track-lift-ent".*)
-
-(** Backward tracking lifted to an entity whose software is reachable: if the overlap
-component satisfies X after a discrete entity step, then before the step it already did, or
-it stepped into X from a reachable overlap state.*)
-Lemma overlap_prev_ent (X : ProcTerm -> Prop) p l h k e' a :
-  reachableProt p -> [|p, l, h, k|] -EA- a ->> e' -> liftProcEnt (liftOverlap X) e' ->
-  liftProcEnt (liftOverlap X) ([|p, l, h, k|]) \/
-  exists p1 p2 p3 p2' b, p = p1 $||$ p2 $||$ p3 /\ overlapState p2 /\
-  p2 -PA- b -PA> p2' /\ X p2'.
-Proof.
-  intros RP S L. destruct e' as [p' l' h' k'].
-  inversion L as [q lq hq kq LO]; subst. inversion LO as [p1' p2' p3' X2]; subst.
-  lets PS : reachableProt_triple RP. inversion PS as [p1 p2 p3 BS OS LS]; subst.
-  destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ S) as [E | [b B]].
-  - inversion E; subst. left. constructor. constructor. exact X2.
-  - link_partripdiscW2_tac B W. destruct W as [E | [b' B']].
-    + subst. left. constructor. constructor. exact X2.
-    + right. exists p1 p2 p3 p2' b'. split; [reflexivity | ]. split; [exact OS | ].
-      split; assumption.
-Qed.
-
-Lemma tfsNext_prev_ent m e e' a : reachableEnt e -> tfsNextStateEnt m e' ->
+(** After a step into tfsNext, the overlap component was tfsStart or tfsNext already. It is
+an overlap state before the step, as it is in a reachable entity.*)
+Lemma tfsNext_prev_ent m e e' a : overlapStateEnt e -> tfsNextStateEnt m e' ->
   e -EA- a ->> e' -> tfsNextStateEnt m e \/ tfsStartStateEnt e.
 Proof.
-  intros RE TN S. destruct e as [p l h k]. lets RP : reachable_ent_prot RE.
-  destruct (overlap_prev_ent _ _ _ _ _ _ _ RP S TN)
-    as [L | [p1 [p2 [p3 [p2' [b [E [OS [B TN']]]]]]]]].
-  - left. exact L.
-  - subst. destruct (tfsNext_prev _ _ _ _ B OS TN') as [TS | TN2]; [right | left];
+  intros OS TN S. ent_state_destr OS p1 p2 p3 l h k. ent_state_destr TN p1' p2' p3' l' h' k'.
+  lets T : triple_disc_ent S. destruct T as [_ [[EQ | [b B]] _]].
+  - subst p2'. left. constructor. constructor. exact TN.
+  - destruct (tfsNext_prev _ _ _ _ B OS TN) as [TS | TN2]; [right | left];
       constructor; constructor; assumption.
 Qed.
-(*Proof: Lift backtracking results at process level. *)
 
 (***************************** Inter-Component Relationships *****************************)
 (**In here, I'd like results that relate the states of things within a reachable entity e.g. the state of the software component and the mode state.*)
@@ -202,24 +220,6 @@ Ltac urgency_pre_tac2_1 SE SP S :=
      try (assert (S x1 p2) as TS; [inversion TP; assumption | ]);
      try (assert (S x1 p3) as TS; [inversion TP; assumption | ]) end.
 
-(** Same as urgency_pre_tac2 but the state predicate has 2 parameters.*)
-Ltac urgency_pre_tac2_2 SE SP S :=
-  urgency_pre_tac;
-  match goal with
-  | [ _ : SE ?x1 ?x2 ([|?p0, ?l0, ?h0, ?k0|]) |- _] =>
-    assert (SP x1 x2 p0) as TP;
-    [inversion U0; assumption | ];
-    match goal with
-    | [ TR : p0 = ?p1 $||$ ?p2 $||$ ?p3, TP : SP x1 x2 p0 |- _] =>
-      rewrite TR in TP end
-  end;
-  match goal with [ _ : SP ?x1 ?x2 (?p1 $||$ ?p2 $||$ ?p3) |- _]
-  (*The state predicate could come from either the broadcast, overlap, or listener.
-   Try all three. Only one should succeed.*)
-  => try (assert (S x1 x2 p1) as TS; [inversion TP; assumption | ]);
-     try (assert (S x1 x2 p2) as TS; [inversion TP; assumption | ]);
-     try (assert (S x1 x2 p3) as TS; [inversion TP; assumption | ]) end.
-
 (*** Urgency Results ***)
 
 (* begin helpers for gotMsgStateEnt_urgent *)
@@ -230,11 +230,11 @@ Lemma gotMsgStateEnt_urgent_aux1 (p : ProcTerm) (m : Mode) (l l0 : Position) :
 (* end helpers *)
 
 (** The listener reads its position as soon as it has a message, since the position is
-always on offer: no delay in the gotMsg state. Reachability plays no part.*)
+always on offer: no delay in the gotMsg state.*)
 Lemma gotMsgStateEnt_urgent (e e' : Entity) (d : Delay) m l :
-  reachableEnt e -> gotMsgStateEnt m l e -> e -ED- d ->> e' -> False.
+  gotMsgStateEnt m l e -> e -ED- d ->> e' -> False.
 Proof.
-  intros RE GS DEL. destruct e as [p lp h k].
+  intros GS DEL. destruct e as [p lp h k].
   inversion GS; subst.
   match goal with [H : gotMsgStateProt _ _ _ |- _] => inversion H; subst end.
   eapply ent_del_pos_in_not with (l0 := l); [ | eassumption].
@@ -249,9 +249,9 @@ Lemma gotRangeStateEnt_urgent_aux1 (p : ProcTerm) (m m0 : Mode) (r : Distance) :
 (* end helpers *)
 
 Lemma gotRangeStateEnt_urgent (e e' : Entity) (d : Delay) m r :
-  reachableEnt e -> gotRangeStateEnt m r e -> e -ED- d ->> e' -> False.
+  gotRangeStateEnt m r e -> e -ED- d ->> e' -> False.
 Proof.
-  intros RE GS DEL. destruct e as [p l h k].
+  intros GS DEL. destruct e as [p l h k].
   inversion GS; subst.
   match goal with [H : gotRangeStateProt _ _ _ |- _] => inversion H; subst end.
   eapply ent_del_mCurr_in_not; [ | eassumption].
@@ -272,9 +272,9 @@ Lemma currCompStateEnt_urgent_aux2 (p : ProcTerm) (m m0 : Mode) (r : Distance) :
 (* end helpers *)
 
 Lemma currCompStateEnt_urgent (e e' : Entity) (d : Delay) m r :
-  reachableEnt e -> currCompStateEnt m r e -> e -ED- d ->> e' -> False.
+  currCompStateEnt m r e -> e -ED- d ->> e' -> False.
 Proof.
-  intros RE CS DEL. destruct e as [p l h k].
+  intros CS DEL. destruct e as [p l h k].
   inversion CS; subst.
   match goal with [H : currCompStateProt _ _ _ |- _] => inversion H; subst end.
   eapply ent_del_mStable_mNext_in_not; [ | | eassumption].
@@ -288,12 +288,14 @@ Lemma abortOvlpStateEnt_urgent (e e' : Entity) (d : Delay) :
   reachableEnt e -> abortOvlpStateEnt e -> e -ED- d ->> e' -> False.
   Admitted.
 
+(** The overlap reads the current mode as soon as it is in tfsStart, since the mode state
+always offers it.*)
 Lemma tfsStartStateEnt_urgent : forall (e e' : Entity) (d : Delay),
-  reachableEnt e -> tfsStartStateEnt e -> e -ED- d ->> e' -> False.
-  urgency_pre_tac2 tfsStartStateEnt tfsStartStateProt tfsStartState.
-  (*The overlap reads the current mode, which the mode state always offers.*)
-  eapply ent_del_sync_mState_not; [ | | eassumption].
-  - rewrite TR. dae_overlap. eapply tfsStart_mCurr_in. eassumption.
+  tfsStartStateEnt e -> e -ED- d ->> e' -> False.
+Proof.
+  intros e e' d TS DEL. ent_state_destr TS p1 p2 p3 l h k.
+  eapply ent_del_sync_mState_not; [ | | exact DEL].
+  - dae_overlap. eapply tfsStart_mCurr_in. exact TS.
   - apply modeState_curr_enabled.
 Qed.
 
@@ -330,16 +332,14 @@ Lemma tfsNext_urgent : forall (m : Mode) (e e' : Entity) (d : Delay),
   - exact MS.
 Qed.
 
+(** The broadcaster hands its message to the interface as soon as it is in bcReady, since
+the interface always takes one.*)
 Lemma bcReady_urgent (m : Mode) (l : Position) : forall (e e' : Entity) (d : Delay),
-  reachableEnt e -> bcReadyStateEnt m l e -> e -ED- d ->> e' 
-  -> False. urgency_pre_tac2_2 bcReadyStateEnt bcReadyStateProt bcReadyState.
-  (**Proof: By activation, the bcReady state can be shown to be capable of outputting on
-  chanOutProc. Separately, the interface component can be shown to always be available for
-  input on this channel, i.e. it can always buffer a message from the software component.
-  Thus, a synch between software and interface is possible, violating the "noSynch" condition
-  that must hold for the entity to delay. Hence delay cannot happen.*)
-  eapply ent_del_sync_inter_not; [ | | eassumption].
-  - rewrite TR. dae_broadcast. eapply bcReady_outProc_out. eassumption.
+  bcReadyStateEnt m l e -> e -ED- d ->> e' -> False.
+Proof.
+  intros e e' d BR DEL. ent_state_destr BR p1 p2 p3 l0 h k.
+  eapply ent_del_sync_inter_not; [ | | exact DEL].
+  - dae_broadcast. eapply bcReady_outProc_out. exact BR.
   - apply interface_outProc_in.
 Qed.
 
@@ -358,39 +358,35 @@ Lemma ovAbort_urgent : forall (e e' : Entity) (d : Delay),
   - apply unstable_stable_in. exact OUS.
 Qed.
 
+(** No delay in tfsBc, whatever broadcast state the broadcaster is in, as it is in a reachable
+entity: sleeping and bcWait take the overlap's output on trans, and bcReady is urgent.*)
 Lemma tfsBc_urgent : forall (e e' : Entity) (d : Delay),
-  reachableEnt e -> tfsBcStateEnt e -> e -ED- d ->> e' 
-  -> False. intros e e' d. introz U. lets Q : U.
-  urgency_pre_tac2 tfsBcStateEnt tfsBcStateProt tfsBcState.
-  lets TOT : tfsBc_trans_out TS. lets DP : link_ent_soft_del U1. rewrite TR in DP.
-  (*Case analysis on the state of the broadcast component. If it is in either the
-  wait or the sleeping state, then an input on trans is possible, which can synch with
-  the output on trans from tfsBc.*)
-  destruct (broadcastState_shape _ BC) as [SL | v x BW | v1 v2 BR].
+  broadcastStateEnt e -> tfsBcStateEnt e -> e -ED- d ->> e' -> False.
+Proof.
+  intros e e' d BS TB DEL. destruct e' as [p' l' h' k'].
+  ent_state_destr TB p1 p2 p3 l h k. ent_state_comp BS.
+  lets TOT : tfsBc_trans_out TB. lets DP : link_ent_soft_del DEL.
+  destruct (broadcastState_shape _ BS) as [SL | v x BW | v1 v2 BR].
   - triple_del_sync_not DP (sleep_trans_in _ SL) TOT.
   - triple_del_sync_not DP (bcWait_trans_in_shape _ _ _ BW) TOT.
-  (*Otherwise, the broadcast component is in the ready state, which is urgent: it can
-  output on outProc, and the interface can always input on it.*)
-  - eapply ent_del_sync_inter_not; [ | | eassumption].
-    + rewrite TR. dae_broadcast. eapply bcReady_outProc_out_shape. eassumption.
+  - eapply ent_del_sync_inter_not; [ | | exact DEL].
+    + dae_broadcast. eapply bcReady_outProc_out_shape. exact BR.
     + apply interface_outProc_in.
 Qed.
 
+(** No delay in switchBc, as for tfsBc: sleeping and bcWait take the overlap's output on
+wake, and bcReady is urgent.*)
 Lemma switchBc_urgent (m : Mode) : forall (e e' : Entity) (d : Delay),
-  reachableEnt e -> switchBcStateEnt m e -> e -ED- d ->> e' 
-  -> False. intros e e' d. introz U. lets Q : U.
-  urgency_pre_tac2_1 switchBcStateEnt switchBcStateProt switchBcState.
-  lets TOT : switchBc_wake_out TS. lets DP : link_ent_soft_del U1. rewrite TR in DP.
-  (*Case analysis on the state of the broadcast component. If it is in either the
-  wait or the sleeping state, then an input on wake is possible, which can synch with
-  the output on wake from switchBc.*)
-  destruct (broadcastState_shape _ BC) as [SL | v x BW | v1 v2 BR].
+  broadcastStateEnt e -> switchBcStateEnt m e -> e -ED- d ->> e' -> False.
+Proof.
+  intros e e' d BS SB DEL. destruct e' as [p' l' h' k'].
+  ent_state_destr SB p1 p2 p3 l h k. ent_state_comp BS.
+  lets TOT : switchBc_wake_out SB. lets DP : link_ent_soft_del DEL.
+  destruct (broadcastState_shape _ BS) as [SL | v x BW | v1 v2 BR].
   - triple_del_sync_not DP (sleeping_wake_in m _ SL) TOT.
   - triple_del_sync_not DP (bcWait_wake_in_shape m _ _ _ BW) TOT.
-  (*Otherwise, the broadcast component is in the ready state, which is urgent: it can
-  output on outProc, and the interface can always input on it.*)
-  - eapply ent_del_sync_inter_not; [ | | eassumption].
-    + rewrite TR. dae_broadcast. eapply bcReady_outProc_out_shape. eassumption.
+  - eapply ent_del_sync_inter_not; [ | | exact DEL].
+    + dae_broadcast. eapply bcReady_outProc_out_shape. exact BR.
     + apply interface_outProc_in.
 Qed.
 
@@ -628,13 +624,10 @@ Lemma tfsCurr_next_ent_lift (X Y : ProcTerm -> Prop) e e' a :
 Proof.
   intros F S L. inversion L as [p l h k LO]; subst.
   inversion LO as [p1 p2 p3 X2]; subst.
-  destruct e' as [p' l' h' k'].
-  destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ S) as [E | [b B]].
-  - subst p'. left. constructor. constructor. assumption.
-  - link_partripdiscex_tac E p1' p2' p3'. subst p'.
-    link_partripdiscW2_tac B W. destruct W as [E | [b' B']].
-    + subst p2'. left. constructor. constructor. assumption.
-    + destruct (F _ _ _ B' X2) as [Z | Z]; [left | right];
+  lets T : triple_disc_ent_fwd S.
+  destruct T as [p1' [p2' [p3' [l' [h' [k' [EQ [_ [[E | [b B]] _]]]]]]]]]; subst e'.
+  - subst p2'. left. constructor. constructor. assumption.
+  - destruct (F _ _ _ B X2) as [Z | Z]; [left | right];
       constructor; constructor; exact Z.
 Qed.
 

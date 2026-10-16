@@ -711,6 +711,159 @@ Proof.
 Qed.
 
 
+(***************Components of an entity's software across a network step*********************)
+(** The entity results of EntityLanguage.v, for the entity at index i of a network: forward,
+from its components before the step; and between its components before and after the step,
+when both are known as compositions of as many components.*)
+
+(** A discrete step: entity i's software becomes a composition of as many components, each
+unchanged or stepped once.*)
+Lemma net_disc_comps_fwd n n' a i q qs l h k :
+  n -NA- a -NA> n' -> [|parAll q qs, l, h, k|] @ i .: n ->
+  exists q' qs' l' h' k', [|parAll q' qs', l', h', k'|] @ i .: n' /\
+  Forall2 (fun x x' => x = x' \/ exists b, x -PA- b -PA> x') (q :: qs) (q' :: qs').
+Proof.
+  intros S E. destruct (link_net_ent_disc_fwd _ _ _ _ _ S E) as [e' [E' [EQ | [b B]]]].
+  - subst e'. exists q qs l h k. split; [exact E' | ].
+    apply Forall2_diag. intros x _. left. reflexivity.
+  - destruct (ent_disc_comps_fwd _ _ _ _ _ _ _ B) as [q' [qs' [l' [h' [k' [EQ F]]]]]].
+    subst e'. exists q' qs' l' h' k'. split; assumption.
+Qed.
+
+(** A delay: entity i's software becomes a composition of as many components, each delayed
+by it.*)
+Lemma net_del_comps_fwd n n' d i q qs l h k :
+  n -ND- d -ND> n' -> [|parAll q qs, l, h, k|] @ i .: n ->
+  exists q' qs' l' h' k', [|parAll q' qs', l', h', k'|] @ i .: n' /\
+  Forall2 (fun x x' => x -PD- d -PD> x') (q :: qs) (q' :: qs').
+Proof.
+  intros D E. destruct (link_net_ent_del_fwd _ _ _ _ _ D E) as [e' [E' S]].
+  destruct (ent_del_comps_fwd _ _ _ _ _ _ _ S) as [q' [qs' [l' [h' [k' [EQ F]]]]]].
+  subst e'. exists q' qs' l' h' k'. split; assumption.
+Qed.
+
+(** A discrete step, between entity i's software before and after it as compositions of as
+many components: each is unchanged or stepped once.*)
+Lemma net_disc_comps n n' a i q qs q' qs' l l' h h' k k' :
+  n -NA- a -NA> n' -> [|parAll q qs, l, h, k|] @ i .: n ->
+  [|parAll q' qs', l', h', k'|] @ i .: n' -> length qs = length qs' ->
+  Forall2 (fun x x' => x = x' \/ exists b, x -PA- b -PA> x') (q :: qs) (q' :: qs').
+Proof.
+  intros S E E' L. destruct (link_net_ent_disc _ _ _ _ _ _ S E E') as [EQ | [b B]].
+  - injection EQ as EQ _ _ _. destruct (parAll_inj _ _ _ _ EQ L) as [E1 E2]. subst.
+    apply Forall2_diag. intros x _. left. reflexivity.
+  - eapply ent_disc_comps; eassumption.
+Qed.
+
+(** A delay, between entity i's software before and after it as compositions of as many
+components: each delays by it.*)
+Lemma net_del_comps n n' d i q qs q' qs' l l' h h' k k' :
+  n -ND- d -ND> n' -> [|parAll q qs, l, h, k|] @ i .: n ->
+  [|parAll q' qs', l', h', k'|] @ i .: n' -> length qs = length qs' ->
+  Forall2 (fun x x' => x -PD- d -PD> x') (q :: qs) (q' :: qs').
+Proof.
+  intros D E E' L. eapply ent_del_comps; [ | exact L].
+  eapply link_net_ent_delW; eassumption.
+Qed.
+
+
+(***************Initial and reachable networks*********************)
+(** A network is initial for the seed process p0 when each of its entities is, and
+reachable from p0 when a finite trace of discrete steps and delays leads to it from an
+initial one: Definitions 6.1 and 6.2 (p.133), with the protocol process as a parameter. A
+proof of reachability is such a trace, which is why reachableNet is in Type: a protocol's
+history relations are indexed by the trace.*)
+
+Inductive initialNet (p0 : ProcTerm) : Network -> Prop :=
+  | initNtNil : initialNet p0 []
+  | initNtCons (e : Entity) (n : Network) : initialEnt p0 e -> initialNet p0 n ->
+    initialNet p0 (e :: n).
+
+Inductive reachableNet (p0 : ProcTerm) : Network -> Type :=
+  | reachNetInit (n : Network) : initialNet p0 n -> reachableNet p0 n
+  | reachNetDisc (n n' : Network) (a : ActDiscNet) : reachableNet p0 n ->
+    n -NA- a -NA> n' -> reachableNet p0 n'
+  | reachNetDel (n n' : Network) (d : Delay) : reachableNet p0 n ->
+    n -ND- d -ND> n' -> reachableNet p0 n'.
+
+(** An entity of an initial network is initial.*)
+Lemma initialNet_ent p0 e i n : initialNet p0 n -> e @ i .: n -> initialEnt p0 e.
+Proof.
+  intro I. revert i. induction I as [ |e0 n I0 I IH]; intros i E; inversion E; subst.
+  - exact I0.
+  - eapply IH. eassumption.
+Qed.
+
+(** An entity of an initial network is in a fail-safe mode.*)
+Lemma initial_failSafe p0 e i n : initialNet p0 n -> e @ i .: n -> failSafe e.
+Proof.
+  intros I E. lets IE : initialNet_ent I E. inversion IE; subst. simpl. assumption.
+Qed.
+
+(** The software of every entity of a network reachable from p0 is reachable from p0.*)
+Lemma reachableNet_proc p0 n p l h k i :
+  reachableNet p0 n -> [|p, l, h, k|] @ i .: n -> reachableFrom p0 p.
+Proof.
+  intro R. revert p l h k i.
+  induction R as [n I | n n' a R IH S | n n' d R IH S]; intros p l h k i E.
+  - lets IE : initialNet_ent I E. inversion IE; subst. apply reachableFromBase.
+  - destruct (link_net_ent_disc_bkwd _ _ _ _ _ S E) as [e [E0 [EQ | [b B]]]].
+    + subst e. eapply IH. exact E0.
+    + destruct e as [p1 l1 h1 k1].
+      destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ B) as [EQ | [c C]].
+      * subst. eapply IH. exact E0.
+      * eapply reachableFromDisc; [eapply IH; exact E0 | exact C].
+  - destruct (link_net_ent_del_bkwd _ _ _ _ _ S E) as [e [E0 D]].
+    destruct e as [p1 l1 h1 k1]. lets C : link_ent_soft_del D.
+    eapply reachableFromDel; [eapply IH; exact E0 | exact C].
+Qed.
+
+(** In a network reachable from a parallel composition, every entity's software is a
+composition of as many components, each reachable from the seed's.*)
+Lemma reachableNet_parAll p0 ps0 n p l h k i :
+  reachableNet (parAll p0 ps0) n -> [|p, l, h, k|] @ i .: n ->
+  exists q qs, p = parAll q qs /\ Forall2 reachableFrom (p0 :: ps0) (q :: qs).
+Proof.
+  intros R E. apply reachableFrom_parAll. eapply reachableNet_proc; eassumption.
+Qed.
+
+(** A discrete step of a reachable network, back to the components of entity i: before the
+step, its software was a composition of as many components, each reachable from the seed's,
+and each unchanged by the step or stepped once.*)
+Lemma reachableNet_disc_bkwd p0 ps0 n n' a i q' qs' l' h' k' :
+  reachableNet (parAll p0 ps0) n -> n -NA- a -NA> n' ->
+  [|parAll q' qs', l', h', k'|] @ i .: n' -> length qs' = length ps0 ->
+  exists q qs l h k, [|parAll q qs, l, h, k|] @ i .: n /\
+  Forall2 reachableFrom (p0 :: ps0) (q :: qs) /\
+  Forall2 (fun x x' => x = x' \/ exists b, x -PA- b -PA> x') (q :: qs) (q' :: qs').
+Proof.
+  intros R S E' L. destruct (link_net_ent_disc_bkwdW _ _ _ _ _ S E') as [e E].
+  destruct e as [p l h k].
+  destruct (reachableNet_parAll _ _ _ _ _ _ _ _ R E) as [q [qs [EQ F]]]. subst p.
+  exists q qs l h k. split; [exact E | ]. split; [exact F | ].
+  eapply net_disc_comps; [exact S | exact E | exact E' | ].
+  apply Forall2_length in F. simpl in F. injection F as F. congruence.
+Qed.
+
+(** A delay of a reachable network, back to the components of entity i: before the delay,
+its software was a composition of as many components, each reachable from the seed's, and
+each delays by it.*)
+Lemma reachableNet_del_bkwd p0 ps0 n n' d i q' qs' l' h' k' :
+  reachableNet (parAll p0 ps0) n -> n -ND- d -ND> n' ->
+  [|parAll q' qs', l', h', k'|] @ i .: n' -> length qs' = length ps0 ->
+  exists q qs l h k, [|parAll q qs, l, h, k|] @ i .: n /\
+  Forall2 reachableFrom (p0 :: ps0) (q :: qs) /\
+  Forall2 (fun x x' => x -PD- d -PD> x') (q :: qs) (q' :: qs').
+Proof.
+  intros R D E' L. destruct (link_net_ent_del_bkwd _ _ _ _ _ D E') as [e [E S]].
+  destruct e as [p l h k].
+  destruct (reachableNet_parAll _ _ _ _ _ _ _ _ R E) as [q [qs [EQ F]]]. subst p.
+  exists q qs l h k. split; [exact E | ]. split; [exact F | ].
+  eapply ent_del_comps; [exact S | ].
+  apply Forall2_length in F. simpl in F. injection F as F. congruence.
+Qed.
+
+
 (***************Positions, queues and mode states of a network's entities*********************)
 
 (** inPosNet l i n says that the entity number i in n has position l.*)
@@ -758,6 +911,13 @@ Inductive transGuard (t : Time) (i : nat) (n : Network) : Prop :=
 network level.*)
 Inductive liftEntNet (X : Entity -> Prop) (i : nat) (n : Network) : Prop :=
   | lenWitness (e : Entity) : X e -> e @ i .: n -> liftEntNet X i n.
+
+(** A lifted predicate holds of the entity at the index.*)
+Lemma liftEntNet_ent (X : Entity -> Prop) (i : nat) (n : Network) (e : Entity) :
+  liftEntNet X i n -> e @ i .: n -> X e.
+Proof.
+  intros L E. destruct L as [e' Xe E']. rewrite (entInNetUnique _ _ _ _ E E'). exact Xe.
+Qed.
 
 (** If the entity i is in position l in either network across a discrete transition,
 then it is also in this position in the other network.*)
@@ -1068,6 +1228,10 @@ Qed.
 (**Proof: Follows directly from the definition*)
 
 End NetworkLanguage.
+
+Arguments reachNetInit {PNames PDefs p0}.
+Arguments reachNetDisc {PNames PDefs p0}.
+Arguments reachNetDel {PNames PDefs p0}.
 
 (** A section's notations and tactics end with it. So that later files can use them, the
 notations are declared again here, and the tactics are declared here.*)

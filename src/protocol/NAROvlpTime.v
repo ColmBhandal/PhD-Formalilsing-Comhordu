@@ -27,7 +27,7 @@ Require Import ComhCoq.protocol.ProtocolBridge.
 
 
 (*If an entity is pending then it cannot delay.*)
-Theorem pending_urgent (n n' : Network) (d : Delay) (i : nat) (p : reachableNet n) :
+Theorem pending_urgent (n n' : Network) (d : Delay) (i : nat) (p : reachableProtNet n) :
   pending i n p -> ~ n -ND- d -ND> n'. Admitted. (*1*)
 (**Proof: *SPAWN SEPARATE URGENCY RESULTS FOR THIS DONE*
 Induction on pending. We have 2 cases. Case 1 is that we are
@@ -39,7 +39,7 @@ output on io. Again by progress this means a delay is not possible.*)
 (* If an entity is pending, and the same entity is in the state
 ovWaitState m u x y, then we can show that u is equal to tw(m0, m) + period m, for some m0.*)
 Theorem pending_time1 (n : Network) (m : Mode) (i : nat)
-  (u x y : Time) (p : reachableNet n) :
+  (u x y : Time) (p : reachableProtNet n) :
   pending i n p -> ovWaitStateNet m u x y i n -> exists m0 q,
   u = addTime (waitTime m0 m q) (period m). Admitted. (*1*)
 (**Proof: COMMON TACTICS FOR THE ADDTIME SHIT? THERE ARE MORE THEOREMS OF A SIMILAR NATURE.
@@ -52,7 +52,7 @@ ovWaitState.*)
 (* If an entity is pending, and the same entity is in the state ovReadyState m u l,
 then we can show that u is equal to tw(m0, m) + period m, for some m0.*)
 Theorem pending_time2 (n : Network) (m : Mode) (i : nat)
-  (u : Time) (l : Position) (p : reachableNet n) :
+  (u : Time) (l : Position) (p : reachableProtNet n) :
   pending i n p -> ovReadyStateNet m u l i n ->
   exists m0 q, u = addTime (waitTime m0 m q) (period m).
   Admitted. (*1*)
@@ -66,7 +66,7 @@ fails because delay can be shown to be impossible when a state is pending (pendi
 then t + u is constant, equal to the sum of the wait time to m from some mode, tw(m0, m)
 and the period of broadcast for m, period m. This is the combination of two results*)
 Theorem nextSince_ovWait_ovReady_time (n : Network) (m : Mode) (i : nat)
-  (t u x y : Time) (l : Position) (p : reachableNet n) :
+  (t u x y : Time) (l : Position) (p : reachableProtNet n) :
   (nextSince m t i n p -> ovWaitStateNet m u x y i n ->
   exists m0 q, addTime t x = waitTime m0 m q
   /\ addTime u y = addTime x (period m)) /\ (*Half theorem*)
@@ -110,7 +110,7 @@ that t + x = tw(m0, m). And so t + u = tw(m0, m) + period m as required.*)
 (* If an entity is nextSince m t, and the same entity is in the state
 switchBcState m, then we can show that mL + max AN trans < t.*)
 Theorem nextSince_switchBc_lower (n : Network) (m : Mode) (i : nat)
-  (t : Time) (p : reachableNet n) :
+  (t : Time) (p : reachableProtNet n) :
   nextSince m t i n p -> switchBcStateNet m i n ->
   msgLatency + Rmax adaptNotif transMax < t. Admitted. (*1*)
 (**Proof: Induction on nextSince. BaseType case fails. Delay follows by monotonicity of t with
@@ -125,7 +125,7 @@ than mL + max AN trans as required.*)
 (* If an entity is nextSince m t, and the same entity is in the state switchCurrState m,
 then we can show that mL + max AN trans < t.*)
 Theorem nextSince_switchCurr_lower (n : Network) (m : Mode) (i : nat)
-  (t : Time) (p : reachableNet n) :
+  (t : Time) (p : reachableProtNet n) :
   nextSince m t i n p -> switchCurrStateNet i n ->
   msgLatency + Rmax adaptNotif transMax < t. Admitted. (*1*)
 (**Proof: SIMILAR TO ANALOGOUS PROOF FOR SWITCHBC- SHARED TACTICS?

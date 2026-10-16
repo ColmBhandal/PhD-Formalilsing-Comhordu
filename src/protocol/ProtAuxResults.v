@@ -1694,15 +1694,23 @@ Theorem paused_switch (p : ProcTerm) :
 both are true, and a transition happens, then either bother are still true or an unpause happens from switchListenState and both become
 false. This is all evident on inspection of the overlap and listener component diagrams.*)
 
+(** reachableProt is the language's reachability from the protocol process.*)
+Lemma reachableProt_reachableFrom (p : ProcTerm) :
+  reachableProt p <-> reachableFrom procProtocol p.
+Proof.
+  split; intro R; induction R;
+    eauto using reachprBase, reachprDisc, reachprDel,
+      reachableFromBase, reachableFromDisc, reachableFromDel.
+Qed.
+
 (**If p is reachable from the "protocol" process via
 the semantics, then it has the "shape" of a protocol process.*)
 Theorem reachableProt_triple (p : ProcTerm) : 
   reachableProt p -> protocolState p.
 Proof.
-  intro R.
-  assert (RF : reachableFrom (parAll sleeping [dormant, listening]) p).
-  { induction R; eauto using reachableFromBase, reachableFromDisc, reachableFromDel. }
-  apply reachableFrom_parAll in RF. destruct RF as [p1 [ps [E F]]]. positions_inv. subst.
+  intro R. apply reachableProt_reachableFrom in R.
+  change procProtocol with (parAll sleeping [dormant, listening]) in R.
+  apply reachableFrom_parAll in R. destruct R as [p1 [ps [E F]]]. positions_inv. subst.
   constructor; assumption.
 Qed.
 (**Proof: The components of a parallel composition each stay reachable from where they

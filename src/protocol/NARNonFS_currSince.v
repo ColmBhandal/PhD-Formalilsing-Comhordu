@@ -35,7 +35,7 @@ Proof.
 
 (*If we are in the ovWaitState then we are either pending or nextSince.*)
 Theorem ovWait_nextSince_pending (n : Network) (m : Mode) (t x y : Time) (i : nat)
-  (p : reachableNet n) :
+  (p : reachableProtNet n) :
   ovWaitStateNet m t x y i n -> pending i n p \/ exists t, nextSince m t i n p.
   (*Proof: Induction on p, the proof of reachability.*)
   introz U. induction p.
@@ -53,7 +53,7 @@ Theorem ovWait_nextSince_pending (n : Network) (m : Mode) (t x y : Time) (i : na
 (*SHARED TACTICS WITH OVWAITSTATE ANALOGUE?
 If we are in the ovReadyState then we are either pending or nextSince.*)
 Theorem ovReady_nextSince_pending (n : Network) (m : Mode) (t : Time) (i : nat)
-  (l : Position) (p : reachableNet n) :
+  (l : Position) (p : reachableProtNet n) :
   ovReadyStateNet m t l i n -> pending i n p \/ exists t, nextSince m t i n p.
   introz U.
   (**Proof: Induction on reachable.*)
@@ -94,7 +94,7 @@ itself urgent*)
 (*If we are in the ovWait state with the parameter x = 0,
 then the nextSince relation holds.*)
 Theorem ovWait_zero_nextSince (n : Network) (m : Mode) (t y : Time) (i : nat)
-  (p : reachableNet n) : ovWaitStateNet m t zeroTime y i n ->
+  (p : reachableProtNet n) : ovWaitStateNet m t zeroTime y i n ->
   exists t, nextSince m t i n p. Admitted. (*2*)
 (**Proof: Induction on reachable. BaseType case fails. For the inductive case(s),
 case analyse- is the last state ovWait? If yes, then the result follows easily
@@ -107,7 +107,7 @@ constructor of nextSince that allows us to prove nextSince holds for the current
 
 (*If we are in the switchBc state, then the nextSince relation holds.*)
 Theorem switchBc_nextSince (n : Network) (m : Mode) (i : nat)
-  (p : reachableNet n) : switchBcStateNet m i n -> exists t, nextSince m t i n p.
+  (p : reachableProtNet n) : switchBcStateNet m i n -> exists t, nextSince m t i n p.
   Admitted. (*2*)
 (**Proof: By induction on reachable. Eliminate the easy cases, leaving us with the
 discrete inductive case with the previous state not switchBcState. Then we use
@@ -118,7 +118,7 @@ application of the nextSince discrete constructor so is this one.*)
 
 (*If we are in the switchCurr state, then the nextSince relation holds.	*)
 Theorem switchCurr_nextSince (n : Network) (m : Mode) (i : nat)
-  (p : reachableNet n) : switchCurrStateNet i n ->
+  (p : reachableProtNet n) : switchCurrStateNet i n ->
   exists t, nextSince m t i n p. Admitted. (*2*)
 (**Proof: By induction on reachable and (...switchCurr_prev...) to give us switchBc m
 as the predecessor state. Then by (swtichBc_nextSince) and application of the nextSince
@@ -127,7 +127,7 @@ discrete constructor our results follows.*)
 (* Let's say in a reachable network, an entity is in non-fail-safe mode m.
 Then that entity has been currSince m t.*)
 Theorem nonFS_currSince (m : Mode) (i : nat) (n : Network) 
-  (p : reachableNet n) : currModeNet m i n -> ~failSafe m ->
+  (p : reachableProtNet n) : currModeNet m i n -> ~failSafe m ->
   exists t, currSince m t i n p.
   intros.
   (**Proof: Induction on the proof of reachability of n.*)

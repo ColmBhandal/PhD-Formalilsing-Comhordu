@@ -103,6 +103,18 @@ Definition nextModeEnt (e : Entity) : option Mode :=
 Inductive incomingEnt (v : list BaseType) : Entity -> Prop :=
   | incent P l h K : incomingInter v h -> incomingEnt v ([|P, l, h, K|]).
 
+(** A predicate on processes, lifted to the entities whose software satisfies it.*)
+Inductive liftProcEnt (X : ProcTerm -> Prop) : Entity -> Prop :=
+  | lifpe (p : ProcTerm) (l : Position) (h : Interface) (k : ModeState) :
+    X p -> liftProcEnt X ([|p, l, h, k|]).
+
+(** An entity is initial for the seed process p0 when its software is p0 and its mode state
+is a stable fail-safe mode: Definition 6.1 (p.133), with the protocol process as a
+parameter.*)
+Inductive initialEnt (p0 : ProcTerm) : Entity -> Prop :=
+  | initEnt (l : Position) (h : Interface) (m : Mode) : failSafe m ->
+    initialEnt p0 ([|p0, l, h, m|]).
+
 Open Scope R_scope.
 
 (** If the minimum distance of compatibiltiy of the respective modes
@@ -353,6 +365,67 @@ Lemma link_ent_soft_disc p p' l l' h h' k k' a :
 Proof.
   intro H. inversion H; subst;
   first [left; reflexivity | right; eexists; eassumption].
+Qed.
+
+(***************Components of the software*********************)
+(** When an entity's software is a parallel composition, a step of the entity is taken down
+to the components, for any number of them: forward, from the components before the step,
+and between the components before and after it when both are known as compositions of as
+many components. The number matters, since the same term is also a composition of fewer
+components.*)
+
+(** A discrete step leads to a composition of as many components, each unchanged or
+stepped once.*)
+Lemma ent_disc_comps_fwd q qs l h k e' a :
+  [|parAll q qs, l, h, k|] -EA- a ->> e' ->
+  exists q' qs' l' h' k', e' = [|parAll q' qs', l', h', k'|] /\
+  Forall2 (fun x x' => x = x' \/ exists b, x -PA- b -PA> x') (q :: qs) (q' :: qs').
+Proof.
+  intro S. destruct e' as [p' l' h' k'].
+  destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ S) as [E | [b B]].
+  - subst p'. exists q qs l' h' k'. split; [reflexivity | ].
+    apply Forall2_diag. intros x _. left. reflexivity.
+  - destruct (parAll_disc_weak _ _ _ _ B) as [q' [qs' [E F]]]. subst p'.
+    exists q' qs' l' h' k'. split; [reflexivity | exact F].
+Qed.
+
+(** Across a discrete step between compositions of as many components, each component is
+unchanged or stepped once.*)
+Lemma ent_disc_comps q qs q' qs' l l' h h' k k' a :
+  [|parAll q qs, l, h, k|] -EA- a ->> [|parAll q' qs', l', h', k'|] ->
+  length qs = length qs' ->
+  Forall2 (fun x x' => x = x' \/ exists b, x -PA- b -PA> x') (q :: qs) (q' :: qs').
+Proof.
+  intros S L. destruct (ent_disc_comps_fwd _ _ _ _ _ _ _ S) as [r [rs [l2 [h2 [k2 [E F]]]]]].
+  injection E as E _ _ _.
+  assert (LR : length qs = length rs)
+    by (apply Forall2_length in F; simpl in F; injection F; trivial).
+  destruct (parAll_inj _ _ _ _ E) as [E1 E2]; [congruence | ]. subst r rs. exact F.
+Qed.
+
+(** A delay leads to a composition of as many components, each delayed by it.*)
+Lemma ent_del_comps_fwd q qs l h k e' d :
+  [|parAll q qs, l, h, k|] -ED- d ->> e' ->
+  exists q' qs' l' h' k', e' = [|parAll q' qs', l', h', k'|] /\
+  Forall2 (fun x x' => x -PD- d -PD> x') (q :: qs) (q' :: qs').
+Proof.
+  intro S. destruct e' as [p' l' h' k']. lets D : link_ent_soft_del S.
+  destruct (parAll_del_inv _ _ _ _ D) as [q' [qs' [E F]]]. subst p'.
+  exists q' qs' l' h' k'. split; [reflexivity | exact F].
+Qed.
+
+(** Across a delay between compositions of as many components, each component delays by
+it.*)
+Lemma ent_del_comps q qs q' qs' l l' h h' k k' d :
+  [|parAll q qs, l, h, k|] -ED- d ->> [|parAll q' qs', l', h', k'|] ->
+  length qs = length qs' ->
+  Forall2 (fun x x' => x -PD- d -PD> x') (q :: qs) (q' :: qs').
+Proof.
+  intros S L. destruct (ent_del_comps_fwd _ _ _ _ _ _ _ S) as [r [rs [l2 [h2 [k2 [E F]]]]]].
+  injection E as E _ _ _.
+  assert (LR : length qs = length rs)
+    by (apply Forall2_length in F; simpl in F; injection F; trivial).
+  destruct (parAll_inj _ _ _ _ E) as [E1 E2]; [congruence | ]. subst r rs. exact F.
 Qed.
 
 (** A delaying entity has no synchronisation on offer between its components.*)
