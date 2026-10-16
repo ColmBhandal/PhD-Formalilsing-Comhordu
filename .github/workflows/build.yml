@@ -24,3 +24,44 @@ jobs:
         run: make -j"$(nproc)"
       - name: Report remaining assumptions under safety
         run: python3 helper-scripts/summarise_assumptions.py | tee -a "$GITHUB_STEP_SUMMARY"
+      # On a pull request, show what it changes in what the project claims: the diff of every
+      # statement and definition, and of the assumptions under safety, against the base branch.
+      - name: Check out the base branch
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - name: Diff the statements and the assumptions against the base branch
+        if: github.event_name == 'pull_request'
+        run: |
+          make -C base -j"$(nproc)"
+          python3 helper-scripts/print_statements.py --src base/src > statements-base.txt
+          python3 helper-scripts/print_statements.py > statements-head.txt
+          python3 base/helper-scripts/summarise_assumptions.py > assumptions-base.md
+          python3 helper-scripts/summarise_assumptions.py > assumptions-head.md
+          diff statements-base.txt statements-head.txt > statements-diff.txt || true
+          diff assumptions-base.md assumptions-head.md > assumptions-diff.txt || true
+          {
+            echo "## Against the base branch"
+            if [ -s statements-diff.txt ]; then
+              echo "Statements and definitions: $(grep -c '^[<>]' statements-diff.txt) lines differ. The diff is in the statements-diff artifact and in the log of this step."
+            else
+              echo "Statements and definitions: unchanged."
+            fi
+            echo
+            if [ -s assumptions-diff.txt ]; then
+              echo "Assumptions under safety:"; echo '```'; cat assumptions-diff.txt; echo '```'
+            else
+              echo "Assumptions under safety: unchanged."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat statements-diff.txt
+      - name: Upload the diffs
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: statements-diff
+          path: |
+            statements-diff.txt
+            assumptions-diff.txt

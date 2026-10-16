@@ -15,7 +15,7 @@ In its current state, this code is not recommended for inclusion in any downstre
 Project documentation lives under [`doc/`](doc):
 
  - [`doc/workstreams/`](doc/workstreams): living trackers for ongoing work, e.g. the [Rocq upgrade & proof completion](doc/workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md) workstream.
- - [`doc/reports/`](doc/reports): point-in-time reports, e.g. the results of a proving pass.
+ - [`doc/reports/`](doc/reports): detailed reports, written when one is asked for, such as the results of a proving pass.
  - [`doc/adr/`](doc/adr): architecture decision records.
  - [`doc/archive/`](doc/archive): superseded historical documents, e.g. the original 2015 project plan.
  - [`doc/thesis/`](doc/thesis): the [PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf) itself, and the corrections to it.

@@ -1,5 +1,9 @@
 # doc/reports/: rules for reports
 
+## When to write one
+
+- Only when a human explicitly asks for a detailed report. A PR is never a reason for one: its description is the record, the workstream links to it, and CI attaches the statements and assumptions diffs. See the working rules in the top-level [`AGENTS.md`](../../AGENTS.md).
+
 ## One folder per report
 
 - Each report is a folder named `YYYY-MM-DD-{kebab-title}/`, where the date is the creation date.
