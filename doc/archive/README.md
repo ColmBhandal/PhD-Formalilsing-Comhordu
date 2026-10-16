@@ -12,7 +12,7 @@ Historical documents, kept for reference. They are **not maintained** and may co
 
 Each item of the 2015 plan was checked against `src/` and current Rocq tooling on 2026-10-13, when the Rocq upgrade and proof completion workstream started, and only what still held is kept. Step and phase numbers refer to that workstream's plan as it stood then.
 
-### 1 Admitted labels (still in use)
+### A.1 Admitted labels (still in use)
 
 The convention is still live in the code: **173 of the 228** live `Admitted` carry a trailing `(*label*)` comment. They are useful hints, but the 2015 counts are stale.
 
@@ -27,7 +27,7 @@ The convention is still live in the code: **173 of the 228** live `Admitted` car
 
 > **Counting gotcha:** `grep -c 'Admitted\.'` happens to give the right total (228), but only because two errors cancel. It **misses** `Admitted (*9*).` at `NARNonFS_currSince.v:27`, and it **counts** an `Admitted.` inside a commented-out block at `NARNonFS_currSince.v:76`. Count outside comments.
 
-### 2 Other guidance carried over
+### A.2 Other guidance carried over
 
 | 2015 item | Status now |
 |---|---|
@@ -40,7 +40,7 @@ The convention is still live in the code: **173 of the 228** live `Admitted` car
 | §5 Show that an unsafe state is reachable without the protocol | **Kept** as a Phase 5 🧑 decision. |
 | §1 Category definitions (Parameter = stub, Axiom = deliberately uninterpreted, Conjecture = assumed as "obvious") | **Kept.** |
 
-### 3 Dropped, and why
+### A.3 Dropped, and why
 
 | 2015 item | Why it was dropped |
 |---|---|
