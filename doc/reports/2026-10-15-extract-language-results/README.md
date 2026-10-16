@@ -1,6 +1,6 @@
 # Report: extracting language results from the proved protocol results
 
-2026-10-15 · step 15 of the [workstream](../../workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md) · [#5](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/5)
+2026-10-15 · step 15 of the Rocq upgrade and proof completion workstream · [#5](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/5)
 
 The protocol files held many copies of the same language facts: "a name applied to arguments is bisimilar to its unfolding" was proved nine times across two files. Step 15 states each such fact once in `src/lang/` and rests the protocol proofs on it: 63 language results added, 63 protocol lemmas removed, every statement that stays unchanged, and `safety` on the same 84 assumptions. A few abstractions did most of the work: a bisimulation transfers a step to the other side (`bisim_step_disc` and `bisim_step_del` in `ProcEquiv.v`); a step of a parallel composition is one component stepping or two synchronising (`par_disc_inv`, generalised to `parAll_disc_inv` by step 16); and a delaying entity offers no synchronisation, so a software action with a matching mode-state or interface action rules out delay (`ent_del_sync_mState_not` in `EntityLanguage.v`), which closed nine urgency proofs. The list of each removed lemma with its replacement is in the PR and in this report's first version, in the git history.
 

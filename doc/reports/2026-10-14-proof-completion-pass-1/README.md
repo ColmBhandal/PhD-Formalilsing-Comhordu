@@ -1,6 +1,6 @@
 # Proof completion, pass 1
 
-**2026-10-14** · Part of the [Rocq upgrade and proof completion workstream](../../workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md)
+**2026-10-14** · Part of the Rocq upgrade and proof completion workstream
 
 This was the first agent pass over every unproved result in the development: all 228 `Admitted` lemmas and all 28 `Conjecture`s, 256 targets in total.
 

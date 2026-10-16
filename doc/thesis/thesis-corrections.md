@@ -36,4 +36,4 @@ It holds for every process, with no condition on the definitions. Remark 4.2 say
 
 **Why:** Remark 4.2's own example, $\mathbf{nonsense}(x, y) \overset{\text{def}}{=} \mathbf{nonsense}(x, y)$, can neither act nor delay, so Theorem 4.7 fails for it. The original code didn't hit this because it fixed the protocol into the language and proved the theorem by checking each protocol process in turn. Remark 4.2's strict form would be too strong: the protocol itself breaks it, since **checkRange** calls **listening** under an `if`, not an action prefix. The weaker condition allows that, and `ProtocolBridge.v` proves that the protocol meets it.
 
-**Found by:** making the language generic, workstream [step 13](../workstreams/2026-10-13-rocq-upgrade-and-proof-completion.md).
+**Found by:** making the language generic, in [#3](https://github.com/bhandalflip/PhD-Formalilsing-Comhordu/pull/3).

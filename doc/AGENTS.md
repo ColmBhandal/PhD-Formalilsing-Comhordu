@@ -1,7 +1,7 @@
 # doc/: rules for all project documentation
 
 - Put every dated document in one of these subfolders. Don't put documents directly in `doc/`.
-  - `workstreams/`: living trackers for ongoing work.
+  - `workstreams/`: living trackers for ongoing work, deleted when they finish.
   - `reports/`: point-in-time reports.
   - `adr/`: architecture decision records.
   - `archive/`: superseded historical material.
