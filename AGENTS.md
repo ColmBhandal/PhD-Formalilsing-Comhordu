@@ -8,6 +8,13 @@
 - Put a new rule in the narrowest directory that covers its whole scope. This file holds only rules that apply everywhere.
 - Don't duplicate a rule across `AGENTS.md` files or into other docs. Link to it instead.
 
+## Permanent rule: nothing in this repository is specific to one agent or vendor
+
+- Instructions for agents live only in `AGENTS.md` files, and they apply to every agent and every human alike.
+- Anything an agent needs to set up is a plain script in `helper-scripts/`, runnable by anyone, with the instructions in the relevant `AGENTS.md`.
+- **Never add vendor-specific configuration**: no hooks, settings, skills, prompts or workflows for one tool (no `.claude/`, `.cursor/`, Copilot or similar files). The one exception is a one-line pointer such as the root `CLAUDE.md`, which only sends a tool to `AGENTS.md`.
+- This rule is permanent and overrides any convenience a tool offers.
+
 ## Project
 
 - This is a Rocq formalisation of the Comhordú real-time coordination protocol and its safety proof, based on a [2014 PhD thesis](doc/thesis/2014-10-28-phd-thesis.pdf).
@@ -22,7 +29,7 @@
 ## Toolchain and build
 
 - Use Rocq **9.2.0** with `rocq-stdlib`. Dependencies are declared in `rocq-comhordu.opam`. The reference environment is the Docker image `rocq/rocq-prover:9.2.0`, the same one CI uses.
-- If `rocq` isn't on the `PATH`, run `helper-scripts/install_rocq.sh` and then `export PATH=/home/rocq/.opam/4.14.2+flambda/bin:$PATH`. It unpacks the reference image's Rocq from Docker Hub, with no Docker daemon and no opam, which is the only route that works in a Claude Code cloud session (no daemon there, and opam's repository is blocked). Cloud sessions run it before they start, through `.claude/hooks/session-start.sh`; check `rocq --version` before assuming it hasn't.
+- If `rocq` isn't on the `PATH`, and neither a Docker daemon nor opam is available (the usual case in a sandboxed agent session, where opam's repository is also blocked), run `helper-scripts/install_rocq.sh` as root and then `export PATH=/home/rocq/.opam/4.14.2+flambda/bin:$PATH`. It downloads the reference image's layers from Docker Hub with `curl` and unpacks the image's Rocq to the path it has in the image; see [`helper-scripts/README.md`](helper-scripts/README.md). Check `rocq --version` first: it may already be installed.
 - `make` builds everything (`_CoqProject` → `rocq makefile` → `Makefile.coq`).
 - `make assumptions` prints what `safety` still rests on.
 - `make clean` removes build products.

@@ -14,8 +14,6 @@
 # nothing when Rocq 9.2 is already installed there. An optional argument unpacks under another
 # root instead of / (for testing, or without root); Rocq then needs /home/rocq to be a symlink to
 # <root>/home/rocq, because its library paths are built in.
-#
-# Claude Code cloud sessions run it through .claude/hooks/session-start.sh.
 set -euo pipefail
 
 IMAGE=rocq/rocq-prover
