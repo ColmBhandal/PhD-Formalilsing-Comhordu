@@ -133,15 +133,8 @@ Inductive notifAbortPathEnt : Entity -> Prop :=
 
 (***************************** Misc *****************************)
 
-(*When defining this, I don't think you need to bother with a restriction to "full action"s. First of all,
-that would be an issue at the network level anyway. Secondly, it's OK at the network level to include some
-"half action"s because it just means we're modelling, say, spurious messages from unkown entities, meaning
-the system is in fact more robust than necessary, which is a good thing.*)
-Parameter reachableEnt : Entity -> Prop.
-(**Idea: Reflexivie transitive closure of initialEnt under entity transition relations*)
-
-Parameter nextModeEnt : Mode -> Entity -> Prop.
-(**Idea: Inductive with one constructor, in which the entity has mode state <m, m', d>, with m' the parameter to this relation*)
-
-Parameter inPosEnt : Position -> Entity -> Prop.
-(**Idea: Analogous to nextModeEnt except with position vs. mode state*)
+(** Reachable entities for the protocol are the language's, with the protocol process as the
+seed, as reachableProtNet is for networks. They are closed under every entity action, the
+half actions included: a half action only means a message from an entity outside the
+network, which the protocol has to cope with anyway.*)
+Notation reachableProtEnt := (reachableEnt procProtocol).

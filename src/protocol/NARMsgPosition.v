@@ -247,7 +247,7 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   (*Now, for the broadcast case, we can infer further information with (bc_outProc_out)*)
   lets BO : bc_outProc_out Y H5.
   (*We then show by (bcReady_pos) that the position output is equal to the position of the sender.*)
-  remember ([|q, l1, h, k|]) as e. assert (reachableEnt e). eapply reachable_net_ent.
+  remember ([|q, l1, h, k|]) as e. assert (reachableProtEnt e). eapply reachable_net_ent.
   apply p. apply H. assert (bcReadyStateEnt m l0 e). rewrite Heqe. constructor.
   rewrite H8. constructor. apply BO. lets BP : bcReady_pos H4 H9.
   (*Then the goal is reduced to: |l - l| <= Smax*0 == 0 <= 0... which is trivial.*)
@@ -256,7 +256,7 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
   assumption.
   (*We use an analogous argument for the overlap case using (ovlp_outProc_out)*)
   lets OO : ovlp_outProc_out Y H6. destruct OO as [u [OO' _]].
-  remember ([|q, l1, h, k|]) as e. assert (reachableEnt e). eapply reachable_net_ent.
+  remember ([|q, l1, h, k|]) as e. assert (reachableProtEnt e). eapply reachable_net_ent.
   apply p. apply H. assert (ovReadyStateExpEnt m u l0 e).
   rewrite Heqe. constructor. rewrite H8. constructor. apply OO'.
   lets OP : ovReady_pos H4 H9. eapply inPos_ent_net in OP.

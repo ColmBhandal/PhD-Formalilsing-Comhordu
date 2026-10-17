@@ -428,6 +428,44 @@ Proof.
   destruct (parAll_inj _ _ _ _ E) as [E1 E2]; [congruence | ]. subst r rs. exact F.
 Qed.
 
+(***************Modes of an entity, and reachable entities*********************)
+
+(** A delay changes neither the current mode nor the next mode of an entity: the mode state
+only counts its transition timer down.*)
+Lemma stepTimedEnt_currMode e e' d : e -ED- d ->> e' -> currModeEnt e = currModeEnt e'.
+Proof.
+  intro S. inversion S; subst. simpl.
+  match goal with [K : _ -ms- _ -ms> _ |- _] => inversion K; subst; reflexivity end.
+Qed.
+
+Lemma stepTimedEnt_nextMode e e' d : e -ED- d ->> e' -> nextModeEnt e = nextModeEnt e'.
+Proof.
+  intro S. inversion S; subst. simpl.
+  match goal with [K : _ -ms- _ -ms> _ |- _] => inversion K; subst; reflexivity end.
+Qed.
+
+(** The entities reachable from an initial entity for p0 by any number of discrete steps and
+delays: reachability as Definition 6.2 (p.133) has it, for one entity.*)
+Inductive reachableEnt (p0 : ProcTerm) : Entity -> Prop :=
+  | reachEntInit (e : Entity) : initialEnt p0 e -> reachableEnt p0 e
+  | reachEntDisc (e e' : Entity) (a : ActDiscEnt) : reachableEnt p0 e ->
+    e -EA- a ->> e' -> reachableEnt p0 e'
+  | reachEntDel (e e' : Entity) (d : Delay) : reachableEnt p0 e ->
+    e -ED- d ->> e' -> reachableEnt p0 e'.
+
+(** The software of a reachable entity is reachable from p0.*)
+Lemma reachableEnt_proc p0 e : reachableEnt p0 e -> reachableFrom p0 (procEnt e).
+Proof.
+  intro R. induction R as [e I | e e' a R IH S | e e' d R IH S].
+  - inversion I; subst. apply reachableFromBase.
+  - destruct e as [p l h k]. destruct e' as [p' l' h' k']. simpl in *.
+    destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ S) as [EQ | [b B]].
+    + subst. exact IH.
+    + eapply reachableFromDisc; eassumption.
+  - destruct e as [p l h k]. destruct e' as [p' l' h' k']. simpl in *.
+    eapply reachableFromDel; [exact IH | ]. eapply link_ent_soft_del. exact S.
+Qed.
+
 (** A delaying entity has no synchronisation on offer between its components.*)
 Lemma ent_del_noSyncNow p l h k d e' :
   [|p, l, h, k|] -ED- d ->> e' -> forall a, noSyncNow a p h k.
@@ -540,6 +578,18 @@ Proof using PNames PDefs. Admitted. (*6*)
 Lemma stepEnt_disc_pres_pos (e e' : Entity) a :
   e -EA- a ->> e' -> posEnt e = posEnt e'. intros.
   destruct e, e'. inversion H; reflexivity. Qed.
+
+(** The software step inside a discrete entity step, when there is one: if it is an input on
+chanPos, the value read is the entity's position, since only the position read rule
+matches such an input.*)
+Lemma ent_disc_proc_act p l h k p' l' h' k' a :
+  [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
+  p = p' \/ exists c, p -PA- c -PA> p' /\ forall v, c = chanPos ;? [basePosition v] -> v = l.
+Proof.
+  intro S. inversion S; subst; try (left; reflexivity); right;
+    match goal with [T : _ -PA- ?c -PA> _ |- _] => exists c; split; [exact T | ] end;
+    intros vv E; congruence.
+Qed.
 
 End EntityLanguage.
 

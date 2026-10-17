@@ -275,6 +275,10 @@ Lemma bcWait_wake_in_shape m (v : BaseType) (e : Exp) p : p ~p~ bcWait v e ->
 Lemma bcReady_outProc_out_shape (v1 v2 : BaseType) p : p ~p~ bcReady v1 v2 ->
   discActEnabled p (chanOutProc ;! [v1, v2]). activation_tac. Qed.
 
+Lemma ovReady_outProc_out_shape (v1 : BaseType) (e2 : Exp) (v3 : BaseType) p :
+  p ~p~ ovReady v1 e2 v3 -> discActEnabled p (chanOutProc ;! [v1, v3]).
+  activation_tac. Qed.
+
 Lemma sleep_trans_in p : sleepingState p -> discActEnabled p (chanTrans *?).
   activation_tac. Qed.
 
@@ -826,6 +830,39 @@ Proof.
       | apply del_bisim_guard;
         match goal with [E : evalExpFunTime _ = Some zeroTime |- _] => rewrite E end;
         reflexivity].
+Qed.
+
+(** The step into ovReady reads the position ovReady holds: its derivative broadcasts that
+position, so the value read is the one ovReady m t l holds, whatever its timer.*)
+Theorem ovReady_prev_act (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t : Exp) (l : Position) :
+  p -PA- a -PA> p' -> overlapState p -> ovReadyStateExp m t l p' ->
+  a = chanPos ;? [basePosition l].
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP.
+  match type of BT with outPrefix _ (eBase ?b1 :: eBase ?b :: nil) _ ~p~ _ =>
+    bt_step BT (chanOutProc ;! [b1, b]) S2 end.
+  destruct (bisim_step_disc _ _ _ _ BT S2) as [r2 [R2 _]].
+  invert_disc_prefixes. output_values. reflexivity.
+Qed.
+
+(** The step into bcReady reads the position bcReady holds, as for ovReady: the broadcast
+component was bcWait with its timer run out, and no other broadcast state reaches bcReady.*)
+Theorem bcReady_prev (p p' : ProcTerm) (a : DiscAct) (m : Mode) (l : Position) :
+  p -PA- a -PA> p' -> broadcastState p -> bcReadyState m l p' ->
+  a = chanPos ;? [basePosition l].
+Proof.
+  intros TR O SP. red in SP.
+  destruct (broadcastState_shape _ O) as [B | m0 e B | m0 l0 B];
+  (let q := fresh "q" in let TQ := fresh "TQ" in let BQ := fresh "BQ" in let BT := fresh "BT" in
+    destruct (bisim_step_disc _ _ _ _ B TR) as [q [TQ BQ]];
+    pose proof (bisim_trans _ _ _ (bisim_symm _ _ BQ) SP) as BT;
+    prot_outProc_in_not_body; invert_disc_prefixes; explicit_typed_input; clean_proc_hyp BT;
+    unfold liftNameProc in BT; try unfold_app_hyp_l BT; prot_outProc_in_not_body;
+    try solve [refute_by_chan BT]).
+  match type of BT with outPrefix _ (eBase ?b1 :: eBase ?b :: nil) _ ~p~ _ =>
+    bt_step BT (chanOutProc ;! [b1, b]) S2 end.
+  destruct (bisim_step_disc _ _ _ _ BT S2) as [r2 [R2 _]].
+  invert_disc_prefixes. output_values. reflexivity.
 Qed.
 
 (** After a step into switchBc, the overlap component was ovWait with its pause timer run
@@ -1658,6 +1695,61 @@ Qed.
   protocol components respectively. We then invert on the tau action and eliminate the tau
   cases for pi -tau-> pi' as they come up because none of the protocol components can ever
   do a tau (show this elsewhere). Leaving us our goal.*)
+
+(* begin helpers for triple_pos_read_bc *)
+(** No component of the protocol outputs on chanPos: the position is only ever read.*)
+Lemma broadcast_pos_out_not p p' v : broadcastState p -> p -PA- chanPos ;! v -PA> p' -> False.
+Proof. intros S T. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra. Qed.
+
+Lemma overlap_pos_out_not p p' v : overlapState p -> p -PA- chanPos ;! v -PA> p' -> False.
+Proof. intros S T. destruct (overlapState_shape _ S); prot_outProc_in_not_contra. Qed.
+
+Lemma listener_pos_out_not p p' v : listenerState p -> p -PA- chanPos ;! v -PA> p' -> False.
+Proof. intros S T. destruct (listenerState_shape _ S); prot_outProc_in_not_contra. Qed.
+(* end helpers *)
+
+(** A step of a protocol triple whose broadcast component can only have stepped by reading
+a position: either it did not step, or the whole triple read that position, since no other
+component could have supplied it. So for the overlap component below.*)
+Lemma triple_pos_read_bc p1 p2 p3 p1' p2' p3' c v :
+  protocolState (p1 $||$ p2 $||$ p3) -> p1 $||$ p2 $||$ p3 -PA- c -PA> p1' $||$ p2' $||$ p3' ->
+  (forall b, p1 -PA- b -PA> p1' -> b = chanPos ;? [basePosition v]) ->
+  p1 = p1' \/ c = chanPos ;? [basePosition v].
+Proof.
+  intros PS T ACT. inversion PS as [? ? ? BS OS LS]; subst.
+  destruct c as [c0 v0 | c0 v0 | ].
+  - triple_disc_nonTau T; first [left; reflexivity | right; eapply ACT; eassumption].
+  - triple_disc_nonTau T; first [left; reflexivity | right; eapply ACT; eassumption].
+  - destruct (link_reach_triple_tau _ _ _ _ _ _ T PS) as [c0 [v0 H]].
+    decompose [or and] H; clear H;
+    try match goal with [E : p1 = p1' |- _] => left; exact E end;
+    try match goal with [H1 : p1 -PA- _ ;! _ -PA> p1' |- _] =>
+      lets X : ACT H1; discriminate X end;
+    match goal with [H1 : p1 -PA- ?c1 ;? ?v1 -PA> p1', H2 : _ -PA- ?c1 ;! ?v1 -PA> _ |- _] =>
+      lets X : ACT H1; injection X as X1 X2; subst c1 v1; exfalso;
+      first [eapply overlap_pos_out_not; [exact OS | exact H2]
+            | eapply listener_pos_out_not; [exact LS | exact H2]] end.
+Qed.
+
+Lemma triple_pos_read_ov p1 p2 p3 p1' p2' p3' c v :
+  protocolState (p1 $||$ p2 $||$ p3) -> p1 $||$ p2 $||$ p3 -PA- c -PA> p1' $||$ p2' $||$ p3' ->
+  (forall b, p2 -PA- b -PA> p2' -> b = chanPos ;? [basePosition v]) ->
+  p2 = p2' \/ c = chanPos ;? [basePosition v].
+Proof.
+  intros PS T ACT. inversion PS as [? ? ? BS OS LS]; subst.
+  destruct c as [c0 v0 | c0 v0 | ].
+  - triple_disc_nonTau T; first [left; reflexivity | right; eapply ACT; eassumption].
+  - triple_disc_nonTau T; first [left; reflexivity | right; eapply ACT; eassumption].
+  - destruct (link_reach_triple_tau _ _ _ _ _ _ T PS) as [c0 [v0 H]].
+    decompose [or and] H; clear H;
+    try match goal with [E : p2 = p2' |- _] => left; exact E end;
+    try match goal with [H1 : p2 -PA- _ ;! _ -PA> p2' |- _] =>
+      lets X : ACT H1; discriminate X end;
+    match goal with [H1 : p2 -PA- ?c1 ;? ?v1 -PA> p2', H2 : _ -PA- ?c1 ;! ?v1 -PA> _ |- _] =>
+      lets X : ACT H1; injection X as X1 X2; subst c1 v1; exfalso;
+      first [eapply broadcast_pos_out_not; [exact BS | exact H2]
+            | eapply listener_pos_out_not; [exact LS | exact H2]] end.
+Qed.
   
 Ltac link_partriptau_tac c v U :=
   match goal with
