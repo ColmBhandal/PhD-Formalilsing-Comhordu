@@ -247,6 +247,3 @@ Inductive reachableProt : ProcTerm -> Prop :=
   p -PA- a -PA> p' -> reachableProt p'
   | reachprDel (p p' : ProcTerm) (d : Delay) : reachableProt p ->
   p -PD- d -PD> p' -> reachableProt p'.
-
-Inductive initialProc : ProcTerm -> Prop :=
-  initProcProt : initialProc procProtocol.
