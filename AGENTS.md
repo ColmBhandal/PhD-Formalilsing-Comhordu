@@ -12,7 +12,7 @@
 
 - Instructions for agents live only in `AGENTS.md` files, and they apply to every agent and every human alike.
 - Anything an agent needs to set up is a plain script in `helper-scripts/`, runnable by anyone, with the instructions in the relevant `AGENTS.md`.
-- **Never add vendor-specific configuration**: no hooks, settings, skills, prompts or workflows for one tool (no `.claude/`, `.cursor/`, Copilot or similar files). The one exception is a one-line pointer such as the root `CLAUDE.md`, which only sends a tool to `AGENTS.md`.
+- **Never add vendor-specific configuration**: no hooks, settings, skills, prompts or workflows for one tool (no `.claude/`, `.cursor/`, Copilot or similar files), and no pointer file for one tool either, such as a root `CLAUDE.md`. `.gitignore` blocks the usual ones, so a tool that writes them locally can't commit them by accident; never commit one, and never loosen that.
 - This rule is permanent and overrides any convenience a tool offers.
 
 ## Project

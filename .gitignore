@@ -1,7 +1,17 @@
 CoqDoc/
 
-# Vendor-specific agent folders never belong in the repository; see AGENTS.md.
+# Vendor-specific agent files never belong in the repository, not even a pointer file;
+# see AGENTS.md.
+CLAUDE.md
 .claude/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.aider*
+.codex/
+GEMINI.md
+.github/copilot-instructions.md
 
 #Coq Build Output to Ignore
 *.aux
