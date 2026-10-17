@@ -34,7 +34,7 @@ Require Import ComhCoq.protocol.ProtocolBridge.
 (*TIDY*)
 
 (*TOGO: NARMisc*)
-Lemma tfs_state_rel i n (p : reachableNet n) :
+Lemma tfs_state_rel i n (p : reachableProtNet n) :
   tfsStateNet i n -> exists m t, tfs m t i n p.
   Admitted. (*4*)
   (*Proof: Induction on reachable.*)
@@ -139,7 +139,7 @@ Qed.
 (* end helpers *)
 
 Lemma currModeNet_notifBad_pres_bkwd m i n n' a
-  (rn : reachableNet n) (w : n -NA- a -NA> n') :
+  (rn : reachableProtNet n) (w : n -NA- a -NA> n') :
   currModeNet m i n' -> notifBadPathNet i n ->
   ~failSafe m ->
   currModeNet m i n \/
@@ -190,7 +190,7 @@ Qed.
 (*If a message was delivered at a time less than AN ago, then a notification of that
 message's delivery is enqueued with time stamp AN - t. *)
 Theorem delivered_incomingNetNotif (n : Network) (v : list BaseType) (r : Distance)
-  (l : Position) (t : Time) (i : nat) (p : reachableNet n) :
+  (l : Position) (t : Time) (i : nat) (p : reachableProtNet n) :
   delivered ([-v, l, r-]) t i n p -> forall q : t < adaptNotif,
   incomingNetNotif ((baseDistance r)::v) (minusTime adaptNotif t (Rlt_le t adaptNotif q)) i n.
   intros H q.
@@ -220,7 +220,7 @@ Theorem delivered_incomingNetNotif (n : Network) (v : list BaseType) (r : Distan
 
 Theorem insuff_incomingNotif_abort (n n' : Network) (a : ActDiscNet) (m : Mode)
   (r : Distance) (l : Position) (i : nat) : 
-  reachableNet n -> nextModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
+  reachableProtNet n -> nextModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n' \/
   notifAbortPathNet i n'. Admitted. (*3*)
@@ -239,7 +239,7 @@ Then show that only such a transition, with the arguments of the buffered messag
 will cause it to leave the list. But in that case, you have a case for the notifAbort path.
 So that's it.*)
 
-Theorem nextSince_next (n : Network) (m : Mode) (t : Time) (i : nat) (p : reachableNet n) : 
+Theorem nextSince_next (n : Network) (m : Mode) (t : Time) (i : nat) (p : reachableProtNet n) : 
   nextSince m t i n p -> nextModeNet m i n. 
   (*By induction on nextSince.*)
   introz U. induction U. 
@@ -268,7 +268,7 @@ Admitted. (*3*)
 discrete transition happens, then in the next state it is either still on the
 notification abort path, or it is not in a nextSince state.*)
 Theorem notifAbort_not_nextSince (n n' : Network)
-  (a : ActDiscNet) (i : nat) (rn : reachableNet n) : 
+  (a : ActDiscNet) (i : nat) (rn : reachableProtNet n) : 
   notifAbortPathNet i n -> n -NA- a -NA> n' ->
   notifAbortPathNet i n' \/ ~nextSinceStateNet i n'. introz U. 
   (**Proof: Similar to msgAbort_not_nextSince*)
@@ -409,7 +409,7 @@ of two things holds. Either a) A notification of the message and its coverage is
 pending immediately i.e. with timestamp 0 or b) the entity in question is on the
 notification abort path. *)
 Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
-  (r : Distance) (t : Time) (i : nat) (p : reachableNet n) : 
+  (r : Distance) (t : Time) (i : nat) (p : reachableProtNet n) : 
   delivered ([-[baseMode m, basePosition l], l0, r-]) adaptNotif i n p -> ~sufficient m r ->
   nextSince m t i n p -> adaptNotif < t ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n \/
@@ -448,7 +448,7 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
 
 Theorem insuff_incomingNotif_bad (n n' : Network) (a : ActDiscNet) (m : Mode)
   (r : Distance) (l : Position) (i : nat) : 
-  reachableNet n -> currModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
+  reachableProtNet n -> currModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n' \/
   notifBadPathNet i n'. Admitted. (*3*)
@@ -480,7 +480,7 @@ Ltac badOvlp_listening_tfs_close :=
 (* end helpers *)
 
 Theorem badOvlp_listening_tfs n n' a i m 
-  (rn : reachableNet n) (w : n -NA- a -NA> n') :
+  (rn : reachableProtNet n) (w : n -NA- a -NA> n') :
   badOvlpStateNet i n -> listeningStateNet i n' ->
   currModeNet m i n ->
   exists t, tfs m t i n' (reachNetDisc n n' a rn w).
@@ -507,7 +507,7 @@ Qed.
 happens, then in the next state it is either still on the notification bad path,
 or the tfs relation holds in the next state.*)
 Theorem notifBad_pres_tfs (m : Mode) (n n' : Network)
-  (a : ActDiscNet) (i : nat) (rn : reachableNet n)
+  (a : ActDiscNet) (i : nat) (rn : reachableProtNet n)
   (w : n -NA- a -NA> n') : 
   notifBadPathNet i n -> currModeNet m i n' -> ~failSafe m ->
   notifBadPathNet i n' \/ (exists t, tfs m t i n' (reachNetDisc n n' a rn w)).
@@ -557,7 +557,7 @@ Either a) A notification of the message and its coverage is pending immediately 
 with timestamp 0 or b) the entity in question is on the notification bad path or 
 c) we are at the beginning of a transition to a fail safe mode. *)
 Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
-  (r : Distance) (t : Time) (i : nat) (p : reachableNet n) : 
+  (r : Distance) (t : Time) (i : nat) (p : reachableProtNet n) : 
   delivered ([-[baseMode m, basePosition l], l0, r-]) adaptNotif i n p -> ~failSafe m ->
   ~sufficient m r -> currSince m t i n p -> adaptNotif < t ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n
@@ -574,7 +574,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   show that the transition from nextSince to currSince preserves incoming, giving us LHS*)
   lets IIA : instant_insuff_abort H H0 H1 H4.
   (*To use later: let's show that we're in a switch state and hence are paused.*)
-  assert (reachableNet n') as p'. eapply reachNetDisc; eassumption.
+  assert (reachableProtNet n') as p'. eapply reachNetDisc; eassumption.
   assert (switchStateNet i n') as SSN2. inversion H3. inversion H5. inversion H7.
   netState_auto_pre. eapply switLisSt. eassumption.
   assert (switchStateNet i n) as SSN1. inversion H2. inversion H5. inversion H7.
@@ -625,7 +625,7 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
 enter the next mode m for some time t, with t' < t, and the time since delivery
 is greater than AN, then message delivery in question was sufficient.*)
 Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
-  (r : Distance) (t t' : Time) (i : nat) (p : reachableNet n) :
+  (r : Distance) (t t' : Time) (i : nat) (p : reachableProtNet n) :
   nextSince m t i n p ->
   delivered ([-[baseMode m, basePosition l], l0, r-]) t' i n p ->
   adaptNotif < t' -> t' < t -> sufficient m r.
@@ -681,7 +681,7 @@ Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
 and we've been currSince for some time t greater than t', then we are tfs for
 some x > (t' - AN) time units.*)
 Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
-  (r : Distance) (t t' : Time) (i : nat) (p : reachableNet n) :
+  (r : Distance) (t t' : Time) (i : nat) (p : reachableProtNet n) :
   currSince m t i n p -> 
   delivered ([-[baseMode m, basePosition l], l0, r-]) t' i n p ->
   forall q : adaptNotif < t', t' < t ->  ~sufficient m r -> ~failSafe m ->

@@ -28,12 +28,12 @@ a time of zero. The condition is preserved by future states as long as they belo
 to a certain subset of locations (state patterns). Since delay does not alter location,
 we do not need this stipulation in the premise of the delay case. Rather, we simply
 add the value of the delay to the running total of time so far.*)
-Inductive tfs (m : Mode) : Time -> nat -> forall n : Network, reachableNet n -> Prop := 
-  | tfsBase (i : nat) (n : Network) (p : reachableNet n) :
+Inductive tfs (m : Mode) : Time -> nat -> forall n : Network, reachableProtNet n -> Prop := 
+  | tfsBase (i : nat) (n : Network) (p : reachableProtNet n) :
     tfsStartStateNet i n -> currModeNet m i n -> tfs m zeroTime i n p
-  | tfsDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+  | tfsDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     tfs m t i n p -> tfsStateNet i n' -> tfs m t i n' (reachNetDisc n n' a p w)
-  | tfsDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -ND- d -ND> n') :
+  | tfsDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -ND- d -ND> n') :
     tfs m t i n p -> tfs m (t +dt+ d) i n' (reachNetDel n n' d p w).
 
 (*pending i n p is a relation that is set up purely as a precursor to nextSince.
@@ -43,14 +43,14 @@ in which there is an extra period m added to the waiting time parameter.
 Pending i n only lasts for two states, and then it hands control over to nextSince.
 Note we don't include any delay constructors. This is because it should be provable
 that a state cannot delay when it is pending.*)
-Inductive pending (i : nat) : forall n : Network, reachableNet n -> Prop :=
-  | pendingBase (a : ActDiscNet) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') (m : Mode) (t x y : Time) :
+Inductive pending (i : nat) : forall n : Network, reachableProtNet n -> Prop :=
+  | pendingBase (a : ActDiscNet) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') (m : Mode) (t x y : Time) :
     initStateNet m i n -> ovWaitStateNet m t x y i n' -> pending i n' (reachNetDisc n n' a p w)
-  | pendingWait (a : ActDiscNet) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') (m : Mode) (t x y : Time) :
+  | pendingWait (a : ActDiscNet) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') (m : Mode) (t x y : Time) :
     pending i n p -> ovWaitStateNet m t x y i n -> ovWaitStateNet m t x y i n' -> pending i n' (reachNetDisc n n' a p w)
-  | pendingWaitReady (a : ActDiscNet) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') (m : Mode) (l : Position) (t x y : Time) :
+  | pendingWaitReady (a : ActDiscNet) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') (m : Mode) (l : Position) (t x y : Time) :
     pending i n p -> ovWaitStateNet m t x y i n -> ovReadyStateNet m t l i n' -> pending i n' (reachNetDisc n n' a p w)    
-  | pendingReady (a : ActDiscNet) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') (m : Mode) (l : Position) (t : Time) :
+  | pendingReady (a : ActDiscNet) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') (m : Mode) (l : Position) (t : Time) :
     pending i n p -> ovReadyStateNet m t l i n -> ovReadyStateNet m t l i n' -> pending i n' (reachNetDisc n n' a p w).
 
 
@@ -70,13 +70,13 @@ preserved by the delay relation. Reachability is implicitly carried forward
 from pending, and so does not need explicit mention in these rules. Notice
 also in the base case that t' is free with respect to t, allowing for the
 time to be updated.*)
-Inductive nextSince (m : Mode) : Time -> nat -> forall n : Network, reachableNet n -> Prop :=
-  | nextSinceBase (a : ActDiscNet) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') (l : Position) (t t' x y : Time) :
+Inductive nextSince (m : Mode) : Time -> nat -> forall n : Network, reachableProtNet n -> Prop :=
+  | nextSinceBase (a : ActDiscNet) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') (l : Position) (t t' x y : Time) :
     pending i n p -> ovReadyStateNet m t l i n -> ovWaitStateNet m t' x y i n' ->
     nextSince m zeroTime i n' (reachNetDisc n n' a p w)
-  | nextSinceDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+  | nextSinceDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     nextSince m t i n p -> nextSinceStateNet i n' -> nextSince m t i n' (reachNetDisc n n' a p w)
-  | nextSinceDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -ND- d -ND> n') :
+  | nextSinceDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -ND- d -ND> n') :
     nextSince m t i n p -> nextSince m (t +dt+ d) i n' (reachNetDel n n' d p w).
 
 (*currSince m t i n roughly says that entity i in the network n has
@@ -94,13 +94,13 @@ The inductive cases are simple, and follow the standard pattern
 shared by much of the "history relations" given here. It is worth noting
 that there is no need to explicitly enforce reachability here in the base case
 because it will follow from the "passing on of the relay bat" from nextSince.*)
-Inductive currSince (m : Mode) : Time -> nat -> forall n : Network, reachableNet n -> Prop :=
-  | currSinceBase (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+Inductive currSince (m : Mode) : Time -> nat -> forall n : Network, reachableProtNet n -> Prop :=
+  | currSinceBase (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     nextSince m t i n p -> switchCurrStateNet i n -> switchListenStateNet i n' ->
     currSince m t i n' (reachNetDisc n n' a p w)
-  | currSinceDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+  | currSinceDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     currSince m t i n p -> currModeNet m i n' -> currSince m t i n' (reachNetDisc n n' a p w)
-  | currSinceDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -ND- d -ND> n') :
+  | currSinceDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -ND- d -ND> n') :
     currSince m t i n p -> currSince m (t +dt+ d) i n' (reachNetDel n n' d p w).				 
 
 
@@ -112,38 +112,38 @@ One thing to note is that sent, like many of these history relations, is preserv
 as you would expect, i.e. if a message has been sent at some point, then it remains sent at a later point.
 Also, at this later point, the time parameter will not have decreased- though it may have increased.
 Sent can be seen as a means of encoding what happened in the past, a way of remembering some of the
-history that brought us to this state. The parameter p of type reachableNet n remembers the exact history
+history that brought us to this state. The parameter p of type reachableProtNet n remembers the exact history
 up to this point. Sent is like a summary of this or a statistic over p.*)				 
-Inductive sent (v : list BaseType) : Time -> nat -> forall n : Network, reachableNet n -> Prop :=
-  | sentBase (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- anTau -NA> n')
+Inductive sent (v : list BaseType) : Time -> nat -> forall n : Network, reachableProtNet n -> Prop :=
+  | sentBase (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- anTau -NA> n')
     (q q' : ProcTerm) (l : Position) (h h' : Interface) (k : ModeState) :
     [| q, l, h, k |] @ i .: n -> [| q', l, h', k |] @ i .: n' -> 
     q -PA- (outAct chanOutProc v) -PA> q' -> h -i- (aiIn chanOutProc v) -i> h' ->
     sent v zeroTime i n' (reachNetDisc n n' anTau p w)
-  | sentDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+  | sentDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     sent v t i n p -> sent v t i n' (reachNetDisc n n' a p w)
-  | sentDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -ND- d -ND> n') :
+  | sentDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -ND- d -ND> n') :
     sent v t i n p -> sent v (t +dt+ d) i n' (reachNetDel n n' d p w).
 
 (*delivered v r t i n p says that the message v was delivered to the radius r t time units
 ago by the entity i in the network n.*)
-Inductive delivered (v : Message) : Time -> nat -> forall n : Network, reachableNet n -> Prop :=
-  | deliveredBase (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- (anOut v i) -NA> n') :
+Inductive delivered (v : Message) : Time -> nat -> forall n : Network, reachableProtNet n -> Prop :=
+  | deliveredBase (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- (anOut v i) -NA> n') :
     delivered v zeroTime i n' (reachNetDisc n n' (anOut v i) p w)
-  | deliveredDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+  | deliveredDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     delivered v t i n p -> delivered v t i n' (reachNetDisc n n' a p w)
-  | deliveredDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -ND- d -ND> n') :
+  | deliveredDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -ND- d -ND> n') :
     delivered v t i n p -> delivered v (t +dt+ d) i n' (reachNetDel n n' d p w).
 
 (*received v t i n p says that the message v was received t time units ago by the entity i in the network n.*)
-Inductive received (v : list BaseType) : Time -> nat -> forall n : Network, reachableNet n -> Prop :=
-  | receivedBase (a : ActDiscNet) (i : nat) (n n' : Network) (p : reachableNet n)
+Inductive received (v : list BaseType) : Time -> nat -> forall n : Network, reachableProtNet n -> Prop :=
+  | receivedBase (a : ActDiscNet) (i : nat) (n n' : Network) (p : reachableProtNet n)
   (w : n -NA- a -NA> n') (e e' : Entity) (l : Position) (r : Distance) :
     e @ i .: n -> e' @ i .: n' -> e -EA- (aeTagIn ([- v, l, r -])) ->> e' ->
     received v zeroTime i n' (reachNetDisc n n' a p w)
-  | receivedDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -NA- a -NA> n') :
+  | receivedDisc (a : ActDiscNet) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -NA- a -NA> n') :
     received v t i n p -> received v t i n' (reachNetDisc n n' a p w)
-  | receivedDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableNet n) (w : n -ND- d -ND> n') :
+  | receivedDel (d : Delay) (t : Time) (i : nat) (n n' : Network) (p : reachableProtNet n) (w : n -ND- d -ND> n') :
     received v t i n p -> received v (t +dt+ d) i n' (reachNetDel n n' d p w).
 
 (***************************** Path predicates *****************************)

@@ -64,7 +64,9 @@ All source ``.v`` files can be found in [`src/`](src), in four folders. Each bui
 
 The top-level safety condition is proved in [Main.v](src/protocol/Main.v). The top-level Theorem is called ``safety``:
 
-``Theorem safety (n : Network) : reachableNet n -> safe n.``
+``Theorem safety (n : Network) : reachableProtNet n -> safe n.``
+
+`reachableProtNet` is the language's `reachableNet` with the protocol process as the seed every entity starts from.
 
 ### Software Language & Protocol
 

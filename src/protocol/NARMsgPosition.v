@@ -34,7 +34,7 @@ Open Scope R_scope.
 message latency, then said message is in the output queue of the interface component 
 with timestamp mL - t.*)
 Theorem sent_outgoing (n : Network) (v : list BaseType) (t : Time) (i : nat)
-  (p : reachableNet n) :
+  (p : reachableProtNet n) :
   sent v t i n p -> forall q : t < msgLatency,
   outgoing v (minusTime msgLatency t (Rlt_le t msgLatency q)) i n.
   (**Proof: Induction on sent.*)
@@ -87,7 +87,7 @@ Lemma fst_sent_aux2 q m t l m' t' x y : ovReadyStateProt m t l q -> ovWaitStateP
 (* end helpers *)
 
 Theorem fst_sent (n : Network) (m : Mode) (t : Time) (i : nat)
-  (p : reachableNet n) : nextSince m t i n p ->
+  (p : reachableProtNet n) : nextSince m t i n p ->
   exists l0, sent [baseMode m, basePosition l0] t i n p.
 Proof.
 (**Proof: By induction on nextSince.*)
@@ -115,7 +115,7 @@ Proof.
 (* If an entity has sent a message v mL time units ago, then said message is in the output
 queue of the interface component with timestamp 0 or it has been delivered 0 time units ago.*)
 Theorem sent_out_del (n : Network) (v : list BaseType) (i : nat)
-  (p : reachableNet n) : sent v msgLatency i n p ->
+  (p : reachableProtNet n) : sent v msgLatency i n p ->
   outgoing v zeroTime i n \/
   exists r l, delivered ([-v, l, r-]) zeroTime i n p.
   (**Proof: By induction on sent.*)
@@ -162,7 +162,7 @@ Theorem sent_out_del (n : Network) (v : list BaseType) (i : nat)
 message latency, then said message was delivered to some radius, and the delivery time
 is less than the time of sending by the amount message latency.*)
 Theorem sent_delivered (n : Network) (v : list BaseType) (t : Time) (i : nat)
-  (p : reachableNet n) : sent v t i n p -> forall q : msgLatency < t,
+  (p : reachableProtNet n) : sent v t i n p -> forall q : msgLatency < t,
   exists r l,
   delivered ([-v, l, r-]) (minusTime t msgLatency (Rlt_le msgLatency t q)) i n p.
   (**Proof: Induction on sent. Well the base case can be immediately discarded due to the
@@ -225,7 +225,7 @@ Theorem sent_delivered (n : Network) (v : list BaseType) (t : Time) (i : nat)
 (* If a message <m, l0> was sent t time units ago by some entity, then the distance
 between l0 and the position of that entity is at most Smax*t.*)
 Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
-  (l l0 : Position) (p : reachableNet n) :
+  (l l0 : Position) (p : reachableProtNet n) :
   sent [baseMode m, basePosition l0] t i n p -> inPosNet l i n ->
   dist2d l l0 <= speedMax*t.
   (**Proof: By induction on the proof of sent.*)
@@ -281,7 +281,7 @@ Theorem sent_pos_bound (n : Network) (m : Mode) (t : Time) (i : nat)
 then for some l0 it has delivered a message <m, l0> to some r at t - mL time units ago,
 and the l0 in the message differs from the current position by at most Smax*t.*)
 Theorem fst_delivered (n : Network) (m : Mode) (t : Time) (i : nat)
-  (l : Position) (p : reachableNet n) :
+  (l : Position) (p : reachableProtNet n) :
   nextSince m t i n p -> inPosNet l i n -> forall q : msgLatency < t,
   exists l0 l1 r,
   delivered ([-[baseMode m, basePosition l0], l1, r-])

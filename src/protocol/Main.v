@@ -33,7 +33,7 @@ Require Import ComhCoq.protocol.ProtocolBridge.
 
 (**Used to exploit a symmetry in the following proof, essentially continues on the proof
 from where it is applied*)
-Theorem safety_aux (n : Network) (X : reachableNet n) (e1 e2 : Entity)
+Theorem safety_aux (n : Network) (X : reachableProtNet n) (e1 e2 : Entity)
   (i j : nat) (H : (i <> j)%nat) (H0 : e1 @ i .: n) (H1 : e2 @ j .: n)
   (x : Distance) (Heqx : x = mkDistance (dist2d e1 e2)) (mdc : Distance) (m1 : Mode)
   (Heqm1 : m1 = e1) (m2 : Mode) (Heqm2 : m2 = e2) (Heqmdc : mdc = minDistComp m1 m2)
@@ -162,7 +162,7 @@ itself is defined elsewhere, but basically means that all pairs of entities in t
 separated by a sufficient distance to ensure that they are not incompatible according to their
 respective modes. The sufficiency of the distance in question is in turn decided by parameters
 of the specific system in question*) 
-Theorem safety (n : Network) : reachableNet n -> safe n.
+Theorem safety (n : Network) : reachableProtNet n -> safe n.
   (*So our assumption is that there exists some initial reachable network in which there is
   some pair of entities that are separated by a distance less than the minimum distance
   of compatibility for their respective modes. Let's call the entities e1 and e2 and

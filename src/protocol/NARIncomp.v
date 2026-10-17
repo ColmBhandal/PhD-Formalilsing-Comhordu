@@ -30,7 +30,7 @@ Require Import ComhCoq.protocol.ProtocolBridge.
 
 (*If any entity has an incomingNet message the network can't delay.*)
 Theorem incomingNet_urgent (n n' : Network) (v : list BaseType) (i : nat) (d : Delay) :
-  reachableNet n -> incomingNet v i n -> ~n -ND- d -ND> n'. Admitted. (*3*)
+  reachableProtNet n -> incomingNet v i n -> ~n -ND- d -ND> n'. Admitted. (*3*)
 (**Proof: First we show by inversion on incomingNet v i n that there is some e @ i .: n.
 Now assume there was such a del towards a contradiction. Then by (del_listening) we'd have
 listeningState i n. But then it can be shown by (...listening-inProc...) that the software
@@ -99,7 +99,7 @@ Theorem incomp_incomingNet_abort (n n' : Network) (a : ActDiscNet) (l l' : Posit
 (**Proof: Analogous to incomp_incomingNet_bad.*)
 
 Theorem msgAbort_not_nextSince (n n' : Network) (a : ActDiscNet)
-  (i : nat) (rn : reachableNet n) :
+  (i : nat) (rn : reachableProtNet n) :
   msgAbortPathNet i n -> n -NA- a -NA> n' -> 
   msgAbortPathNet i n' \/ ~nextSinceStateNet i n'. introz U.
   (*Link down to the entity level and eliminate the entity equality case.*)
@@ -249,7 +249,7 @@ and it's possibly incompatible with the  pending mode and position,
 then either a) it is pending consumption or b) the message in question
 is being processed along the "msgAbortPath".*)
 Theorem instant_incomp_abort (n : Network) (t : Time) (l l' : Position) (i : nat)
-  (m m' : Mode) (p : reachableNet n) :
+  (m m' : Mode) (p : reachableProtNet n) :
   nextSince m t i n p -> inPosNet l i n -> 0 < t ->
   received [baseMode m', basePosition l'] zeroTime i n p ->
   dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
@@ -295,7 +295,7 @@ we have been pending transition to a mode which threatens to be incompatible wit
 the received mode, given our current position & adjusting for time, the we get a
 contradiction.*)
 Theorem incomp_abort (n : Network) (t t' : Time) (l l' : Position) (i : nat)
-  (m m' : Mode) (p : reachableNet n) :
+  (m m' : Mode) (p : reachableProtNet n) :
   nextSince m t i n p -> inPosNet l i n ->
   received [baseMode m', basePosition l'] t' i n p -> zeroTime < t' -> t' < t ->
   dist2d l l' -nn- speedMax *nn* msgLatency + speedMax*t' < possIncDist m m' ->
@@ -357,7 +357,7 @@ and it's possibly incompatible with the current mode and position, then either a
 pending consumption, b) the message in question is being processed along the "msgBadPath"
 or c) we have initiated a transition to tfs this instant.*)
 Theorem instant_incomp_tfs (n : Network) (t : Time) (l l' : Position) (i : nat)
-  (m m' : Mode) (p : reachableNet n) :
+  (m m' : Mode) (p : reachableProtNet n) :
   currSince m t i n p -> inPosNet l i n -> 0 < t ->
   received [baseMode m', basePosition l'] zeroTime i n p ->
   dist2d l l' -nn- speedMax *nn* msgLatency < possIncDist m m' ->
@@ -425,7 +425,7 @@ with mode m' and position l0 some non-zero t' time units ago, with t' being
 more recent than t, and the following inequality holds, with l our current
 position: (|l - l0| - Smax*mL) + Smax*t' < Dpi m1 m2, then we are tfs m t'.*)
 Theorem incomp_tfs  (n : Network) (t t' : Time) (l l' : Position) (i : nat)
-  (m m' : Mode) (p : reachableNet n) :
+  (m m' : Mode) (p : reachableProtNet n) :
   currSince m t i n p -> inPosNet l i n ->
   received [baseMode m', basePosition l'] t' i n p ->
   zeroTime < t' -> t' < t  ->

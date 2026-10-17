@@ -19,10 +19,7 @@ Require Import ComhCoq.protocol.ProtocolBridge.
 
 
 (***************************** Lifting *****************************) 
-
-Inductive liftProcEnt (X : ProcTerm -> Prop) : Entity -> Prop :=
-  | lifpe (p : ProcTerm) (l : Position) (h : Interface) (k : ModeState) :
-    X p -> liftProcEnt X ([|p, l, h, k|]).
+(** The protocol's state predicates, lifted to entities by the language's liftProcEnt.*)
 
 (******** Simple Lifted Predicates ********) 
 
@@ -148,9 +145,3 @@ Parameter nextModeEnt : Mode -> Entity -> Prop.
 
 Parameter inPosEnt : Position -> Entity -> Prop.
 (**Idea: Analogous to nextModeEnt except with position vs. mode state*)
-
-(** An entity is initial if its consitutent process is
-initial and its mode state is a stable, failSafe mode.*)
-Inductive initialEnt : Entity -> Prop :=
-  initEnt p l h m : initialProc p -> failSafe m ->
-  initialEnt ([|p, l, h, m|]).

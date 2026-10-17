@@ -2088,6 +2088,17 @@ Proof.
   exists p'; exists ps'; exists i. auto.
 Qed.
 
+(** Compositions of as many components are the same term only when their components are.*)
+Lemma parAll_inj p ps q qs : parAll p ps = parAll q qs -> length ps = length qs ->
+  p = q /\ ps = qs.
+Proof.
+  revert p q qs. induction ps as [ |p2 ps IH]; intros p q qs E L;
+    destruct qs as [ |q2 qs]; simpl in *; try discriminate.
+  - split; [exact E | reflexivity].
+  - injection E as E1 E2. injection L as L. destruct (IH _ _ _ E2 L) as [E3 E4].
+    subst. split; reflexivity.
+Qed.
+
 (*********Reachability*********)
 
 (** The processes reachable from p0 by any number of discrete steps and delays.*)

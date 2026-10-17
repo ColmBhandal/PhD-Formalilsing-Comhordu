@@ -106,7 +106,7 @@ Qed.
 
 (*The following string of results should be provable by lifting inter-component
 relationships. Except the one with nextSince, not so sure there.*)
-Lemma ovWait_ovReady_nextMode_net i n (p : reachableNet n) :
+Lemma ovWait_ovReady_nextMode_net i n (p : reachableProtNet n) :
   (forall m t x y, ovWaitStateNet m t x y i n ->
    nextModeNet m i n) /\
   (forall m t l, ovReadyStateNet m t l i n -> nextModeNet m i n).
@@ -118,7 +118,7 @@ Proof.
 Qed.
 (*+*)
 Lemma switchBc_nextMode_net m i n :
-  reachableNet n -> switchBcStateNet m i n -> nextModeNet m i n. Admitted. (*4*)
+  reachableProtNet n -> switchBcStateNet m i n -> nextModeNet m i n. Admitted. (*4*)
 (*+*)
 Lemma switchCurr_nextSince_nextMode_net m t i n p :
   nextSince m t i n p ->
@@ -141,7 +141,7 @@ Lemma nextSince_ovReaddy_modeEq m m' t t' l i n p :
 
 (*If an entity is tfs m, then it is in some tfsState.*)
 Theorem tfs_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
-  (p : reachableNet n) : tfs m t i n p -> tfsStateNet i n .
+  (p : reachableProtNet n) : tfs m t i n p -> tfsStateNet i n .
   intros.
   (*Induction on tfs.*)
   induction H.
@@ -158,7 +158,7 @@ Theorem tfs_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
 
 (*The tfs relation is at zero time when in the state tfsStart.*)
 Lemma tfsStart_tfs_zero : forall (n : Network) (t : Time)
-  (i : nat) (m : Mode) (p : reachableNet n),
+  (i : nat) (m : Mode) (p : reachableProtNet n),
   tfs m t i n p -> tfsStartStateNet i n -> t = zeroTime.
 (*Proof: Similar to tfsNext_tfs_zero except can eliminate the backtrack
 case because it implies the previous state is not tfs.*)
@@ -179,7 +179,7 @@ because tfsStart is urgent.*)
 
 (*The tfs relation is at zero time when in the state tfsNext.*)
 Lemma tfsNext_tfs_zero : forall (n : Network) (t : Time)
-  (i : nat) (m : Mode) (p : reachableNet n),
+  (i : nat) (m : Mode) (p : reachableProtNet n),
   tfs m t i n p -> tfsNextStateNet m i n -> t = zeroTime.
   intros. induction p. initNet_contra H0.
   (*
@@ -195,7 +195,7 @@ because tfsNext is urgent.*)
   Admitted. (*R*)
   
 Lemma currModeNet_switch_states n n' a m m' i :
-  reachableNet n -> n -NA- a -NA> n' -> currModeNet m i n ->
+  reachableProtNet n -> n -NA- a -NA> n' -> currModeNet m i n ->
   currModeNet m' i n' -> m <> m' ->
   (switchCurrStateNet i n /\ switchListenStateNet i n') \/
   (tfsCurrStateNet i n /\ tfsBcStateNet i n'). Admitted. (*3*)
@@ -206,7 +206,7 @@ level using a tactic- netState_auto_tac or some variant?*)
 
 (*tfs and tfsNext state simultaneously mean the mode parameters coincide*)
 Lemma tfsNext_tfs_mode_eq : forall (n : Network) (t : Time)
-  (i : nat) (m1 m2 : Mode) (p : reachableNet n),
+  (i : nat) (m1 m2 : Mode) (p : reachableProtNet n),
   tfs m1 t i n p -> tfsNextStateNet m2 i n -> m1 = m2. 
 (**Proof: Induction on tfs. BaseType case fails by state pred elim with tfsNext. Discrete inductive
 case can use back-tracking to show that the previous state was either tfsStart or tfsNext. In the former
@@ -220,7 +220,7 @@ on currModeNet suffices*)
 (* If the nextSince relation holds for some m t then the entity in question
 is in a nextSinceState.*)
 Theorem nextSince_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
-  (p : reachableNet n) : nextSince m t i n p -> nextSinceStateNet i n. 
+  (p : reachableProtNet n) : nextSince m t i n p -> nextSinceStateNet i n. 
   (*Induction on nextSince.*)
   intro U. induction U.
   (*The base case follows because ovWaitStateNet m t' x y i n' is a nextSinceStateNet.*)
@@ -239,7 +239,7 @@ Theorem nextSince_rel_state (n : Network) (m : Mode) (t : Time) (i : nat)
   apply U1. eassumption. apply Q. Qed.
 
 Lemma nextSince_next : forall (m : Mode) (t : Time) (i : nat)
-  (n : Network) (p : reachableNet n),
+  (n : Network) (p : reachableProtNet n),
   nextSince m t i n p -> nextModeNet m i n.
 (**Proof: Strtengthen the statement to replace nextSince with nextSinceState.
 Then split into the different nextSinceState cases and use an aux lemma for each.*)
@@ -264,7 +264,7 @@ Then split into the different nextSinceState cases and use an aux lemma for each
 message v to radius r t time units ago, and x + 2*Smax*t <= r, then e2 has received v t time
 units ago.*)
 Theorem delivered_received (n : Network) (v : list BaseType) (t : Time) (r x : Distance)
-  (i j : nat) (p : reachableNet n) (l : Position) :
+  (i j : nat) (p : reachableProtNet n) (l : Position) :
   delivered ([-v, l, r-]) t i n p -> i <> j ->
   distNet i j n x -> x + 2*speedMax*t <= r -> received v t j n p.
   intros. generalize dependent x.
@@ -324,7 +324,7 @@ Theorem delivered_received (n : Network) (v : list BaseType) (t : Time) (r x : D
 
 (*The currSince relation for mode m implies that the current mode we are now in is m.*)
 Theorem currSince_curr (n : Network) (m : Mode) (t : Time) (i : nat)
-  (p : reachableNet n) : currSince m t i n p -> currModeNet m i n.
+  (p : reachableProtNet n) : currSince m t i n p -> currModeNet m i n.
   intros.
   (*Induction on currSince.*)
   induction H.
@@ -342,7 +342,7 @@ Theorem currSince_curr (n : Network) (m : Mode) (t : Time) (i : nat)
 the mode transition guard for that entity is t' and the sum of t and t' is at most
 trans m.*)
 Theorem tfs_transGuard (n : Network) (m : Mode) (t : Time) (i : nat)
-  (p : reachableNet n) : 
+  (p : reachableProtNet n) : 
   tfsCurrStateNet i n -> tfs m t i n p ->
   exists t', transGuard t' i n /\ t + t' <= trans m.
   intros.
@@ -390,7 +390,8 @@ Theorem tfs_transGuard (n : Network) (m : Mode) (t : Time) (i : nat)
   generalize dependent x1. rewrite <- H2. intros. split.  
   eapply transGuard_intro. apply H7. apply modeTransTime_bound.
   (*Now, for the delay inductive case, we know that delay preserves tfsCurr*)
-  addHyp (tfsCurrState_del_pres_net n n' d i p w). addHyp H. rewrite <- H1 in H2.
+  lets OSP : reachableProtNet_del_prev p w H. destruct OSP as [_ [OS _]].
+  addHyp (tfsCurrState_del_pres_net n n' d i OS w). addHyp H. rewrite <- H1 in H2.
   (*So we can apply I.H. to the previous state.*)
   apply IHtfs in H2. invertClear H2. rename x into t'. invertClear H3.
   (*Then we know that the transGuard decreases and the t from
@@ -403,7 +404,7 @@ Theorem tfs_transGuard (n : Network) (m : Mode) (t : Time) (i : nat)
   
 (*If an entity is tfs m for a time of t, then this t is bounded from above by trans m.*)
 Theorem tfs_bound (n : Network) (m : Mode) (t : Time) (i : nat)
-  (p : reachableNet n) : tfs m t i n p -> t <= trans m.
+  (p : reachableProtNet n) : tfs m t i n p -> t <= trans m.
   intros.
   (*Induction on the proof of reachable.*)
   generalize dependent t. induction p; intros.
@@ -459,7 +460,7 @@ Theorem tfs_bound (n : Network) (m : Mode) (t : Time) (i : nat)
 a discrete transition, then in the resultant network, v is either still timed out and outgoing
 or it has just been delivered from l in this instant.*)
 Theorem outgoing_timeout_disc (n n' : Network) (a : ActDiscNet) (i : nat)
-  (p : reachableNet n) (w : n -NA- a -NA> n') (v : list BaseType) (l : Position) :
+  (p : reachableProtNet n) (w : n -NA- a -NA> n') (v : list BaseType) (l : Position) :
   inPosNet l i n -> outgoing v zeroTime i n ->
   outgoing v zeroTime i n' \/
   exists r, delivered ([-v, l, r-]) zeroTime i n' (reachNetDisc n n' a p w).
@@ -525,7 +526,7 @@ Qed.
 (* end helpers *)
 
 Lemma notifAbortPathNet_urgent (i : nat) (n n' : Network) (d : Delay) :
-  reachableNet n -> notifAbortPathNet i n -> n -ND- d -ND> n' -> False.
+  reachableProtNet n -> notifAbortPathNet i n -> n -ND- d -ND> n' -> False.
 Proof.
   intros RN NA W.
   destruct NA as [e NE EIN].
@@ -536,13 +537,13 @@ Qed.
 (**Proof: lift from...EA::urgency... #urgent-path*)
 
 Lemma notifBadPathNet_urgent i n n' d :
-  reachableNet n -> notifBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
+  reachableProtNet n -> notifBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
 (**Proof: Follows from urgency results from all underlying component states.
 Urgency holds in each one because there is always a synch possible with the
 mode state or the overlap component. #urgent-path*)
 
 Lemma msgBadPathNet_urgent (n n' : Network) (d : Delay) (i : nat) :
-  reachableNet n -> msgBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
+  reachableProtNet n -> msgBadPathNet i n -> n -ND- d -ND> n' -> False. Admitted. (*4*)
 (**Proof: Lift urgency from EA urgency result. #urgent-path*)
 
 (* begin helpers for msgAbort_paused_disj_net *)
@@ -589,7 +590,7 @@ Qed.
 
 (** If we are switching from a tfs state to a non tfs state, then we cannot be currSince.*)
 Lemma tfsState_not_currSince (m : Mode) (t : Time) (i : nat) (n n' : Network)
-  (p : reachableNet n) (a : ActDiscNet) (w : n -NA- a -NA> n') :
+  (p : reachableProtNet n) (a : ActDiscNet) (w : n -NA- a -NA> n') :
   tfsStateNet i n -> ~tfsStateNet i n' -> ~currSince m t i n p. Admitted. (*3*)
 (**Proof: Well, such a switch would mean we are going from tfsListen to dormant. And we can
 show in a separate result that the tfsListen state implies that we're not currSince (which
@@ -597,7 +598,7 @@ in turn is because the tfsBc state is not currSince, which again in turn is beca
 preceded by an output on mCurr to switch the mode to some fail safe mode*)
 
 Lemma msgBad_disc_net (n n' : Network) (a : ActDiscNet) (i : nat) (m : Mode)
-  (p : reachableNet n) (w : n -NA- a -NA> n') :
+  (p : reachableProtNet n) (w : n -NA- a -NA> n') :
   msgBadPathNet i n -> currModeNet m i n ->
   msgBadPathNet i n' \/ tfs m zeroTime i n' (reachNetDisc n n' a p w). Admitted. (*3*)
 (**Proof: Decompose msgBadPath. For all cases but one, fwd-tracking gives that either the state is preserved or the next state is also on the bad path, which is the LHS. The only exception is the badOvlp state, in which case the future may be the listening state. In this case though, fwd-tracking gives that the transition was an output on bad. Now, this must be matched in order for a synch to occur, and the only possible match is from the overlap component. There are 3 states in which this listens on bad. We can eliminate tfsListen and tfsCurr because they would imply that the entity is alredy tfs, which contradicts the assumption that it was on the msgBadPath: the definition of msgBadPath dictates that an entity is not tfs. Thus the remaining case is the transition from ovWait to tfsStart, giving the base case for tfs, which is the RHS exactly.*)
@@ -605,7 +606,7 @@ Lemma msgBad_disc_net (n n' : Network) (a : ActDiscNet) (i : nat) (m : Mode)
 (*Needs some inter-component results for its proof*)
 (** With a time parameter of 0, the tfs relation is preserved*)
 Lemma tfs_zero_disc_pres (n n' : Network) (a : ActDiscNet) (i : nat) (m : Mode)
-  (p : reachableNet n) (w : n -NA- a -NA> n') :
+  (p : reachableProtNet n) (w : n -NA- a -NA> n') :
   tfs m zeroTime i n p ->
   tfs m zeroTime i n' (reachNetDisc n n' a p w). Admitted. (*4*)
 (**Proof: A state that is tfs with 0 time parameter must be either tfsStart, tfsNext or a guarded tfsCurr. It can be shown
@@ -615,7 +616,7 @@ state, which is only possible when this delay expires. But since the time parame
 remains stuck in this state.*)
 
 Lemma ovWait_nextSince_time (n : Network) (m : Mode) (x y t t1: Time) (i : nat)
-  (p : reachableNet n) :
+  (p : reachableProtNet n) :
   ovWaitStateNet m t x y i n -> nextSince m t1 i n p -> period m - y <= t1.
 (**Proof: Induction on next since. The base case gives that y = period m,
 so the LHS of the inequality is 0 and trivially true. For the discrete
@@ -652,7 +653,7 @@ cancelled, and then the I.H. is applicable.*)
 
 (*The mode parameter of ovWait is the same as that of the nextSince relation if both hold.*)
 Lemma nextSince_ovWait_modes_eq (n : Network) (m1 m2 : Mode) (t t1 x y : Time)
-  (i : nat) (p : reachableNet n) :
+  (i : nat) (p : reachableProtNet n) :
   ovWaitStateNet m1 t x y i n -> nextSince m2 t1 i n p -> m1 = m2.
 Proof.
   intros OW NS. symmetry. eapply nextSince_ovWait_modeEq; eassumption.
@@ -662,7 +663,7 @@ shows that ovReadySate and ovWaitState are predecessors to each other and so the
 definition of nextSince.*)
 
 Lemma bcWait_bktrk_net (n n' : Network) (m : Mode) (x : Time)
-  (i : nat) (a : ActDiscNet) (p : reachableNet n) :
+  (i : nat) (a : ActDiscNet) (p : reachableProtNet n) :
   bcWaitStateNet m x i n' -> n -NA- a -NA> n' ->
   bcWaitStateNet m x i n \/ (sleepingStateNet i n /\ x = zeroTime) \/
   (exists l, bcReadyStateNet m l i n /\ x = period m /\
@@ -670,7 +671,7 @@ Lemma bcWait_bktrk_net (n n' : Network) (m : Mode) (x : Time)
 (**Proof: Lift back tracking result.*)
 
 Lemma msgAbortPathNet_urgent i n n' d :
-  reachableNet n -> msgAbortPathNet i n -> n -ND- d -ND> n' -> False.
+  reachableProtNet n -> msgAbortPathNet i n -> n -ND- d -ND> n' -> False.
   intros. inversion H. link_netentdelfwd_tac e' LD.
   assert (reachableEnt e) as RE. eapply reachable_net_ent; eassumption.
   eapply msgAbortPathEnt_urgent; eassumption. Qed.

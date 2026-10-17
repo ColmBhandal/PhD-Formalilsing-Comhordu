@@ -42,7 +42,7 @@ Require Import ComhCoq.protocol.ProtocolBridge.
 that the time parameter to this relation is always greater than mL + max AN trans,
 which is the lower bound for the pre-sent interval.*)
 Theorem currSince_lower_bound (n : Network) (t : Time) (m : Mode)
-  (i : nat) (p : reachableNet n) : currSince m t i n p ->
+  (i : nat) (p : reachableProtNet n) : currSince m t i n p ->
   msgLatency + Rmax adaptNotif transMax < t.  
   (**Proof: Induction on currSince.*)
   intros. induction H.
@@ -67,7 +67,7 @@ and this t is bounded from below by mL + AN, then the entity in question has del
 a message of <m, l0> to a sufficient radius r and l0, the position broadcast, differs
 from the current position by at most Smax*t.*)
 Theorem nextSince_fst_deliv_suff (n : Network) (t : Time) (m : Mode)
-  (i : nat) (l : Position) (p : reachableNet n) : 
+  (i : nat) (l : Position) (p : reachableProtNet n) : 
   nextSince m t i n p -> inPosNet l i n ->
   forall q : msgLatency + Rmax adaptNotif transMax < t,
   let s := (Rplus_lt_weaken_lr msgLatency (Rmax adaptNotif transMax)
@@ -110,7 +110,7 @@ tx(m, m') + period m', where m is the current mode.*)
 (* If we are in the wait state of the overlap component, and the y clock value is non-zero,
 then a message containing the mode in question and some position was sent exactly
 (period m - y) time units ago.  *)
-Theorem ovWait_sent (n : Network) (m : Mode) (t x y : Time) (i : nat) (p : reachableNet n) : 
+Theorem ovWait_sent (n : Network) (m : Mode) (t x y : Time) (i : nat) (p : reachableProtNet n) : 
   ovWaitStateNet m t x y i n -> 0 < y ->
   exists l q,
   sent [baseMode m, basePosition l] (minusTime (period m) y q) i n p.  
@@ -165,7 +165,7 @@ Then for any t' < t, we can assert that a message was sent containing the mode i
 question m and some position l0 within the window t' and t' + period m. We also know
 that the message was sent at most t units ago.*)
 Theorem nextSince_periodic_sent (n : Network) (m : Mode) (t t' : Time)
-  (i : nat) (p : reachableNet n) :
+  (i : nat) (p : reachableProtNet n) :
   nextSince m t i n p -> t' < t ->
   exists t'' l,
   t' < (time t'') <= t' + period m /\ t'' <= t /\
@@ -234,7 +234,7 @@ Theorem nextSince_periodic_sent (n : Network) (m : Mode) (t t' : Time)
 
 (*If we're in the tfsBc state, then we're not currSince.*)
 Theorem tfsBc_not_currSince (n : Network) (m : Mode) (t  : Time)
-  (i : nat) (p : reachableNet n) :
+  (i : nat) (p : reachableProtNet n) :
   tfsBcStateNet i n -> currSince m t i n p -> False. Admitted. (*1*)
 (**Proof: Induction on currSince. The base case fails because tfsBcState is not switchListen.
 The delay case is easy because by (...backwards del pres state...) the previous state is
@@ -251,7 +251,7 @@ required the currMode to be m.*)
 component. In particular, if we're currSince, then the broadcast component is either
 waiting to broadcast or ready to broadcast.*)
 Theorem currSince_bc_state (n : Network) (m : Mode) (t : Time)
-  (i : nat) (p : reachableNet n) : currSince m t i n p ->
+  (i : nat) (p : reachableProtNet n) : currSince m t i n p ->
   (exists x, bcWaitStateNet m x i n) \/
   (exists l, bcReadyStateNet m l i n). Admitted. (*1*)
 (**Proof: Induction on currSince. In the base case, we have that the overlap component has
@@ -275,7 +275,7 @@ contradicts the hypothesis.*)
 
 (** If we're currSince & we can delay, then we're in the bcWait state.*)
 Corollary currSince_del_bcWait (n n' : Network) (m : Mode) (t : Time)
-  (i : nat) (d : Delay) (p : reachableNet n) :
+  (i : nat) (d : Delay) (p : reachableProtNet n) :
   n -ND- d -ND> n' -> currSince m t i n p ->
   exists x, bcWaitStateNet m (delToTime (x +dt+ d)) i n. Admitted. (*2*)
 (**Proof: Apply currSince_bc_state and then eliminate bcReady as it is urgent*)
@@ -283,7 +283,7 @@ Corollary currSince_del_bcWait (n n' : Network) (m : Mode) (t : Time)
 (* If we are in the wait state of the broadcast component with time x,
 and we are currSince for time t, then x <= t.*)
 Theorem bcWait_currSince_time (n : Network) (m : Mode) (x t: Time)
-  (i : nat) (p : reachableNet n) :
+  (i : nat) (p : reachableProtNet n) :
   bcWaitStateNet m x i n -> currSince m t i n p -> period m - x <= t.
   Admitted. (*2*)
 (**Proof: Induction on currSince.
@@ -296,7 +296,7 @@ Delay inductive: x decreases, t increases, so I.H. is more than enough.
 then a message containing the mode in question and some position was sent exactly
 (period m - x) time units ago.*)
 Theorem bcWait_sent (n : Network) (m : Mode) (x : Time)
-  (i : nat) (p : reachableNet n) :
+  (i : nat) (p : reachableProtNet n) :
   bcWaitStateNet m x i n -> zeroTime < x ->
   exists l q,
   sent [baseMode m, basePosition l] (minusTime (period m) x q) i n p.
@@ -315,7 +315,8 @@ Theorem bcWait_sent (n : Network) (m : Mode) (x : Time)
   timering.
   (*The delay inductive case follows by an application of I.H. and then the delay
   constructor for sent.*)
-  lets BD : bcWaitNet_del_bkwd p H0 s H. assert (zeroTime < x +dt+ d) as ZL.
+  lets BSP : reachableProtNet_del_prev p s H. destruct BSP as [BS _].
+  lets BD : bcWaitNet_del_bkwd BS H0 s H. assert (zeroTime < x +dt+ d) as ZL.
   apply Rplus_lt_weaken_rl. timeNonneg. simpl.
   delPos. lets IH : IHp BD ZL. decompEx2 IH l q SE. assert (x <= period m) as q0.
   simpl in q. eapply Rplus_le_weaken_lr. apply q. apply Rlt_le. delPos. exists l q0.
@@ -327,7 +328,7 @@ Then for any t' < t, we can assert that a message was sent containing the mode i
 question m and some position l0 within the window t' and t' + period m. We also know
 that the message was sent at most t units ago.*)
 Theorem currSince_periodic_sent (n : Network) (m : Mode) (t t' : Time)
-  (i : nat) (p : reachableNet n) :
+  (i : nat) (p : reachableProtNet n) :
   currSince m t i n p -> t' < t ->
   exists t'' l, t' < (time t'')  /\ t'' <= t' + period m /\ t'' <= t /\
   sent [baseMode m, basePosition l] t'' i n p. 
@@ -403,7 +404,7 @@ Theorem currSince_periodic_sent (n : Network) (m : Mode) (t t' : Time)
 to a sufficient radius r and this happened t - mL time units ago. Also, l0 differs from
 l by at most Smax*t.*)
 Theorem currSince_fst_deliv_suff (n : Network) (m : Mode) (t : Time)
-  (i : nat) (l : Position) (p : reachableNet n) :
+  (i : nat) (l : Position) (p : reachableProtNet n) :
   currSince m t i n p -> inPosNet l i n ->
   exists q,
   let s := (Rplus_lt_weaken_lr msgLatency (Rmax adaptNotif transMax) t q
@@ -482,7 +483,7 @@ sufficient radius r and this happened t' time units ago, with t' < t in the pre 
 interval of m and the distance between the sent position and the current position being no
 more than Smax*(mL + t').*)
 Theorem pre_del_suff (n : Network) (m : Mode) (t : Time)
-  (i : nat) (l : Position) (p : reachableNet n) :
+  (i : nat) (l : Position) (p : reachableProtNet n) :
   currSince m t i n p -> inPosNet l i n -> ~failSafe m ->
   exists t' r l0 l1,
   delivered ([-[baseMode m, basePosition l0], l1, r-]) t' i n p /\ 
