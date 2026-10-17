@@ -710,7 +710,7 @@ Theorem insuff_react (n : Network) (m : Mode) (l l0 : Position)
   invertClearAs2 H4 x TFA. decompAnd2 TFA TFL TF. rename TF into H4.
   (*Then we must establish that we are currently still in a tfs state.*)
   assert (tfsStateNet i n'). apply currSince_curr in H.
-  apply tfs_rel_state in H4. apply (tfs_currMode_disc_pres n n' a i m w H Q H4).
+  apply tfs_rel_state in H4. apply (tfs_currMode_disc_pres n n' a i m p w H Q H4).
   (*Then the discrete consructor for tfs does the rest and the case is done.*)
   exists x. split. assumption. constructor; assumption.
   (*In the delay inductive case, we first assert t' < t from t' + d < t + d*)

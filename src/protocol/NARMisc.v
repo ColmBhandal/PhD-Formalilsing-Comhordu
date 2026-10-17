@@ -515,7 +515,7 @@ Proof.
 Qed.
 
 Lemma notifAbortPathNet_urgent_ent e e' d :
-  reachableEnt e -> notifAbortPathEnt e -> e -ED- d ->> e' -> False.
+  reachableProtEnt e -> notifAbortPathEnt e -> e -ED- d ->> e' -> False.
 Proof.
   intros RE NA ED.
   inversion NA as [p l h k m m' RB CM NE NM | p l h k m' CO NM | p l h k AO]; subst.
@@ -673,7 +673,7 @@ Lemma bcWait_bktrk_net (n n' : Network) (m : Mode) (x : Time)
 Lemma msgAbortPathNet_urgent i n n' d :
   reachableProtNet n -> msgAbortPathNet i n -> n -ND- d -ND> n' -> False.
   intros. inversion H. link_netentdelfwd_tac e' LD.
-  assert (reachableEnt e) as RE. eapply reachable_net_ent; eassumption.
+  assert (reachableProtEnt e) as RE. eapply reachable_net_ent; eassumption.
   eapply msgAbortPathEnt_urgent; eassumption. Qed.
 (**Proof: Synchronisation is always possible for the msgAbortPath states between the
 listener component and either the position, the mode state or the overlap component.

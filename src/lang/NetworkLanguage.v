@@ -800,22 +800,23 @@ Proof.
   intros I E. lets IE : initialNet_ent I E. inversion IE; subst. simpl. assumption.
 Qed.
 
+(** Every entity of a network reachable from p0 is reachable from p0.*)
+Lemma reachableNet_ent p0 n e i : reachableNet p0 n -> e @ i .: n -> reachableEnt p0 e.
+Proof.
+  intro R. revert e i. induction R as [n I | n n' a R IH S | n n' d R IH S]; intros e i E.
+  - apply reachEntInit. eapply initialNet_ent; eassumption.
+  - destruct (link_net_ent_disc_bkwd _ _ _ _ _ S E) as [e0 [E0 [EQ | [b B]]]].
+    + subst e0. eapply IH. exact E0.
+    + eapply reachEntDisc; [eapply IH; exact E0 | exact B].
+  - destruct (link_net_ent_del_bkwd _ _ _ _ _ S E) as [e0 [E0 D]].
+    eapply reachEntDel; [eapply IH; exact E0 | exact D].
+Qed.
+
 (** The software of every entity of a network reachable from p0 is reachable from p0.*)
 Lemma reachableNet_proc p0 n p l h k i :
   reachableNet p0 n -> [|p, l, h, k|] @ i .: n -> reachableFrom p0 p.
 Proof.
-  intro R. revert p l h k i.
-  induction R as [n I | n n' a R IH S | n n' d R IH S]; intros p l h k i E.
-  - lets IE : initialNet_ent I E. inversion IE; subst. apply reachableFromBase.
-  - destruct (link_net_ent_disc_bkwd _ _ _ _ _ S E) as [e [E0 [EQ | [b B]]]].
-    + subst e. eapply IH. exact E0.
-    + destruct e as [p1 l1 h1 k1].
-      destruct (link_ent_soft_disc _ _ _ _ _ _ _ _ _ B) as [EQ | [c C]].
-      * subst. eapply IH. exact E0.
-      * eapply reachableFromDisc; [eapply IH; exact E0 | exact C].
-  - destruct (link_net_ent_del_bkwd _ _ _ _ _ S E) as [e [E0 D]].
-    destruct e as [p1 l1 h1 k1]. lets C : link_ent_soft_del D.
-    eapply reachableFromDel; [eapply IH; exact E0 | exact C].
+  intros R E. exact (reachableEnt_proc _ _ (reachableNet_ent _ _ _ _ R E)).
 Qed.
 
 (** In a network reachable from a parallel composition, every entity's software is a
@@ -917,6 +918,71 @@ Lemma liftEntNet_ent (X : Entity -> Prop) (i : nat) (n : Network) (e : Entity) :
   liftEntNet X i n -> e @ i .: n -> X e.
 Proof.
   intros L E. destruct L as [e' Xe E']. rewrite (entInNetUnique _ _ _ _ E E'). exact Xe.
+Qed.
+
+(** currModeNet m i n says that the entity number i in n has current mode m, and
+nextModeNet m i n that it is changing to mode m.*)
+Definition currModeNet (m : Mode) (i : nat) (n : Network) : Prop :=
+  liftEntNet (fun e => currModeEnt e = m) i n.
+
+Definition nextModeNet (m : Mode) (i : nat) (n : Network) : Prop :=
+  liftEntNet (fun e => nextModeEnt e = Some m) i n.
+
+Lemma currMode_intro : forall (m : Mode) (e : Entity) (i : nat) (n : Network),
+  m = currModeEnt e -> e @ i .: n -> currModeNet m i n.
+Proof.
+  intros m e i n EQ E. subst m. econstructor; [reflexivity | exact E].
+Qed.
+
+Lemma currMode_ent_ex : forall (m : Mode) (i : nat) (n : Network),
+  currModeNet m i n <-> exists e, e @ i .: n /\ currModeEnt e = m.
+Proof.
+  intros m i n. split.
+  - intros [e C E]. exists e. split; assumption.
+  - intros [e [E C]]. econstructor; eassumption.
+Qed.
+
+Lemma inPos_ent_net : forall (l : Position) (e : Entity) (i : nat) (n : Network),
+  posEnt e = l -> e @ i .: n -> inPosNet l i n.
+Proof.
+  intros l e i n P E. destruct e as [p l0 h k]. simpl in P. subst l0. econstructor. exact E.
+Qed.
+
+(** An entity with a current mode after a discrete step had one before it, and the other way
+round: the step keeps the entity in the network.*)
+Theorem currMode_pres_bkwd (n n' : Network) (a : ActDiscNet) (m' : Mode) (i : nat) :
+  n -NA- a -NA> n' -> currModeNet m' i n' ->
+  exists m, currModeNet m i n.
+Proof.
+  intros S [e' _ E']. destruct (link_net_ent_disc_bkwdW _ _ _ _ _ S E') as [e E].
+  exists (currModeEnt e). econstructor; [reflexivity | exact E].
+Qed.
+
+Theorem currMode_pres_fwd (n n' : Network) (a : ActDiscNet) (m : Mode) (i : nat) :
+  n -NA- a -NA> n' -> currModeNet m i n ->
+  exists m', currModeNet m' i n'.
+Proof.
+  intros S [e _ E]. destruct (link_net_ent_disc_fwd_ex _ _ _ S _ _ E) as [e' E'].
+  exists (currModeEnt e'). econstructor; [reflexivity | exact E'].
+Qed.
+
+(** A delay changes neither the current mode nor the next mode of an entity.*)
+Lemma currModeNet_del_pres : forall (n n' : Network) (d : Delay)
+  (m : Mode) (i : nat), n -ND- d -ND> n' ->
+  (currModeNet m i n <-> currModeNet m i n').
+Proof.
+  intros n n' d m i D. split; intros [e C E].
+  - destruct (link_net_ent_del_fwd _ _ _ _ _ D E) as [e' [E' S]].
+    econstructor; [ | exact E']. rewrite <- (stepTimedEnt_currMode _ _ _ S). exact C.
+  - destruct (link_net_ent_del_bkwd _ _ _ _ _ D E) as [e0 [E0 S]].
+    econstructor; [ | exact E0]. rewrite (stepTimedEnt_currMode _ _ _ S). exact C.
+Qed.
+
+Lemma nextModeNet_del_pres n n' d m i :
+  n -ND- d -ND> n' -> nextModeNet m i n -> nextModeNet m i n'.
+Proof.
+  intros D [e N E]. destruct (link_net_ent_del_fwd _ _ _ _ _ D E) as [e' [E' S]].
+  econstructor; [ | exact E']. rewrite <- (stepTimedEnt_nextMode _ _ _ S). exact N.
 Qed.
 
 (** If the entity i is in position l in either network across a discrete transition,

@@ -121,12 +121,6 @@ leaving the component's predicate as the goal.*)
 Ltac net_state_intro E :=
   eapply lenWitness; [ | exact E]; constructor; constructor.
 
-Parameter currModeNet : Mode -> nat -> Network -> Prop.
-(**Idea: Lift currModeEnt*)
-
-Parameter nextModeNet : Mode -> nat -> Network -> Prop.
-(**Idea: Lift nextModeEnt*)
-
 (********************************* Lifting Protocol Predicates *********************************)
 
 (*----------------Simple Lifted Predicates----------------*)
@@ -466,7 +460,7 @@ Lemma tfsState_elim_net i n :
   right. right. right. right. netState_auto_tac.
   Qed.
 
-Lemma tfsListen_failSafe_net m i n :
+Lemma tfsListen_failSafe_net m i n : reachableProtNet n ->
   tfsListenStateNet i n -> currModeNet m i n -> failSafe m.
 (*Proof: Similar result for tfsBc, and one for tfsCurr but for the next mode
 rather than the curr mode- perhaps inter-component results will be lifted
@@ -475,8 +469,8 @@ for these?*) Admitted. (*#inter-component-lift-net*)
 (*-LOCAL TIDY*)
 
 Lemma tfs_currMode_disc_pres (n n' : Network) (a : ActDiscNet) (i : nat) (m : Mode) :
-  n -NA- a -NA> n' -> currModeNet m i n -> ~ failSafe m ->
-  tfsStateNet i n -> tfsStateNet i n'. introz U.
+  reachableProtNet n -> n -NA- a -NA> n' -> currModeNet m i n -> ~ failSafe m ->
+  tfsStateNet i n -> tfsStateNet i n'. intro RN. introz U.
   (*Destruct the tfs state into its components and apply an array of
   network level fwd-tracking results.*)
   apply tfsState_elim_net in U2. or_flat; ex_flat; [ |
@@ -719,12 +713,6 @@ Proof.
   intros m0 e2 e3 e4 B. ovWait_bisim_contra B.
 Qed.
 
-Lemma nextModeNet_del_pres n n' d m i :
-  n -ND- d -ND> n' -> nextModeNet m i n -> nextModeNet m i n'.
-  Admitted. (*6*)
-(**Proof: Follows from the semantics. Perhaps there is a similar result
-for the current mode that can be consulted for inspiration*)
-  
 (*-LOCAL TIDY*)
 
 Lemma ovWait_ovReady_nextMode_net m t x y l i n :
@@ -805,26 +793,6 @@ to delay [del link theorem- salvaged?]. And then we can lift the result
 
 (********************************* Basic Results *********************************)
 
-(*If the curr mode of entity i is m in a derivative network,
-then there is some curr mode for that entity in any source network.*)
-Theorem currMode_pres_bkwd (n n' : Network) (a : ActDiscNet) (m' : Mode) (i : nat) :
-  n -NA- a -NA> n' -> currModeNet m' i n' ->
-  exists m, currModeNet m i n. Admitted. (*7*)
-(**Proof: Well currMode m' i n' means that there is some e' @ i .: n'.
-Then we can show by (...salvaged linking theorem of some sort...) that
-there is some e @ i .: n. It is easy then to show that every entity has
-some current mode, and so e has one, call it m, and we're done (after a bit of lifting).*)
-
-
-(*If the curr mode of entity i is m in a network, then there
- is some curr mode for that entity in any derivative network.*)
-Theorem currMode_pres_fwd (n n' : Network) (a : ActDiscNet) (m : Mode) (i : nat) :
-  n -NA- a -NA> n' -> currModeNet m i n ->
-  exists m', currModeNet m' i n'. Admitted. (*7*)
-(**Proof: Analogous to the previous proof except we use some
-(...salvaged linking theorem of some sort...) to show that the number of
-entities are preserved forwards in a network.*)
-
 (*If v is incomingNetNotif with timestamp t, and the network can delay, then in
 the derivative network v is incomingNetNotif with timestamp t - d.
 Corollary is that whenever t = 0 delay is impossible.
@@ -902,13 +870,12 @@ Theorem incomingNetNotif_del (n n' : Network) (d : Delay) (r : Distance) (m : Mo
   apply DI. assert (t = zeroTime) as TZ. apply timeEqR. rewrite <- Q.
   reflexivity. rewrite TZ in H0. apply notif_timeout_enabled. assumption. Qed.
 
-Conjecture currMode_intro : forall (m : Mode) (e : Entity) (i : nat) (n : Network),
-  m = currModeEnt e -> e @ i .: n -> currModeNet m i n.
-(**Proof: Obvious- lift currModeEnt to currModeNet*)
-
-Conjecture reachable_net_ent : forall (n : Network) (e : Entity) (i : nat),
-  reachableProtNet n -> e @ i .: n -> reachableEnt e.
-(**Proof: Obvious- inversion on reachableProtNet*)
+(** Every entity of a reachable network is reachable.*)
+Lemma reachable_net_ent : forall (n : Network) (e : Entity) (i : nat),
+  reachableProtNet n -> e @ i .: n -> reachableProtEnt e.
+Proof.
+  intros n e i R E. exact (reachableNet_ent _ _ _ _ R E).
+Qed.
 
 Conjecture transGuard_disc_pres : forall (n n' : Network)
   (a : ActDiscNet) (t : Time) (i : nat),
@@ -920,11 +887,6 @@ Conjecture transGuard_del : forall (n n' : Network)
   n -ND- d -ND> n' -> transGuard t i n -> 
   exists p, transGuard (minusTime t d p) i n'.
 (**Proof: Obvious- transGuard definition and mode state semantics*)
-
-Conjecture currModeNet_del_pres : forall (n n' : Network) (d : Delay)
-  (m : Mode) (i : nat), n -ND- d -ND> n' ->
-  (currModeNet m i n <-> currModeNet m i n').
-(**Proof: Obvious- delay preservation tactic*)
 
 (* begin helpers for currModeNet_dec *)
 From Stdlib Require Import Classical.
@@ -945,17 +907,13 @@ Proof.
 Qed.
 (**Proof: Follows directly from mode state semantics, and linking of delay from network to entity to modestate*)
 
-Conjecture inPos_ent_net : forall (l : Position) (e : Entity) (i : nat) (n : Network),
-  inPosEnt l e -> e @ i .: n -> inPosNet l i n.
-(**Proof: Obvious from definitions*)
-
-Conjecture currMode_ent_ex : forall (m : Mode) (i : nat) (n : Network),
-  currModeNet m i n <-> exists e, e @ i .: n /\ currModeEnt e = m.
-(**Proof: Obvious from definitions*)
-
-Conjecture nextMode_ent_ex : forall (m : Mode) (i : nat) (n : Network),
-  nextModeNet m i n <-> exists e, e @ i .: n /\ nextModeEnt m e.
-(**Proof: Obvious from definitions*)
+Lemma nextMode_ent_ex : forall (m : Mode) (i : nat) (n : Network),
+  nextModeNet m i n <-> exists e, e @ i .: n /\ nextModeEnt e = Some m.
+Proof.
+  intros m i n. split.
+  - intros [e N E]. exists e. split; assumption.
+  - intros [e [E N]]. econstructor; [exact N | exact E].
+Qed.
 
 Ltac currMode_ent_ex_tac e U :=
   let Q := fresh in let U1 := fresh U in let U2 := fresh U in
