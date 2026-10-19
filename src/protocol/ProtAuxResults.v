@@ -202,18 +202,18 @@ Lemma bcReady_outProc_out m l p :
   activation_tac. Qed.
 
 Lemma tfsStart_mCurr_in (p : ProcTerm) (m : Mode) : tfsStartState p ->
-  discActEnabled p (chanMCurr ;? [baseMode m]). activation_tac. Qed.
+  discActEnabled p (chanMCurrRead ;? [baseMode m]). activation_tac. Qed.
 
 Lemma tfsNext_mStable_out (p : ProcTerm) (m : Mode) : tfsNextState m p ->
-  discActEnabled p (chanMStable *!). activation_tac. Qed.
+  discActEnabled p (chanMStableWrite *!). activation_tac. Qed.
 
 Lemma tfsNext_mNext_out (p : ProcTerm) (m : Mode) : tfsNextState m p ->
-  discActEnabled p (chanMNext ;! ([baseMode (failSafeSucc m)])).
+  discActEnabled p (chanMNextWrite ;! ([baseMode (failSafeSucc m)])).
   activation_tac; apply daeSumL; apply dae_outPfx; constructor;
   constructor; try rewrite updateAppEq; assumption; constructor. Qed.
 
 Lemma switchCurr_mCurr_out (p : ProcTerm) : switchCurrState p ->
-  discActEnabled p (chanMCurr *!). activation_tac. Qed.
+  discActEnabled p (chanMCurrWrite *!). activation_tac. Qed.
 
 Lemma switchListen_unpause_out (p : ProcTerm) : switchListenState p ->
   discActEnabled p (chanUnpause *!). activation_tac. Qed.
@@ -225,7 +225,7 @@ Lemma tfsCurr_abort_in (p : ProcTerm) : tfsCurrState p ->
   discActEnabled p (chanAbort *?). activation_tac. Qed.
 
 Lemma tfsCurr_mCurr_out (p : ProcTerm) : tfsCurrState p ->
-  discActEnabled p (chanMCurr *!). activation_tac. Qed.
+  discActEnabled p (chanMCurrWrite *!). activation_tac. Qed.
 
 Lemma tfsListen_bad_in (p : ProcTerm) : tfsListenState p ->
   discActEnabled p (chanBad *?). activation_tac. Qed.
@@ -243,7 +243,7 @@ Lemma dormant_abort_in (p : ProcTerm) : dormantState p ->
   discActEnabled p (chanAbort *?). activation_tac. Qed.
 
 Lemma dormant_mNext_in (p : ProcTerm) (m : Mode) : dormantState p ->
-  discActEnabled p (chanMNext ;? [baseMode m]). activation_tac.
+  discActEnabled p (chanMNextRead ;? [baseMode m]). activation_tac.
   Qed.
 
 Lemma switchBc_wake_out m p : switchBcState m p ->
@@ -255,7 +255,7 @@ Lemma sleeping_wake_in m p : sleepingState p ->
 Lemma bcWait_wake_in m m' x p : bcWaitState m' x p ->
   discActEnabled p (chanWake ;? [baseMode m]). activation_tac. Qed.
 
-Lemma ovAbort_stable_out p : ovAbortState p -> discActEnabled p (chanMStable *!).
+Lemma ovAbort_stable_out p : ovAbortState p -> discActEnabled p (chanMStableWrite *!).
   activation_tac. Qed.
  
 Lemma tfsBc_trans_out p : tfsBcState p -> discActEnabled p (chanTrans *!).
@@ -344,11 +344,11 @@ Ltac prot_outProc_in_not_contra :=
 its initial process. Up to bisimilarity, such a component is in one of the named states.
 The modes, positions and distances it holds are values of those types, because they arrived
 by typed inputs; its timers and ranges are expressions, because they are computed. The
-listener's conditional states resolve at once to the branch their condition selects. One
-condition can be ill formed: the range gotMsg computes is a plain non-negative real where
-bPossInc wants a distance, so a listener that has received a message can be stuck, which is
-to say bisimilar to nilProc. The lemmas below prove these shapes, and the brute-force
-results about the components follow from them by case analysis.*)
+listener's conditional states resolve at once to the branch their condition selects. The
+shapes do not record that a range evaluates to a number, so a condition on one may be ill
+formed, and then the listener is stuck, which is to say bisimilar to nilProc. The lemmas
+below prove these shapes, and the brute-force results about the components follow from them
+by case analysis.*)
 
 Inductive broadcastShape (p : ProcTerm) : Prop :=
   | shSleeping : p ~p~ sleeping -> broadcastShape p
@@ -590,90 +590,8 @@ and p from there.*)
 
 (*** Bidirectional tracking (action/variable matching) ***)
 
-(* begin helpers for goMsg_gotRange_track *)
-Lemma goMsg_gotRange_track_tot X Y A B :
-  evalBoolExpFunTot (bPossInc X Y (eSubtract A B)) = false /\
-  evalBoolExpFunTot (bNot (bPossInc X Y (eSubtract A B))) = false.
-Proof.
-  unfold evalBoolExpFunTot; simpl.
-  destruct (evalExpFun A) as [b1| ]; destruct (evalExpFun B) as [b2| ];
-  try destruct (evalBaseNonnegFun b1); try destruct (evalBaseNonnegFun b2);
-  destruct (evalExpFun X) as [b3| ]; try destruct b3;
-  destruct (evalExpFun Y) as [b4| ]; try destruct b4; split; reflexivity.
-Qed.
-
-Lemma goMsg_gotRange_track_live (m' : Mode) (r : Distance) : exists (a1 : DiscAct) g2,
-  subProcTerm (listsToSub [vM] (listBaselistExp [baseMode m']))
-    (app currPincCheckN [eVar vM, eBase m', eBase r]) -PA- a1 -PA> g2.
-Proof.
-  simpl. remove_updates.
-  destruct (possIncBool m' m' r) eqn:PI.
-  - do 2 eexists. eapply stepDpApp; [reflexivity | ].
-    unfold currPincCheck. simpl. remove_resets. remove_updates.
-    apply stepDpChoiceR. eapply stepDpThen.
-    + eapply stepDpApp; [reflexivity | ]. unfold badOvlp. simpl.
-      apply stepDpOut. constructor.
-    + unfold evalBoolExpFunTot. simpl. rewrite PI. reflexivity.
-  - do 2 eexists. eapply stepDpApp; [reflexivity | ].
-    unfold currPincCheck. simpl. remove_resets. remove_updates.
-    apply stepDpChoiceL. eapply stepDpThen.
-    + eapply stepDpApp; [reflexivity | ]. unfold currComp. simpl.
-      apply stepDpChoiceL. apply (stepDpIn chanMStable [] []). typed_vals.
-    + unfold evalBoolExpFunTot. simpl. rewrite PI. reflexivity.
-Qed.
-
-Ltac goMsg_gotRange_track_kill :=
-  match goal with
-  | [H : evalBoolExpFunTot (bPossInc ?X ?Y (eSubtract ?A ?B)) = true |- _] =>
-    rewrite (proj1 (goMsg_gotRange_track_tot X Y A B)) in H; discriminate H
-  | [H : evalBoolExpFunTot (bNot (bPossInc ?X ?Y (eSubtract ?A ?B))) = true |- _] =>
-    rewrite (proj2 (goMsg_gotRange_track_tot X Y A B)) in H; discriminate H
-  end.
-
-Lemma goMsg_gotRange_track_stuck E1 A B (m' : Mode) q1 a1 q2 :
-  app gotRangeN [E1, eSubtract A B] -PA- chanMCurr ;? [baseMode m'] -PA> q1 ->
-  q1 -PA- a1 -PA> q2 -> False.
-Proof.
-  intros S1 S2.
-  inversion S1; subst. clear S1.
-  invert_def.
-  unfold gotRange in *. simpl in *.
-  match goal with [H : stepDiscProc (inPrefix _ _ _) _ _ |- _] => rename H into S4 end.
-  remove_resets_hyp S4. remove_updates_hyp S4.
-  inversion S4; subst. clear S4.
-  simpl in S2. remove_updates_hyp S2.
-  inversion S2; subst. clear S2.
-  invert_def.
-  unfold currPincCheck in *. simpl in *.
-  match goal with [H : stepDiscProc (_ $+$ _) _ _ |- _] => rename H into SS end.
-  remove_resets_hyp SS. remove_updates_hyp SS.
-  inversion SS; subst; clear SS;
-  match goal with [H : stepDiscProc (_ $> _) _ _ |- _] => inversion H; subst end;
-  goMsg_gotRange_track_kill.
-Qed.
-(* end helpers *)
-
-Lemma goMsg_gotRange_track m m' l r p p' a :
-  gotMsgState m l p -> gotRangeState m' r p' ->
-  p -PA- a -PA> p' -> exists l',
-  a = chanPos ;? [basePosition l'] /\
-  r = mkDistance (dist2d l l' -nn- speedMax *nn* msgLatency).
-Proof.
-  intros GM GR ST. exfalso.
-  destruct (bisim_step_disc _ _ _ _ GM ST) as [q [QS PQ]].
-  unfold gotMsg in QS. invert_disc_prefixes.
-  assert (G1 : gotRange m' r -PA- chanMCurr ;? [baseMode m'] -PA>
-     subProcTerm (listsToSub [vM] (listBaselistExp [baseMode m'])) (app currPincCheckN [eVar vM, eBase m', eBase r]))
-    by (apply stepDpIn; typed_vals).
-  destruct (bisim_step_disc _ _ _ _ (bisim_trans _ _ _ (bisim_symm _ _ GR) PQ) G1)
-    as [q1 [Q1 B1]].
-  destruct (goMsg_gotRange_track_live m' r) as [a1 [g2 GS]].
-  destruct (bisim_step_disc _ _ _ _ B1 GS) as [q2 [QS2 _]].
-  simpl in Q1. eapply goMsg_gotRange_track_stuck; eassumption.
-Qed.
-
 Lemma currOK_listening_track m p p' a : currOKState m p ->
-  listeningState p' -> p -PA- a -PA> p' -> a = (chanMStable *?).
+  listeningState p' -> p -PA- a -PA> p' -> a = (chanMStableRead *?).
   Admitted.
 
 Lemma abortOvlp_listening_track (p p' : ProcTerm) (a : DiscAct) :
@@ -738,7 +656,8 @@ Ltac refute_with_chans q BT cs :=
   end.
 
 Ltac refute_by_chan BT :=
-  let cs := constr:(chanAN :: chanMStable :: chanMCurr :: chanMNext :: chanPos
+  let cs := constr:(chanAN :: chanMStableRead :: chanMStableWrite :: chanMCurrRead
+    :: chanMCurrWrite :: chanMNextRead :: chanMNextWrite :: chanPos
     :: chanOutProc :: chanInProc :: chanIOEnv :: chanTrans :: chanWake :: chanPause
     :: chanUnpause :: chanBad :: chanAbort :: nil) in
   match type of BT with ?q ~p~ ?X =>
@@ -788,13 +707,37 @@ Proof.
     apply bisim_refl.
 Qed.
 
+(** After a step into tfsCurr, the overlap component was tfsNext, or tfsCurr already.*)
+Lemma tfsCurr_prev (p p' : ProcTerm) (a : DiscAct) :
+  p -PA- a -PA> p' -> overlapState p -> tfsCurrState p' ->
+  tfsCurrState p \/ exists m, tfsNextState m p.
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP;
+    first [left; exact B | right; eexists; exact B].
+Qed.
+
+(** After a step into tfsBc, the overlap component was tfsCurr.*)
+Lemma tfsBc_prev (p p' : ProcTerm) (a : DiscAct) :
+  p -PA- a -PA> p' -> overlapState p -> tfsBcState p' -> tfsCurrState p.
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP; exact B.
+Qed.
+
+(** After a step into tfsListen, the overlap component was tfsBc, or tfsListen already.*)
+Lemma tfsListen_prev (p p' : ProcTerm) (a : DiscAct) :
+  p -PA- a -PA> p' -> overlapState p -> tfsListenState p' ->
+  tfsListenState p \/ tfsBcState p.
+Proof.
+  intros TR O SP. red in SP. backtrack_shape SP; first [left; exact B | right; exact B].
+Qed.
+
 (** tfsNext shows its mode only through the fail-safe successor it writes on mNext, so two
 bisimilar tfsNext agree on that successor and need not agree on the mode.*)
 Lemma tfsNext_bisim_param (v m : Mode) :
   tfsNext v ~p~ tfsNext m -> failSafeSucc v = failSafeSucc m.
 Proof.
   intro B.
-  eassert (S : tfsNext v -PA- chanMNext ;! [baseMode (failSafeSucc v)] -PA> _)
+  eassert (S : tfsNext v -PA- chanMNextWrite ;! [baseMode (failSafeSucc v)] -PA> _)
     by (unfold tfsNext; step_search).
   destruct (bisim_disc_match _ _ _ _ B S) as [q R]. unfold tfsNext in R.
   invert_disc_prefixes.
@@ -1247,8 +1190,8 @@ Qed.
 into nextEq with it.*)
 Lemma currOK_next_act (p p' : ProcTerm) (a : DiscAct) (m'' : Mode) :
   p -PA- a -PA> p' -> currOKState m'' p ->
-  (a = chanMStable *? /\ listeningState p') \/
-  (exists m, a = chanMNext ;? [baseMode m] /\ nextEqState m m'' p').
+  (a = chanMStableRead *? /\ listeningState p') \/
+  (exists m, a = chanMNextRead ;? [baseMode m] /\ nextEqState m m'' p').
 Proof.
   intros TR CS. unfold currOKState in CS. unfold currOK in CS.
   currOK_next_fwd_pre.
@@ -1266,6 +1209,17 @@ Proof.
   currOK_next_fwd_pre.
   eexists. unfold currEqState. eapply bisim_trans; [eassumption | ].
   currOK_next_unfold_app. apply bisim_refl.
+Qed.
+
+(** The same, with the action: the only step of rangeBad reads a mode on mCurr.*)
+Lemma rangeBad_next_act (p p' : ProcTerm) (a : DiscAct) (m'' : Mode) :
+  p -PA- a -PA> p' -> rangeBadState m'' p ->
+  exists m, a = chanMCurrRead ;? [baseMode m] /\ currEqState m m'' p'.
+Proof.
+  intros TR CS. unfold rangeBadState in CS. unfold rangeBad in CS.
+  currOK_next_fwd_pre.
+  eexists. split; [reflexivity | ]. unfold currEqState.
+  eapply bisim_trans; [eassumption | ]. currOK_next_unfold_app. apply bisim_refl.
 Qed.
 
 Theorem gotMessage_next (p p' : ProcTerm)
@@ -1287,7 +1241,7 @@ Qed.
 (** The same, with the action: the only step of gotRange reads a mode on mCurr.*)
 Lemma gotRange_next_act (p p' : ProcTerm) (a : DiscAct) (m'' : Mode) (r : Distance) :
   p -PA- a -PA> p' -> gotRangeState m'' r p ->
-  exists m, a = chanMCurr ;? [baseMode m] /\ currPincCheckState m m'' r p'.
+  exists m, a = chanMCurrRead ;? [baseMode m] /\ currPincCheckState m m'' r p'.
 Proof.
   intros TR CS. unfold gotRangeState in CS. unfold gotRange in CS.
   currOK_next_fwd_pre.
@@ -1340,12 +1294,44 @@ Qed.
 (** The same, with the action: the only step of tfsStart reads a mode on mCurr.*)
 Lemma tfsStart_next_act (p p' : ProcTerm) (a : DiscAct) :
   p -PA- a -PA> p' -> tfsStartState p ->
-  exists m, a = chanMCurr ;? [baseMode m] /\ tfsNextState m p'.
+  exists m, a = chanMCurrRead ;? [baseMode m] /\ tfsNextState m p'.
 Proof.
   intros TR CS. unfold tfsStartState in CS. unfold tfsStart in CS.
   currOK_next_fwd_pre.
   eexists. split; [reflexivity | ]. unfold tfsNextState.
   eapply bisim_trans; [eassumption | ]. currOK_next_unfold_app. apply bisim_refl.
+Qed.
+
+(** The steps of tfsNext: it writes the fail-safe successor of its mode on mNext and moves to
+tfsCurr, or writes on mStable and stays.*)
+Lemma tfsNext_next_act (p p' : ProcTerm) (a : DiscAct) (m : Mode) :
+  p -PA- a -PA> p' -> tfsNextState m p ->
+  (a = chanMNextWrite ;! [baseMode (failSafeSucc m)] /\ tfsCurrState p') \/
+  (a = chanMStableWrite *! /\ tfsNextState m p').
+Proof.
+  intros T B. destruct (bisim_step_disc _ _ _ _ B T) as [q [TQ BQ]].
+  unfold tfsNext in TQ. invert_disc_prefixes;
+  repeat match goal with
+    | [H : evalExpLists _ _ |- _] => inversion H; subst; clear H
+    | [H : evalExp (eFailSafeSucc _) _ |- _] => inversion H; subst; clear H
+    | [H : evalExp (eBase _) _ |- _] => inversion H; subst; clear H end.
+  - left. split; [reflexivity | ]. red. eapply bisim_trans; [exact BQ | ].
+    apply app_bisim_nil; reflexivity.
+  - right. split; [reflexivity | ]. red. eapply bisim_trans; [exact BQ | ].
+    unfold_app_bisim. apply bisim_refl.
+Qed.
+
+(** The steps of tfsCurr: it switches mode on mCurr and moves to tfsBc, or takes an abort or a
+bad and stays.*)
+Lemma tfsCurr_next_act (p p' : ProcTerm) (a : DiscAct) :
+  p -PA- a -PA> p' -> tfsCurrState p ->
+  (a = chanMCurrWrite *! /\ tfsBcState p') \/ tfsCurrState p'.
+Proof.
+  intros T B. destruct (bisim_step_disc _ _ _ _ B T) as [q [TQ BQ]].
+  unfold tfsCurr in TQ. invert_disc_prefixes; explicit_typed_input; clean_proc_hyp BQ;
+  repeat match goal with [H : evalExpLists [] _ |- _] => inversion H; subst; clear H end;
+  (first [left; split; [reflexivity | ] | right]); red;
+  (eapply bisim_trans; [exact BQ | apply app_bisim_nil; reflexivity]).
 Qed.
   
 (****************** Conditionals ******************)
@@ -1407,7 +1393,7 @@ Proof.
   intros PI S. unfold currPincCheckState, badOvlpState in *.
   assert (B : evalBoolExp (bPossInc m m'' r) true).
   { rewrite <- (possInc_possIncBool m m'' r PI).
-    apply bevalPossInc; apply evalBase. }
+    apply bevalPossInc_dist; apply evalBase. }
   eapply bisim_trans. apply S. unfold currPincCheck.
   eapply bisim_trans. apply choice_bisim_symm.
   eapply bisim_trans. apply (if_then_bisim_true _ _ _ B).
@@ -1423,7 +1409,7 @@ Proof.
   { assert (F : possIncBool m m'' r = false).
     { unfold possIncBool. destruct (possIncDec m m'' r);
       [contradiction | reflexivity]. }
-    rewrite <- F. apply bevalPossInc; apply evalBase. }
+    rewrite <- F. apply bevalPossInc_dist; apply evalBase. }
   eapply bisim_trans. apply S. unfold currPincCheck.
   eapply bisim_trans. apply choice_bisim_symm.
   eapply bisim_trans. apply (if_then_bisim_false _ _ _ B).
@@ -1437,7 +1423,7 @@ Proof.
   intros PI S. unfold nextPincCheckState, abortOvlpState in *.
   assert (B : evalBoolExp (bPossInc m m'' r) true).
   { rewrite <- (possInc_possIncBool m m'' r PI).
-    apply bevalPossInc; apply evalBase. }
+    apply bevalPossInc_dist; apply evalBase. }
   eapply bisim_trans. apply S. unfold nextPincCheck.
   eapply bisim_trans. apply choice_bisim_symm.
   eapply bisim_trans. apply (if_then_bisim_true _ _ _ B).
@@ -1451,12 +1437,13 @@ Proof.
   intros NP U. red in U. red.
   assert (PB : possIncBool m m'' r = false).
   { unfold possIncBool. destruct (possIncDec m m'' r); [contradiction | reflexivity]. }
+  destruct r as [r].
   eapply bisim_trans; [exact U | ].
   unfold nextPincCheck.
   eapply bisim_trans.
   { apply choice_bisim_context.
     - apply cond_bisim_true. change true with (negb false). apply bevalNot.
-      rewrite <- PB. apply bevalPossInc; constructor.
+      rewrite <- PB. apply bevalPossInc_dist; constructor.
     - apply cond_bisim_false. unfold evalBoolExpFunTot. simpl.
       first [exact PB | rewrite PB; reflexivity]. }
   eapply bisim_trans; [apply choice_bism_unit_r | ].
@@ -1980,25 +1967,56 @@ Proof. intros S T. destruct (overlapState_shape _ S); prot_outProc_in_not_contra
 Lemma listener_pos_out_not p p' v : listenerState p -> p -PA- chanPos ;! v -PA> p' -> False.
 Proof. intros S T. destruct (listenerState_shape _ S); prot_outProc_in_not_contra. Qed.
 
-(** No component of the protocol offers a mode on mCurr: the overlap only writes the empty
-tuple there, to switch mode.*)
-Lemma broadcast_mCurr_out_not p p' v :
-  broadcastState p -> p -PA- chanMCurr ;! v -PA> p' -> False.
-Proof. intros S T. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra. Qed.
-
-Lemma overlap_mCurr_out_not p p' v vs :
-  overlapState p -> p -PA- chanMCurr ;! (v :: vs) -PA> p' -> False.
+(** No component of the protocol writes on a channel it reads the mode state from.*)
+Lemma broadcast_read_out_not p p' c v :
+  broadcastState p -> c = chanMCurrRead \/ c = chanMNextRead \/ c = chanMStableRead ->
+  p -PA- c ;! v -PA> p' -> False.
 Proof.
-  intros S T. destruct (overlapState_shape _ S); try prot_outProc_in_not_contra;
-  prot_outProc_in_not_unfold;
-  match goal with [B : ?p ~p~ ?q, TR : ?p -PA- ?a -PA> ?p' |- _] =>
-    destruct (bisim_disc_match _ _ _ _ B TR) as [q' TR'] end;
-  prot_outProc_in_not_body; invert_disc_prefixes;
-  match goal with [E : evalExpLists [] (_ :: _) |- _] => inversion E end.
+  intros S C T. destruct C as [ E | [ E | E ] ]; subst c;
+    destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
+Lemma overlap_read_out_not p p' c v :
+  overlapState p -> c = chanMCurrRead \/ c = chanMNextRead \/ c = chanMStableRead ->
+  p -PA- c ;! v -PA> p' -> False.
+Proof.
+  intros S C T. destruct C as [ E | [ E | E ] ]; subst c;
+    destruct (overlapState_shape _ S); prot_outProc_in_not_contra.
+Qed.
+
+Lemma listener_read_out_not p p' c v :
+  listenerState p -> c = chanMCurrRead \/ c = chanMNextRead \/ c = chanMStableRead ->
+  p -PA- c ;! v -PA> p' -> False.
+Proof.
+  intros S C T. destruct C as [ E | [ E | E ] ]; subst c;
+    destruct (listenerState_shape _ S); prot_outProc_in_not_contra.
+Qed.
+
+(** Neither the broadcaster nor the listener reads a channel the software writes the mode state
+on.*)
+Lemma broadcast_write_in_not p p' c v :
+  broadcastState p -> c = chanMCurrWrite \/ c = chanMNextWrite \/ c = chanMStableWrite ->
+  p -PA- c ;? v -PA> p' -> False.
+Proof.
+  intros S C T. destruct C as [ E | [ E | E ] ]; subst c;
+    destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
+Qed.
+
+Lemma listener_write_in_not p p' c v :
+  listenerState p -> c = chanMCurrWrite \/ c = chanMNextWrite \/ c = chanMStableWrite ->
+  p -PA- c ;? v -PA> p' -> False.
+Proof.
+  intros S C T. destruct C as [ E | [ E | E ] ]; subst c;
+    destruct (listenerState_shape _ S); prot_outProc_in_not_contra.
+Qed.
+
+(** Only the overlap component switches mode.*)
+Lemma broadcast_mCurr_out_not p p' v :
+  broadcastState p -> p -PA- chanMCurrWrite ;! v -PA> p' -> False.
+Proof. intros S T. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra. Qed.
+
 Lemma listener_mCurr_out_not p p' v :
-  listenerState p -> p -PA- chanMCurr ;! v -PA> p' -> False.
+  listenerState p -> p -PA- chanMCurrWrite ;! v -PA> p' -> False.
 Proof. intros S T. destruct (listenerState_shape _ S); prot_outProc_in_not_contra. Qed.
 
 (** The broadcaster outputs only on outProc.*)
@@ -2011,24 +2029,6 @@ Proof.
   invert_disc_prefixes. reflexivity.
 Qed.
 
-(** The overlap component outputs on mNext only in tfsNext, where it writes the fail-safe
-successor of its mode.*)
-Lemma overlap_mNext_out p p' v :
-  overlapState p -> p -PA- chanMNext ;! v -PA> p' ->
-  exists m, tfsNextState m p /\ v = [baseMode (failSafeSucc m)].
-Proof.
-  intros S T. destruct (overlapState_shape _ S)
-    as [B | m B | m e2 e3 e4 B | m e2 l B | m B | B | B | B | B | m B | B | B | B];
-    try prot_outProc_in_not_contra.
-  destruct (bisim_disc_match _ _ _ _ B T) as [q R]. unfold tfsNext in R.
-  invert_disc_prefixes.
-  repeat match goal with
-    | [H : evalExpLists _ _ |- _] => inversion H; subst; clear H
-    | [H : evalExp (eFailSafeSucc _) _ |- _] => inversion H; subst; clear H
-    | [H : evalExp (eBase _) _ |- _] => inversion H; subst; clear H end.
-  match goal with [B' : p ~p~ tfsNext ?m0 |- _] =>
-    exists m0; split; [exact B' | reflexivity] end.
-Qed.
 (* end helpers *)
 
 (** A step of a protocol triple whose broadcast component can only have stepped by reading
@@ -2076,11 +2076,11 @@ Qed.
 
 (** A step of a protocol triple whose listener can only have stepped by reading a mode on
 mCurr: either it did not step, or the whole triple read that mode, since no component
-offers a mode on mCurr. So for the overlap component below.*)
+writes on mCurrRead. So for the overlap component below.*)
 Lemma triple_mCurr_read_li p1 p2 p3 p1' p2' p3' c :
   protocolState (p1 $||$ p2 $||$ p3) -> p1 $||$ p2 $||$ p3 -PA- c -PA> p1' $||$ p2' $||$ p3' ->
-  (forall b, p3 -PA- b -PA> p3' -> exists v, b = chanMCurr ;? [baseMode v]) ->
-  p3 = p3' \/ (p3 -PA- c -PA> p3' /\ exists v, c = chanMCurr ;? [baseMode v]).
+  (forall b, p3 -PA- b -PA> p3' -> exists v, b = chanMCurrRead ;? [baseMode v]) ->
+  p3 = p3' \/ (p3 -PA- c -PA> p3' /\ exists v, c = chanMCurrRead ;? [baseMode v]).
 Proof.
   intros PS T ACT. inversion PS as [? ? ? BS OS LS]; subst.
   destruct c as [c0 v0 | c0 v0 | ].
@@ -2095,14 +2095,14 @@ Proof.
       destruct (ACT _ H1) as [? X]; discriminate X end;
     match goal with [H1 : p3 -PA- ?c1 ;? ?v1 -PA> p3', H2 : _ -PA- ?c1 ;! ?v1 -PA> _ |- _] =>
       destruct (ACT _ H1) as [v X]; injection X as X1 X2; subst c1 v1; exfalso;
-      first [eapply broadcast_mCurr_out_not; [exact BS | exact H2]
-            | eapply overlap_mCurr_out_not; [exact OS | exact H2]] end.
+      first [eapply broadcast_read_out_not; [exact BS | left; reflexivity | exact H2]
+            | eapply overlap_read_out_not; [exact OS | left; reflexivity | exact H2]] end.
 Qed.
 
 Lemma triple_mCurr_read_ov p1 p2 p3 p1' p2' p3' c :
   protocolState (p1 $||$ p2 $||$ p3) -> p1 $||$ p2 $||$ p3 -PA- c -PA> p1' $||$ p2' $||$ p3' ->
-  (forall b, p2 -PA- b -PA> p2' -> exists v, b = chanMCurr ;? [baseMode v]) ->
-  p2 = p2' \/ (p2 -PA- c -PA> p2' /\ exists v, c = chanMCurr ;? [baseMode v]).
+  (forall b, p2 -PA- b -PA> p2' -> exists v, b = chanMCurrRead ;? [baseMode v]) ->
+  p2 = p2' \/ (p2 -PA- c -PA> p2' /\ exists v, c = chanMCurrRead ;? [baseMode v]).
 Proof.
   intros PS T ACT. inversion PS as [? ? ? BS OS LS]; subst.
   destruct c as [c0 v0 | c0 v0 | ].
@@ -2117,8 +2117,31 @@ Proof.
       destruct (ACT _ H1) as [? X]; discriminate X end;
     match goal with [H1 : p2 -PA- ?c1 ;? ?v1 -PA> p2', H2 : _ -PA- ?c1 ;! ?v1 -PA> _ |- _] =>
       destruct (ACT _ H1) as [v X]; injection X as X1 X2; subst c1 v1; exfalso;
-      first [eapply broadcast_mCurr_out_not; [exact BS | exact H2]
-            | eapply listener_mCurr_out_not; [exact LS | exact H2]] end.
+      first [eapply broadcast_read_out_not; [exact BS | left; reflexivity | exact H2]
+            | eapply listener_read_out_not; [exact LS | left; reflexivity | exact H2]] end.
+Qed.
+
+(** A step of a protocol triple whose overlap component can only have stepped by writing on
+the mode state: either it did not step, or the whole triple made that write, since no other
+component reads it.*)
+Lemma triple_write_ov p1 p2 p3 p1' p2' p3' c :
+  protocolState (p1 $||$ p2 $||$ p3) -> p1 $||$ p2 $||$ p3 -PA- c -PA> p1' $||$ p2' $||$ p3' ->
+  (forall b, p2 -PA- b -PA> p2' -> exists c0 v, b = c0 ;! v /\
+    (c0 = chanMCurrWrite \/ c0 = chanMNextWrite \/ c0 = chanMStableWrite)) ->
+  p2 = p2' \/ p2 -PA- c -PA> p2'.
+Proof.
+  intros PS T ACT. inversion PS as [? ? ? BS OS LS]; subst.
+  destruct c as [c0 v0 | c0 v0 | ].
+  - triple_disc_nonTau T; first [left; reflexivity | right; assumption].
+  - triple_disc_nonTau T; first [left; reflexivity | right; assumption].
+  - destruct (link_reach_triple_tau _ _ _ _ _ _ T PS) as [c0 [v0 H]].
+    decompose [or and] H; clear H;
+    try match goal with [E : p2 = p2' |- _] => left; exact E end;
+    match goal with [H2 : p2 -PA- _ -PA> p2' |- _] =>
+      destruct (ACT _ H2) as [c1 [v1 [X C]]] end;
+    first [discriminate X | injection X as X1 X2; subst]; exfalso;
+    first [eapply broadcast_write_in_not; [eassumption | exact C | eassumption]
+          | eapply listener_write_in_not; [eassumption | exact C | eassumption]].
 Qed.
   
 Ltac link_partriptau_tac c v U :=
@@ -2244,7 +2267,7 @@ Qed.
 (**Proof sketch: Brute force. Because none of its constituents can input on said channel.*)
 
 Theorem bc_mCurr_out_not (p p' : ProcTerm) : 
-  p -PA- chanMCurr ;! [] -PA> p' -> broadcastState p -> False.
+  p -PA- chanMCurrWrite ;! [] -PA> p' -> broadcastState p -> False.
 Proof.
   intros TR S. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
@@ -2258,7 +2281,7 @@ Qed.
 (**Proof: Brute force analysis of all broadcast states and none of them are enabled on this action*)
 
 Theorem listen_mCurr_out_not (p p' : ProcTerm) : 
-  p -PA- chanMCurr ;! [] -PA> p' -> listenerState p -> False.
+  p -PA- chanMCurrWrite ;! [] -PA> p' -> listenerState p -> False.
 Proof.
   intros TR S. destruct (listenerState_shape _ S); prot_outProc_in_not_contra.
 Qed.
@@ -2266,7 +2289,7 @@ Qed.
 
 (**The two cases where the overlap component can output on mCurr.*)
 Theorem ovlp_mCurr_out (p p' : ProcTerm) : 
-  p -PA- chanMCurr ;! [] -PA> p' -> overlapState p ->
+  p -PA- chanMCurrWrite ;! [] -PA> p' -> overlapState p ->
   (switchCurrState p /\ switchListenState p') \/
   (tfsCurrState p /\ tfsBcState p').
 Proof.
@@ -2279,6 +2302,12 @@ Proof.
     (eapply bisim_trans; [exact BQ | ]); apply app_bisim_nil; reflexivity.
 Qed.
 (**Proof: Brute force analysis on overlap states and show that these are the only two matches*)
+
+Theorem listen_mStable_out_not (p p' : ProcTerm) :
+  p -PA- chanMStableWrite ;! [] -PA> p' -> listenerState p -> False.
+Proof.
+  intros TR S. destruct (listenerState_shape _ S); prot_outProc_in_not_contra.
+Qed.
 
 Lemma bc_abort_out_not (p p' : ProcTerm) : 
   p -PA- chanAbort;! [] -PA> p' -> broadcastState p -> False.
@@ -2313,26 +2342,26 @@ Qed.
 (**Proof: Brute force analysis of overlap states and these are the only ones that fit the transition*)
 
 Theorem bc_mStable_out_not (p p' : ProcTerm) : 
-  p -PA- chanMStable*! -PA> p' -> broadcastState p -> False.
+  p -PA- chanMStableWrite*! -PA> p' -> broadcastState p -> False.
 Proof.
   intros TR S. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra.
 Qed.
 
 (**The two cases where the overlap component can output on mStable: aborting an overlap,
-and the self-loop of tfsNext. The value tfsNext holds is whatever was read on mCurr.*)
-Theorem ovlp_mStable_out (p p' : ProcTerm) : 
-  p -PA- chanMStable*! -PA> p' -> overlapState p ->
+and the self-loop of tfsNext, which keeps its mode.*)
+Theorem overlap_mStable_out (p p' : ProcTerm) :
+  p -PA- chanMStableWrite*! -PA> p' -> overlapState p ->
   (ovAbortState p /\ dormantState p') \/
-  (exists (v : BaseType), p ~p~ tfsNext v /\ p' ~p~ tfsNext v).
+  (exists m, tfsNextState m p /\ tfsNextState m p').
 Proof.
   intros TR S. destruct (overlapState_shape _ S)
-    as [B | v B | v e2 e3 e4 B SC | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
+    as [B | v B | v e2 e3 e4 B | v1 e2 v3 B | m0 B | B | B | B | B | v B | B | B | B];
     try solve [prot_outProc_in_not_contra];
     destruct (bisim_step_disc _ _ _ _ B TR) as [q [TQ BQ]];
     [unfold ovAbort in TQ | unfold tfsNext in TQ]; invert_disc_prefixes.
   - left. split; [exact B | ]. red. eapply bisim_trans; [exact BQ | ].
     apply app_bisim_nil; reflexivity.
-  - right. exists v. split; [exact B | ]. eapply bisim_trans; [exact BQ | ].
+  - right. exists v. split; [exact B | ]. red. eapply bisim_trans; [exact BQ | ].
     unfold_app_bisim. apply bisim_refl.
 Qed.
 

@@ -162,23 +162,27 @@ Inductive stepDiscEnt : Entity -> ActDiscEnt -> Entity -> Prop :=
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i' , k |]
   | stepDeRdStbl : forall (p p' : ProcTerm) (l : Position)
     (i : Interface) (k k' : ModeState),
-    p -PA- chanMStable *? -PA> p' -> k -ms- chanMStable @! -ms> k' ->
+    p -PA- chanMStableRead *? -PA> p' -> k -ms- chanMStableRead @! -ms> k' ->
+    [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k' |]
+  | stepDeWriteStbl : forall (p p' : ProcTerm) (l : Position)
+    (i : Interface) (k k' : ModeState),
+    p -PA- chanMStableWrite *! -PA> p' -> k -ms- chanMStableWrite @? -ms> k' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k' |]
   | stepDeCurrWrite : forall (p p' : ProcTerm) (l : Position)
     (i : Interface) (k k' : ModeState) (m : Mode),
-    p -PA- chanMCurr *! -PA> p' -> k -ms- chanMCurr @? -ms> k' ->
+    p -PA- chanMCurrWrite *! -PA> p' -> k -ms- chanMCurrWrite @? -ms> k' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k' |]
   | stepDeCurrRead : forall (p p' : ProcTerm) (l : Position)
     (i : Interface) (k k' : ModeState) (m : Mode),
-    p -PA- chanMCurr ;? [baseMode m] -PA> p' -> k -ms- chanMCurr .! m -ms> k' ->
+    p -PA- chanMCurrRead ;? [baseMode m] -PA> p' -> k -ms- chanMCurrRead .! m -ms> k' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k' |]
   | stepDeNextWrite : forall (p p' : ProcTerm) (l : Position)
     (i : Interface) (k k' : ModeState) (m : Mode),
-    p -PA- chanMNext ;! [baseMode m] -PA> p' -> k -ms- chanMNext .? m -ms> k' ->
+    p -PA- chanMNextWrite ;! [baseMode m] -PA> p' -> k -ms- chanMNextWrite .? m -ms> k' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k' |]
   | stepDeNextRead : forall (p p' : ProcTerm) (l : Position)
     (i : Interface) (k k' : ModeState) (m : Mode),
-    p -PA- chanMNext ;? [baseMode m] -PA> p' -> k -ms- chanMNext .! m -ms> k' ->
+    p -PA- chanMNextRead ;? [baseMode m] -PA> p' -> k -ms- chanMNextRead .! m -ms> k' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p' , l , i , k' |]
   | stepDePosRead : forall (p p' : ProcTerm) (l : Position)
     (i : Interface) (k : ModeState),
@@ -202,7 +206,7 @@ Inductive stepDiscEnt : Entity -> ActDiscEnt -> Entity -> Prop :=
     [| p , l , i , k |] -EA- [-v, l, r-]#! ->> [| p , l , i' , k |]
   | stepDeTest : forall (p : ProcTerm) (l : Position)
     (i : Interface) (k k' : ModeState) (m : Mode),
-    k -ms- chanMNext .? m -ms> k' ->
+    k -ms- chanMNextWrite .? m -ms> k' ->
     [| p , l , i , k |] -EA- aeTau ->> [| p , l , i , k' |]
   where "e1 -EA- a ->> e2" := (stepDiscEnt e1 a e2).
 
@@ -256,7 +260,7 @@ Inductive stepTimedEnt : Entity -> Delay -> Entity -> Prop :=
 output on mCurr, and the mode state input on the same channel.*)
 Theorem curr_switch_proc (p p' : ProcTerm) (l l' : Position) (h h' : Interface) (k k' : ModeState) :
   [|p, l, h, k|] -EA- aeTau ->> [|p', l', h', k'|] -> currModeMState k <> currModeMState k' ->
-  p -PA- chanMCurr *! -PA> p' /\ k -ms- chanMCurr @? -ms> k'.
+  p -PA- chanMCurrWrite *! -PA> p' /\ k -ms- chanMCurrWrite @? -ms> k'.
   intros H H0.
   (*By inversion on the discrete entity transition*)
   (*We first eliminate the cases where the mode state is the preserved.*)
@@ -351,6 +355,7 @@ Lemma link_ent_proc_neq_disc p p' h h' l l' k k' a :
   right. right. left. repeat eexists; eassumption.
   right. right. left. repeat eexists; eassumption.
   do 6 right. left. repeat eexists; eassumption.
+  do 5 right. left. repeat eexists; eassumption.
   do 5 right. left. repeat eexists; eassumption.
   do 4 right. left. repeat eexists; eassumption.
   do 3 right. left. repeat eexists; eassumption.
@@ -501,7 +506,7 @@ Qed.
 (** Software that reads any current mode cannot let time pass: the mode state always
 offers its current mode.*)
 Lemma ent_del_mCurr_in_not p l h k d e' :
-  (forall m, discActEnabled p (chanMCurr ;? [baseMode m])) ->
+  (forall m, discActEnabled p (chanMCurrRead ;? [baseMode m])) ->
   [|p, l, h, k|] -ED- d ->> e' -> False.
 Proof.
   intros DA DEL. eapply ent_del_sync_mState_not;
@@ -512,8 +517,8 @@ Qed.
 (** Software that reads stability and any next mode cannot let time pass: a stable mode
 state offers mStable and an unstable one offers its next mode on mNext.*)
 Lemma ent_del_mStable_mNext_in_not p l h k d e' :
-  discActEnabled p (chanMStable *?) ->
-  (forall m, discActEnabled p (chanMNext ;? [baseMode m])) ->
+  discActEnabled p (chanMStableRead *?) ->
+  (forall m, discActEnabled p (chanMNextRead ;? [baseMode m])) ->
   [|p, l, h, k|] -ED- d ->> e' -> False.
 Proof.
   intros DS DN DEL. destruct k as [m1 | m1 m2 t].
@@ -587,14 +592,27 @@ Lemma ent_disc_proc_act p l h k p' l' h' k' a :
   [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
   p = p' \/ exists c, p -PA- c -PA> p' /\
     (forall v, c = chanPos ;? [basePosition v] -> v = l) /\
-    (forall m, c = chanMCurr ;? [baseMode m] -> m = currModeMState k /\ k' = k) /\
-    (forall m, c = chanMNext ;? [baseMode m] -> nextModeMState k = Some m /\ k' = k).
+    (forall m, c = chanMCurrRead ;? [baseMode m] -> m = currModeMState k /\ k' = k) /\
+    (forall m, c = chanMNextRead ;? [baseMode m] -> nextModeMState k = Some m /\ k' = k).
 Proof.
   intro S. inversion S; subst; try (left; reflexivity); right;
     match goal with [T : _ -PA- ?c -PA> _ |- _] => exists c; split; [exact T | ] end;
     (split; [ | split]); intros vv E; try congruence.
   - injection E as E; subst. apply mState_curr_out. assumption.
   - injection E as E; subst. apply mState_next_out. assumption.
+Qed.
+
+(** Likewise a write on mCurr, mNext or mStable is taken by the mode state.*)
+Lemma ent_disc_proc_write p l h k p' l' h' k' a :
+  [|p, l, h, k|] -EA- a ->> [|p', l', h', k'|] ->
+  p = p' \/ exists c, p -PA- c -PA> p' /\
+    (c = chanMCurrWrite *! -> k -ms- chanMCurrWrite @? -ms> k') /\
+    (c = chanMStableWrite *! -> k -ms- chanMStableWrite @? -ms> k') /\
+    (forall m, c = chanMNextWrite ;! [baseMode m] -> k -ms- chanMNextWrite .? m -ms> k').
+Proof.
+  intro S. inversion S; subst; try (left; reflexivity); right;
+    match goal with [T : _ -PA- ?c -PA> _ |- _] => exists c; split; [exact T | ] end;
+    (split; [ | split]); intros; congruence.
 Qed.
 
 End EntityLanguage.

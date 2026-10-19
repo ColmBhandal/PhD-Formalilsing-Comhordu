@@ -254,13 +254,26 @@ Proof.
     intros m0 e2 e3 e4 B. ovWait_bisim_contra B.
 Qed.
 
-(*The only two possibilities for a change in mode state as per a discrete
-transition are the standard mode switch or the mode switch to fail safe.*)
+(*An unstable mode state changes in a discrete transition only by the standard mode switch,
+the mode switch to fail safe, or the overlap component aborting the mode change.*)
 Lemma mState_switch_states : forall (n n' : Network) (i : nat)
-  (a : ActDiscNet) (k k' : ModeState), reachableProtNet n -> k <> k' ->
+  (a : ActDiscNet) (k k' : ModeState), reachableProtNet n -> unstable k -> k <> k' ->
   n -NA- a -NA> n' -> mState_in_net k i n -> mState_in_net k' i n' ->
   (tfsCurrStateNet i n /\ tfsBcStateNet i n') \/
-  (switchCurrStateNet i n /\ switchListenStateNet i n'). Admitted. (*3*)
+  (switchCurrStateNet i n /\ switchListenStateNet i n') \/
+  (ovAbortStateNet i n /\ dormantStateNet i n') \/
+  (exists m, tfsNextStateNet m i n /\ tfsNextStateNet m i n').
+Proof.
+  intros n n' i a k k' R U NE S M M'.
+  destruct M as [p l h E]. destruct M' as [p' l' h' E'].
+  destruct (link_net_ent_disc _ _ _ _ _ _ S E E') as [EQ | [b B]].
+  { injection EQ; intros; subst. contradiction NE; reflexivity. }
+  destruct (mState_switch_states_ent _ _ _ _ _ _ _ _ _ (reachableNet_ent _ _ _ _ R E) U NE B)
+    as [[A D] | [[A D] | [[A D] | [m [A D]]]]];
+    [left | right; left | right; right; left | right; right; right; exists m];
+    (split; [econstructor; [exact A | exact E] | econstructor; [exact D | exact E']]).
+Qed.
+
 (**Proof: The mState_in_net predicates can be taken apart to show that there's an entity in the network. Then because the
 network is reachable, the software component of this entity is a protocolState process. Also, it can be shown from the semantics of
 entities that the only law (what about init?) that changes the mode state is that in which the software component outputs on mCurr.
@@ -287,7 +300,42 @@ Qed.
 
 Lemma switch_states_mState : forall (n n' : Network) (i : nat) (a : ActDiscNet)
   (m : Mode), reachableProtNet n -> n -NA- a -NA> n' -> switchCurrStateNet i n ->
-  switchListenStateNet i n' -> nextModeNet m i n -> currModeNet m i n'. Admitted. (*3*)
+  switchListenStateNet i n' -> nextModeNet m i n -> currModeNet m i n'.
+Proof.
+  intros n n' i a m R S SC SL NM.
+  net_state_destr SC p1 p2 p3 l h k E.
+  net_state_destr SL p1' p2' p3' l' h' k' E'.
+  assert (NB : p2 <> p2').
+  { intro EQ; subst p2'. lets D : switchCurr_mCurr_out SC.
+    destruct (bisim_dae _ _ _ SL D) as [q T]. unfold switchListen in T. inversion T. }
+  lets PS : reachableProt_triple (reachable_ent_prot _ _ _ _ (reachableNet_ent _ _ _ _ R E)).
+  inversion PS as [? ? ? BS OS LS]; subst.
+  destruct (link_net_ent_disc _ _ _ _ _ _ S E E') as [EQ | [b B]].
+  { injection EQ; intros; subst. contradiction NB; reflexivity. }
+  destruct (ent_disc_proc_write _ _ _ _ _ _ _ _ _ B) as [EQ | [c [T [CW _]]]].
+  { injection EQ; intros; subst. contradiction NB; reflexivity. }
+  (* switchCurr only writes on mCurr, and only the mode state reads it *)
+  assert (SW : forall b2, p2 -PA- b2 -PA> p2' -> b2 = chanMCurrWrite *!).
+  { intros b2 T2. destruct (bisim_step_disc _ _ _ _ SC T2) as [q [TQ _]].
+    unfold switchCurr in TQ. invert_disc_prefixes.
+    match goal with [H : evalExpLists [] _ |- _] => inversion H end. reflexivity. }
+  assert (EC : c = chanMCurrWrite *!).
+  { destruct c as [c0 v0 | c0 v0 | ].
+    - triple_disc_nonTau T; first [contradiction NB; reflexivity | eapply SW; eassumption].
+    - triple_disc_nonTau T; first [contradiction NB; reflexivity | eapply SW; eassumption].
+    - exfalso. destruct (link_reach_triple_tau _ _ _ _ _ _ T PS) as [c0 [v0 H]].
+      decompose [or and] H; clear H;
+      try match goal with [X : p2 = p2' |- _] => exact (NB X) end;
+      match goal with [T2 : p2 -PA- _ -PA> p2' |- _] =>
+        let X := fresh "X" in lets X : SW T2;
+        first [discriminate X | injection X as X1 X2; subst] end;
+      first [eapply broadcast_write_in_not; [eassumption | | eassumption]; solve [auto]
+            | eapply listener_write_in_not; [eassumption | | eassumption]; solve [auto]
+            | discriminate]. }
+  specialize (CW EC). inversion CW; subst.
+  lets NM' : liftEntNet_ent NM E. simpl in NM'. injection NM' as NM'. subst.
+  eapply lenWitness; [ | exact E']. reflexivity.
+Qed.
 (**Proof: Tracking shows us that the action must be tau, composed of an output from the software process on mCurr and an input
 on the same by the mode state. Then it can be shown separately that an input on the mode state that is nextMode m yields a mode
 state that it currMode m. Which can be lifted to currModeNet.*)
@@ -414,7 +462,16 @@ Lemma rangeBad_next_net m m'' i n n' a : reachableProtNet n ->
   (*Proof: If it wasn't for the currModeNet entanglement, you'd just be able
   to do: fwd_track_net_tac rangeBad_next_ent, but something else needs to be
   done to account for this extra little feature of the proof.*)
-  Admitted. (*D- rangeBad_next_ent*)
+Proof.
+  intros R S RB CM. destruct RB as [e RBe Ein].
+  destruct (link_net_ent_disc_fwd n n' e i a S Ein) as [e' [E'in [Eq | [a' Ste]]]].
+  - subst. left. econstructor; eassumption.
+  - destruct (rangeBad_track_ent _ _ _ _ (reachableNet_ent _ _ _ _ R Ein) RBe Ste)
+      as [RB' | CE].
+    + left. econstructor; eassumption.
+    + right. lets CM' : liftEntNet_ent CM Ein. simpl in CM'. rewrite CM' in CE.
+      econstructor; eassumption.
+Qed.
 
 Lemma badOvlp_next_net i n n' a :
   n -NA- a -NA> n' -> badOvlpStateNet i n ->
@@ -465,7 +522,12 @@ Lemma tfsListen_failSafe_net m i n : reachableProtNet n ->
   tfsListenStateNet i n -> currModeNet m i n -> failSafe m.
 (*Proof: Similar result for tfsBc, and one for tfsCurr but for the next mode
 rather than the curr mode- perhaps inter-component results will be lifted
-for these?*) Admitted. (*#inter-component-lift-net*)
+for these?*)
+Proof.
+  intros R TL CM. destruct TL as [e TLe E].
+  lets CM' : liftEntNet_ent CM E. simpl in CM'. rewrite <- CM'.
+  exact (proj2 (proj2 (tfs_failSafe_ent e (reachableNet_ent _ _ _ _ R E))) TLe).
+Qed.
 
 (*-LOCAL TIDY*)
 
@@ -685,7 +747,7 @@ Lemma init_nextMode_net m i n :
 Lemma nextMode_pres_fwd_net m i n n' a :
   reachableProtNet n -> nextModeNet m i n -> 
   ~(switchCurrStateNet i n \/ ovAbortStateNet i n \/
-  tfsCurrStateNet i n) ->
+  (exists m0, tfsNextStateNet m0 i n) \/ tfsCurrStateNet i n) ->
   n -NA- a -NA> n' -> nextModeNet m i n'. Admitted. (*3*)
 (**Proof: Brute force? Inter-component relationships? Is there any
 machinery that you can use to help you prove this one?*)
@@ -1071,9 +1133,9 @@ Proof.
   assert (currModeMState k -mtr-> failSafeSucc m) as FS
     by (rewrite <- EQ; apply failSafeSucc_successor).
   destruct (mState_stable_next_enabled _ _ FS) as [MS | MS].
-  - eapply ent_del_sync_mState_not with (a := chanMStable *!); [ | exact MS | exact ED].
+  - eapply ent_del_sync_mState_not with (a := chanMStableWrite *!); [ | exact MS | exact ED].
     dae_overlap. eapply tfsNext_mStable_out. exact TS.
-  - eapply ent_del_sync_mState_not with (a := chanMNext ;! [baseMode (failSafeSucc m)]);
+  - eapply ent_del_sync_mState_not with (a := chanMNextWrite ;! [baseMode (failSafeSucc m)]);
       [ | exact MS | exact ED].
     dae_overlap. apply tfsNext_mNext_out. exact TS.
 Qed.
@@ -1085,7 +1147,7 @@ Proof.
   destruct (del_net_ent e i n n' d EIN V) as [e' ED].
   inversion SE as [p l h k TP Hpe]. subst e.
   inversion TP as [p1 p2 p3 TS Hp]. subst p.
-  eapply ent_del_sync_mState_not with (a := chanMCurr ;? [baseMode (currModeMState k)]);
+  eapply ent_del_sync_mState_not with (a := chanMCurrRead ;? [baseMode (currModeMState k)]);
     [ | apply modeState_curr_enabled | exact ED].
   dae_overlap. apply tfsStart_mCurr_in. exact TS.
 Qed.
