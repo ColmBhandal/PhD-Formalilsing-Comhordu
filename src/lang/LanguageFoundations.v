@@ -173,6 +173,20 @@ Lemma eqDecChannel : eqDec Channel. unfold eqDec.
   destruct x1, x2; try solve [right; unfold not; intros; inversion H];
   left; reflexivity. Qed.
 
+(** The direction in which a channel is used: an input reads it and an output writes it.*)
+Inductive Direction : Type := read | write.
+
+(** The direction in which software uses each channel it shares with the rest of its entity:
+it reads its mode state, its incoming messages, its notifications and its position, and writes
+its mode state and its outgoing messages. Other channels have none, among them chanIOEnv, which
+links the interface to the environment.*)
+Definition chanDir (c : Channel) : option Direction :=
+  match c with
+  | chanMStableRead | chanMCurrRead | chanMNextRead | chanInProc | chanAN | chanPos => Some read
+  | chanMStableWrite | chanMCurrWrite | chanMNextWrite | chanOutProc => Some write
+  | _ => None
+  end.
+
 
 (** A substitution is a mapping from variables to expressions.*)
 Definition Subst := Var -> Exp.
