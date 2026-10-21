@@ -218,12 +218,100 @@ Theorem delivered_incomingNetNotif (n : Network) (v : list BaseType) (r : Distan
   my_applys_eq Q2. apply timeEqR. simpl. ring. Qed.
 
 
+(* begin helpers for insuff_incomingNotif_abort *)
+(** Only the listener inputs on AN: no broadcast or overlap state does.*)
+Local Lemma broadcast_AN_in_not p p' v :
+  broadcastState p -> p -PA- chanAN ;? v -PA> p' -> False.
+Proof. intros S T. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra. Qed.
+
+Local Lemma overlap_AN_in_not p p' v :
+  overlapState p -> p -PA- chanAN ;? v -PA> p' -> False.
+Proof. intros S T. destruct (overlapState_shape _ S); prot_outProc_in_not_contra. Qed.
+
+(** A listener that inputs on AN is listening.*)
+Local Lemma listener_AN_in_listening p p' v :
+  listenerState p -> p -PA- chanAN ;? v -PA> p' -> listeningState p.
+Proof.
+  intros S T.
+  destruct (listenerState_shape _ S) as [B | m B | B | m B | B | m l B | m e B | m e B | B | B];
+    try exact B; prot_outProc_in_not_contra.
+Qed.
+
+(** Listening takes a notification of a range r insufficient for its mode m into rangeBad m.*)
+Local Lemma listening_AN_insuff_rangeBad p p' r m l :
+  listeningState p -> ~ sufficient m r ->
+  p -PA- chanAN ;? [baseDistance r, baseMode m, basePosition l] -PA> p' ->
+  rangeBadState m p'.
+Proof.
+  intros LS NS T. destruct (ProcEquiv.bisim_step_disc _ _ _ _ LS T) as [q [TQ B]].
+  unfold listening in TQ. invert_disc_prefixes. explicit_typed_input. clean_proc_hyp B.
+  red. eapply ProcEquiv.bisim_trans; [exact B | ]. unfold_app_bisim.
+  assert (EB : evalBoolExp (bSufficient (eBase (baseMode m)) (eBase (baseDistance r))) false).
+  { assert (F : suffBool m r = false)
+      by (unfold suffBool; destruct (suffDec m r); [contradiction | reflexivity]).
+    rewrite <- F. apply bevalSufficient_dist; apply evalBase. }
+  eapply ProcEquiv.bisim_trans; [apply (ProcEquiv.if_then_bisim_false _ _ _ EB) | ].
+  unfold_app_bisim. apply ProcEquiv.bisim_refl.
+Qed.
+
+(** A notification with timestamp 0 stays incoming across a discrete step of a reachable
+network, unless the step is its entity's listener, listening, taking it, which leaves the
+rest of the entity's software, its position and its mode state as they were.*)
+Local Lemma incomingNetNotif_zero_disc n n' a i v :
+  reachableProtNet n -> n -NA- a -NA> n' -> incomingNetNotif v zeroTime i n ->
+  incomingNetNotif v zeroTime i n' \/
+  exists p1 p2 p3 p3' lp h h' k,
+    [|p1 $||$ p2 $||$ p3, lp, h, k|] @ i .: n /\
+    [|p1 $||$ p2 $||$ p3', lp, h', k|] @ i .: n' /\
+    listeningState p3 /\ p3 -PA- chanAN ;? v -PA> p3'.
+Proof.
+  intros RN S IN. destruct IN as [p lp li lo ln k E INL].
+  destruct (link_net_ent_disc_fwd _ _ _ _ _ S E) as [e' [E' [EQ | [b B]]]].
+  - subst e'. left. econstructor; eassumption.
+  - lets PS : reachableProtNet_triple RN E. inversion PS as [p1 p2 p3 BS OS LS]; subst p.
+    inversion B; subst;
+      try (left; econstructor; [exact E' | exact INL]; fail);
+      match goal with [Hi : {| li := _; lo := _; ln := _ |} -i- _ -i> _ |- _] =>
+        inversion Hi; subst end;
+      try (left; econstructor; [exact E' | exact INL]; fail).
+    + (* the interface hands a notification to the software *)
+      match goal with [H : ln -nl- _ !! -nl> _ |- _] => inversion H; subst end.
+      simpl in INL.
+      match goal with [H : _ -tl- _ !! -tl> _ |- _] =>
+        destruct (timedList_out _ _ _ _ H INL) as [IN' | EQ] end.
+      * left. econstructor; [exact E' | exact IN'].
+      * injection EQ as EV. subst. right.
+        match goal with [H : _ $||$ _ $||$ _ -PA- chanAN ;? _ -PA> _ |- _] =>
+          triple_disc_nonTau H end.
+        -- exfalso. eapply broadcast_AN_in_not; eassumption.
+        -- exfalso. eapply overlap_AN_in_not; eassumption.
+        -- do 8 eexists. split; [exact E | ]. split; [exact E' | ]. split; [ | eassumption].
+           eapply listener_AN_in_listening; eassumption.
+    + (* the interface broadcasts and buffers a new notification *)
+      left. econstructor; [exact E' | ]. eapply notifList_in_pres; eassumption.
+Qed.
+(* end helpers *)
+
 Theorem insuff_incomingNotif_abort (n n' : Network) (a : ActDiscNet) (m : Mode)
   (r : Distance) (l : Position) (i : nat) : 
   reachableProtNet n -> nextModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n' \/
-  notifAbortPathNet i n'. Admitted. (*3*)
+  notifAbortPathNet i n' \/ notifBadPathNet i n'.
+Proof.
+  intros RN NM S NS IN.
+  destruct (incomingNetNotif_zero_disc _ _ _ _ _ RN S IN)
+    as [IN' | [p1 [p2 [p3 [p3' [lp [h [h' [k [E [E' [LS T]]]]]]]]]]]].
+  - left. exact IN'.
+  - (* the listener took the notification into rangeBad m: the abort path if m is not the
+       current mode, else the bad path *)
+    right. lets N : liftEntNet_ent NM E. simpl in N.
+    destruct (eqDecMode (currModeMState k) m) as [EQ | NE].
+    + right. econstructor; [ | exact E']. eapply nbpRng; [ | exact EQ].
+      constructor. eapply listening_AN_insuff_rangeBad; eassumption.
+    + left. econstructor; [ | exact E']. eapply napRng; [ | reflexivity | exact NE | exact N].
+      constructor. eapply listening_AN_insuff_rangeBad; eassumption.
+Qed.
 (**Proof: Much like Basics::outgoing_timeout_disc. We case analyse the action a.
 For the cases where a is either input, output or ignore, we can show that
 incomingNetNotif is preserved (...linking theorems / theorems on timed lists...),
@@ -240,180 +328,245 @@ will cause it to leave the list. But in that case, you have a case for the notif
 So that's it.*)
 
 Theorem nextSince_next (n : Network) (m : Mode) (t : Time) (i : nat) (p : reachableProtNet n) : 
-  nextSince m t i n p -> nextModeNet m i n. 
-  (*By induction on nextSince.*)
-  introz U. induction U. 
-  (*In the base case, we carry over a similar result for ovWait (ovWait_next).*)
-  eapply ovWaitState_nextMode_net.
-  eapply reachNetDisc. apply p. apply w. apply H1.
-  (*In the discrete inductive case, we have by I.H. that the nextMode was m in the previous
-  state. Now let's assume towards a contradiction that the nextMode is no longer m.*)
-  
-(*nextModeNet
-
-Well we can then show by (...linking...) and some elimination that the only
-matching cases are those in which the software component either outputs on stable or on
-mCurr. Now, by (Misc::nextSince_rel_state), we know that in our previous state we were
-in one of the next_since states. We can show elsewhere that none of these are enabled
-on mCurr! or stable! (...PA::activation...). Also, we can show that none of the broadcast
-or listener states are enabled on these actions (...PA::activation...). Hence the software
-process couldn't have done such an action, giving us our contradiction.*)
-
-(*The timed inductive case is easy: the mode state's modes don't
-change with time.*)
-Admitted. (*3*)
+  nextSince m t i n p -> nextModeNet m i n.
+Proof. intro U. exact (ComhCoq.protocol.NARMisc.nextSince_next _ _ _ _ _ U). Qed.
 (**Proof: As detailed above*)
 
 (*If an entity is on the notification abort path, and a
 discrete transition happens, then in the next state it is either still on the
 notification abort path, or it is not in a nextSince state.*)
+
 Theorem notifAbort_not_nextSince (n n' : Network)
   (a : ActDiscNet) (i : nat) (rn : reachableProtNet n) : 
   notifAbortPathNet i n -> n -NA- a -NA> n' ->
-  notifAbortPathNet i n' \/ ~nextSinceStateNet i n'. introz U. 
-  (**Proof: Similar to msgAbort_not_nextSince*)
-  (*Link down to the entity level and eliminate the entity equality case.*)
-  inversion U. link_netentdiscfwd_tac e' b U1. left. econstructor.
-  apply H. rewrite U2. assumption.
-  (*Extract the process transition from the entity one.*)
-  (*Apply linking from the entity transition to the software transition.*)
-  link_entsoftdisc_tac;
-  (*Show and use equality between mode states.*)
-  lets MSI : minet H0; lets MSI' : minet U1;
-  lets NME : notifAbort_modeState_eq U MSI U0;
-  lets MIU : mState_in_net_unique MSI' NME; subst.
-  (*First deal with the case where the process terms are equal.*)
-  left. econstructor;[ | apply U1]. inversion H.
-  econstructor; eassumption. eapply napCuok; eassumption.
-  eapply napAbort; eassumption.
-  (*Now on to the case where the process term transitions.
-  Invert the path predicate and solve all 3 sub-cases.*)
-  inversion H; subst.
-  (*---------------------Case 1: rangeBad-----------------*) 
-  inversion H6; subst. link_partripdiscex_tac_norm. 
-  link_partripdiscW3_tac H1 LPT. elim_intro LPT EQP EXP.
-  (*EQ case, LHS follows directly*)
-  left. subst. econstructor;[ | apply U1].
-  eapply napRng. econstructor. eassumption. reflexivity.
-  assumption. assumption.
-  (*transition case- need to use fwd-tracking.*)
-  ex_flat. lets RBN : rangeBad_next H3 H2. ex_flat.
-  left. econstructor. eapply napCuok. econstructor.
-  eapply currEq_cond_false. apply H8. my_applys_eq H4.
-  remember ([|p1' $||$ p2' $||$ p3', l, h, k0|]) as e'.
-  replace (currModeMState k0) with (currModeEnt e').
-  assert (currEqStateEnt x1 m' e'). subst.
-  (*
-  repeat econstructor.
-  assumption. eapply currEq_mode. eassumption. subst.
-  reflexivity. eassumption. eassumption.
-  (*---------------------Case 2: currOK-----------------*) 
-  inversion H4; subst. link_partripdiscex_tac_norm. swapRename H2 H1.
-  link_partripdiscW3_tac H2 LPT. elim_intro LPT EQP EXP.
-  (*EQ case, LHS follows directly*)
-  left. subst. econstructor;[ | apply U1].
-  eapply napCuok. econstructor. eassumption. assumption.
-  (*transition case- need to use fwd-tracking.*)
-  ex_flat. lets CON : currOK_next H3 H1.
-  elim_intro CON NEX LIS.
-  (*First sub-case of the tracking- show abortOvlp state holds.*)
-  ex_flat. left. econstructor.
-  eapply napAbort. econstructor. eapply nextEq_cond_true;
-  [ | apply H5]. remember ([|p1' $||$ p2' $||$ p3', l, h, k0|]) as e'.
-  assert (nextEqStateEnt x1 m' e'). subst. repeat econstructor. assumption.
-  lets NEM : nextEq_mode H6. rewrite Heqe' in NEM.
-  apply nextMode_ent_mState in NEM. rewrite H7 in NEM. inversion NEM.
-  reflexivity. apply U1.
-  (*Second sub-case of the tracking. Show a contradiction because it implies an input on
-  the channel abort by the listener, which cannot be matched by any component- particularly
-  the mode state, because it has a next mode and so is not stable.*)
-  assert (p3 <> p3') as PNE3. unfold not. intros. subst.
-  state_pred_elim H1 LIS.
-  assert (p1 $||$ p2 $||$ p3 <> p1' $||$ p2' $||$ p3') as PNE.
-  unfold not. intro. inversion H5. subst. apply PNE3. reflexivity.
-  (*apply ent proc link theorem and flatten out the ands, ors and exists.*)
-  lets LEP : link_ent_proc_neq_disc PNE U3. andflat LEP.
-  or_flat; ex_flat; and_flat; try link_partripneq_tac;
-  try (lets CLT : currOK_listening_track H1 LIS AND1; inversion CLT); subst.
-  (*From here there are 5 LEP sub-cases (some were eliminated)*)
-  (*In the first case apply this tactic: link_partriptau_tac,
-  and use tracking to narrow down info and eliminate some cases.*)
-  reach_net_prot_tac.
-  link_partriptau_tac c v LPT;
-  try (lets CLT : currOK_listening_track H1 LIS LPT1;
-  inversion CLT; subst).
-  (*Eliminate first two sub-cases by contradiction.*)
-  subst; contradict PNE3; reflexivity.
-  subst; contradict PNE3; reflexivity.
-  (*Two remaining sub-cases are that p1 or p2 output on MStable.
-  Contradictions can be shown in both cases.*)
-  false. eapply bc_mStable_out_not. apply LPT.
-  inversion RPT. assumption.
-  false. eapply ovlp_mStable_out_not. apply LPT.
-  inversion RPT. assumption.
-  (*Now back to the remaining cases. First eliminate interface/software synch.*)
-  false. eapply inter_mStable_in_not. eassumption.
-  (*Then do the modeState/software synch.*)
-  false. eapply next_modeState_stable_not; eassumption.
-  (*Get rid of p reading current position by tracking and showing that actions can't be equal-
-  incompatible actions in question are input on pos and input on stable*)
-  lets CLT : currOK_listening_track H1 LIS AND; inversion CLT.
-  (*---------------------Case 3: abortOvlp-----------------*) 
-  inversion H3; subst. link_partripdiscex_tac_norm. swapRename H1 H2.
-  link_partripdiscW3_tac H2 LPT. elim_intro LPT EQP EXP.
-  (*EQ case, LHS follows directly*)
-  left. subst. econstructor;[ | apply U1].
-  eapply napAbort. econstructor. eassumption.
-  (*transition case- need to use fwd-tracking.*)
-  ex_flat. lets CON : abortOvlp_next H4 H1. right.
-  (*Assert some useful results for later.*)
-  assert (p3 <> p3') as PNE3. unfold not. intros. subst.
-  false. eapply listening_abort_contra; eassumption.
-  assert (p1 $||$ p2 $||$ p3 <> p1' $||$ p2' $||$ p3') as PNE.
-  unfold not. intro. inversion H5. subst. apply PNE3. reflexivity.
-(*apply ent proc link theorem and flatten out the ands, ors and exists.*)
-  lets LEP : link_ent_proc_neq_disc PNE U3. andflat LEP.
-  or_flat; ex_flat; and_flat; try link_partripneq_tac;
-  try (lets CLT : abortOvlp_listening_track H1 CON AND1; inversion CLT); subst.
-  (*In the first case apply this tactic: link_partriptau_tac,
-  and use tracking to narrow down info and eliminate some cases.*)
-  reach_net_prot_tac.
-  link_partriptau_tac c v LPT;
-  try (lets CLT : abortOvlp_listening_track H1 CON LPT1;
-  inversion CLT; subst).
-  (*Eliminate first two sub-cases by contradiction.*)
-  subst; contradict PNE3; reflexivity.
-  subst; contradict PNE3; reflexivity.
-  (*Two remaining sub-cases are that p1 or p2 output on MStable.
-  Contradictions can be shown in both cases.*)
-  false. eapply bc_abort_in_not. apply LPT.
-  inversion RPT. assumption.
-  (*This is the special case, where we need to show that nextSinceState does not hold.*) 
-  inversion RPT.
-  lets OAI : ovlp_abort_in_notNextSince LPT H9. unfold not. intro. apply OAI.
-  inversion H11. entnetuniq2 EN n'. subst. inversion H12. inversion H6.
-  assumption.
-  (*Now back to the remaining cases. First eliminate interface/software synch.*)
-  false. eapply inter_abort_in_not. eassumption.
-  (*Then do the modeState/software synch.*)
-  false. eapply modeState_abort_in_not; eassumption.
-  (*Get rid of p reading current position by tracking and showing that actions can't be equal-
-  incompatible actions in question are input on pos and input on stable*)
-  lets CLT : abortOvlp_listening_track H1 CON AND; inversion CLT. Qed.*)
-  Admitted. (*R*)
+  notifAbortPathNet i n' \/ ~nextSinceStateNet i n'.
+Proof.
+  intros U W.
+  destruct U as [e E I].
+  destruct (link_net_ent_disc_fwd n n' e i a W I) as [e' [I' [EQ | [b ST]]]].
+  { subst e'. left. econstructor; eassumption. }
+  assert (R : reachableProtEnt e) by (eapply reachable_net_ent; eassumption).
+  destruct e as [p l h k].
+  lets PS : reachableProt_triple (reachable_ent_prot _ _ _ _ R).
+  inversion PS as [p1 p2 p3 BS OS LS]; subst p.
+  destruct (triple_disc_ent_fwd _ _ _ _ _ _ _ _ ST)
+    as [p1' [p2' [p3' [l' [h' [k' [EQ' [W1 [W2 W3]]]]]]]]].
+  subst e'.
+  assert (NSN : ~ nextSinceStateEnt ([|p1' $||$ p2' $||$ p3', l', h', k'|]) ->
+    ~ nextSinceStateNet i n')
+    by (intros NSE NS; apply NSE; exact (liftEntNet_ent _ _ _ _ NS I')).
+  destruct (eqDecProcTerm p3 p3') as [E3 | N3].
+  - (* the listener stays *)
+    subst p3'.
+    inversion E; subst.
+    + match goal with [H : rangeBadStateProt _ _ |- _] =>
+        inversion H as [? ? ? RB]; subst end.
+      destruct (eqDecModeState k k') as [KE | KN].
+      * subst k'. left. econstructor; [ | exact I'].
+        eapply napRng; [constructor; exact RB | reflexivity | eassumption | eassumption].
+      * right. apply NSN. eapply mState_change_not_nextSince_ent; [exact R | | exact KN | exact ST].
+        eapply nextMode_unstable. eassumption.
+    + match goal with [H : currOKStateProt _ _ |- _] =>
+        inversion H as [? ? ? CO]; subst end.
+      destruct (eqDecModeState k k') as [KE | KN].
+      * subst k'. left. econstructor; [ | exact I'].
+        eapply napCuok; [constructor; exact CO | eassumption].
+      * right. apply NSN. eapply mState_change_not_nextSince_ent; [exact R | | exact KN | exact ST].
+        eapply nextMode_unstable. eassumption.
+    + match goal with [H : abortOvlpStateProt _ |- _] =>
+        inversion H as [? ? ? AO]; subst end.
+      left. econstructor; [ | exact I']. eapply napAbort. constructor. exact AO.
+  - (* the listener steps *)
+    destruct W3 as [E3 | [b3 T3]]; [contradiction | ].
+    inversion E; subst.
+    + (* rangeBad: it reads the current mode, which differs from m', into currOK m' *)
+      match goal with [H : rangeBadStateProt _ _ |- _] =>
+        inversion H as [? ? ? RB]; subst end.
+      assert (ACT : forall c, p3 -PA- c -PA> p3' -> entChanAct c).
+      { intros c T. destruct (rangeBad_next_act _ _ _ _ T RB) as [m0 [EC _]].
+        subst c. left. reflexivity. }
+      destruct (triple_disc_ent_chan 2 R ST eq_refl eq_refl ACT) as [E3 | ST3];
+        [contradiction | ].
+      destruct (ent_disc_proc_read _ _ _ _ _ _ _ _ _ ST3) as [E3 | [c [T [_ [RC _]]]]];
+        [contradiction | ].
+      destruct (rangeBad_next_act _ _ _ _ T RB) as [m0 [EC CE]].
+      destruct (RC m0 EC) as [M0 KE]. subst k'.
+      left. econstructor; [ | exact I']. eapply napCuok; [ | eassumption].
+      constructor. eapply currEq_cond_false; [ | exact CE]. congruence.
+    + (* currOK: with a next mode, it reads it on mNext, into abortOvlp *)
+      match goal with [H : currOKStateProt _ _ |- _] =>
+        inversion H as [? ? ? CO]; subst end.
+      assert (ACT : forall c, p3 -PA- c -PA> p3' -> entChanAct c).
+      { intros c T. destruct (currOK_next_act _ _ _ _ T CO) as [[EC _] | [m0 [EC _]]];
+          subst c; left; reflexivity. }
+      destruct (triple_disc_ent_chan 2 R ST eq_refl eq_refl ACT) as [E3 | ST3];
+        [contradiction | ].
+      destruct (ent_disc_proc_read _ _ _ _ _ _ _ _ _ ST3)
+        as [E3 | [c [T [_ [_ [RN RS]]]]]]; [contradiction | ].
+      destruct (currOK_next_act _ _ _ _ T CO) as [[EC _] | [m0 [EC NQ]]].
+      * destruct (RS EC) as [NN _]. congruence.
+      * destruct (RN m0 EC) as [NM KE]. subst k'.
+        left. econstructor; [ | exact I']. eapply napAbort. constructor.
+        eapply nextEq_cond_true; [ | exact NQ]. congruence.
+    + (* abortOvlp: it outputs on abort, which only the overlap component can take, and
+         the overlap component then leaves the nextSince states *)
+      match goal with [H : abortOvlpStateProt _ |- _] =>
+        inversion H as [? ? ? AO]; subst end.
+      assert (TR : forall c, p3 -PA- c -PA> p3' -> c = chanAbort ;! []).
+      { intros c T. eapply abortOvlp_listening_track; [exact AO | | exact T].
+        eapply abortOvlp_next; eassumption. }
+      right. apply NSN. intro NS.
+      (* the step is the software's: a component's own step on an entity channel would be
+         the listener's on abort, which is not one *)
+      inversion ST; subst; try (exfalso; apply N3; reflexivity);
+        match goal with
+        | [K : p1 $||$ p2 $||$ p3 -PA- tauAct -PA> _ |- _] => idtac
+        | [K : p1 $||$ p2 $||$ p3 -PA- _ -PA> _ |- _] =>
+            triple_disc_nonTau K; try (exfalso; apply N3; reflexivity);
+            match goal with [K3 : p3 -PA- _ -PA> _ |- _] =>
+              apply TR in K3; discriminate K3 end
+        end.
+      match goal with [K : p1 $||$ p2 $||$ p3 -PA- tauAct -PA> _ |- _] =>
+        destruct (link_reach_triple_tau _ _ _ _ _ _ K PS) as [c [v CC]] end.
+      destruct CC as [[T1 [T2 E0]] | [[T1 [T2 E0]] | [[T1 [T2 E0]] | [[T1 [T2 E0]] |
+        [[T1 [T2 E0]] | [T1 [T2 E0]]]]]]];
+        try (subst; exfalso; apply N3; reflexivity);
+        try (apply TR in T2; discriminate T2).
+      * (* the broadcaster would take the abort, which it never does *)
+        apply TR in T2. injection T2 as EC EV. subst.
+        eapply bc_abort_in_not; eassumption.
+      * (* the overlap component takes the abort and leaves the nextSince states *)
+        apply TR in T2. injection T2 as EC EV. subst.
+        ent_state_comp NS.
+        eapply ovlp_abort_in_notNextSince; eassumption.
+Qed.
+(**Proof: Similar to msgAbort_not_nextSince*)
+
+(* begin helpers for instant_insuff_abort *)
+(** badOvlp's only step is its output on bad.*)
+Local Lemma badOvlp_act p p' a : badOvlpState p -> p -PA- a -PA> p' -> a = chanBad ;! [].
+Proof.
+  intros B T. unfold badOvlpState, badOvlp in B.
+  destruct (ProcEquiv.bisim_disc_match _ _ _ _ B T) as [q TQ]. invert_disc_prefixes.
+  match goal with [H : evalExpLists [] _ |- _] => inversion H end.
+  reflexivity.
+Qed.
+
+(** The broadcaster never inputs on bad.*)
+Local Lemma broadcast_bad_in_not p p' :
+  broadcastState p -> p -PA- chanBad ;? [] -PA> p' -> False.
+Proof. intros S T. destruct (broadcastState_shape _ S); prot_outProc_in_not_contra. Qed.
+
+(** An overlap state that inputs on bad leaves the nextSince states.*)
+Local Lemma ovlp_bad_in_notNextSince p p' :
+  p -PA- chanBad;? [] -PA> p' -> overlapState p -> ~ nextSinceState p'.
+Proof.
+  intros P O N. destruct (overlapState_shape _ O)
+    as [D | v D | v e2 e3 e4 D | v1 e2 v3 D | m0 D | D | D | D | D | v D | D | D | D];
+    try solve [prot_outProc_in_not_contra];
+    destruct (ProcEquiv.bisim_step_disc _ _ _ _ D P) as [q' [Q B]];
+    prot_outProc_in_not_body; invert_disc_prefixes;
+    destruct N as [m1 t1 x1 y1 X | m1 t1 l1 X | m1 X | m1 X]; red in X;
+    pose proof (ProcEquiv.bisim_trans _ _ _ (ProcEquiv.bisim_symm _ _ B) X) as BT; clear B X;
+    clean_proc_hyp BT; unfold liftNameProc in BT; unfold_app_hyp_l BT;
+    prot_outProc_in_not_body; refute_by_chan BT.
+Qed.
+
+(** On a discrete step, an entity on the notification bad path with a next mode stays on it,
+or leaves the nextSince states.*)
+Local Lemma notifBad_not_nextSince (n n' : Network) (a : ActDiscNet) (m : Mode) (i : nat)
+  (rn : reachableProtNet n) :
+  nextModeNet m i n -> notifBadPathNet i n -> n -NA- a -NA> n' ->
+  notifBadPathNet i n' \/ ~nextSinceStateNet i n'.
+Proof.
+  intros NM U W.
+  destruct U as [e E I].
+  destruct (link_net_ent_disc_fwd n n' e i a W I) as [e' [I' [EQ | [b ST]]]].
+  { subst e'. left. econstructor; eassumption. }
+  assert (R : reachableProtEnt e) by (eapply reachable_net_ent; eassumption).
+  lets NK : liftEntNet_ent NM I.
+  destruct e as [p l h k]. simpl in NK.
+  lets PS : reachableProt_triple (reachable_ent_prot _ _ _ _ R).
+  inversion PS as [p1 p2 p3 BS OS LS]; subst p.
+  destruct (triple_disc_ent_fwd _ _ _ _ _ _ _ _ ST)
+    as [p1' [p2' [p3' [l' [h' [k' [EQ' [W1 [W2 W3]]]]]]]]].
+  subst e'.
+  assert (NSN : ~ nextSinceStateEnt ([|p1' $||$ p2' $||$ p3', l', h', k'|]) ->
+    ~ nextSinceStateNet i n')
+    by (intros NSE NS; apply NSE; exact (liftEntNet_ent _ _ _ _ NS I')).
+  destruct (eqDecProcTerm p3 p3') as [E3 | N3].
+  - (* the listener stays *)
+    subst p3'.
+    inversion E; subst.
+    + match goal with [H : rangeBadStateProt _ _ |- _] =>
+        inversion H as [? ? ? RB]; subst end.
+      destruct (eqDecModeState k k') as [KE | KN].
+      * subst k'. left. econstructor; [ | exact I'].
+        eapply nbpRng; [constructor; exact RB | reflexivity].
+      * right. apply NSN. eapply mState_change_not_nextSince_ent; [exact R | | exact KN | exact ST].
+        eapply nextMode_unstable. exact NK.
+    + match goal with [H : badOvlpStateProt _ |- _] =>
+        inversion H as [? ? ? BO]; subst end.
+      left. econstructor; [ | exact I']. eapply nbpBad. constructor. exact BO.
+  - (* the listener steps *)
+    destruct W3 as [E3 | [b3 T3]]; [contradiction | ].
+    inversion E; subst.
+    + (* rangeBad: it reads the current mode, the mode it holds, into currEq and badOvlp *)
+      match goal with [H : rangeBadStateProt _ _ |- _] =>
+        inversion H as [? ? ? RB]; subst end.
+      assert (ACT : forall c, p3 -PA- c -PA> p3' -> entChanAct c).
+      { intros c T. destruct (rangeBad_next_act _ _ _ _ T RB) as [m0 [EC _]].
+        subst c. left. reflexivity. }
+      destruct (triple_disc_ent_chan 2 R ST eq_refl eq_refl ACT) as [E3 | ST3];
+        [contradiction | ].
+      destruct (ent_disc_proc_read _ _ _ _ _ _ _ _ _ ST3) as [E3 | [c [T [_ [RC _]]]]];
+        [contradiction | ].
+      destruct (rangeBad_next_act _ _ _ _ T RB) as [m0 [EC CE]].
+      destruct (RC m0 EC) as [M0 KE]. subst k'.
+      left. econstructor; [ | exact I']. eapply nbpBad.
+      constructor. eapply currEq_cond_true; [ | exact CE]. exact M0.
+    + (* badOvlp: it outputs on bad, which only the overlap component can take, and the
+         overlap component then leaves the nextSince states *)
+      match goal with [H : badOvlpStateProt _ |- _] =>
+        inversion H as [? ? ? BO]; subst end.
+      assert (TR : forall c, p3 -PA- c -PA> p3' -> c = chanBad ;! []).
+      { intros c T. exact (badOvlp_act _ _ _ BO T). }
+      right. apply NSN. intro NS.
+      inversion ST; subst; try (exfalso; apply N3; reflexivity);
+        match goal with
+        | [K : p1 $||$ p2 $||$ p3 -PA- tauAct -PA> _ |- _] => idtac
+        | [K : p1 $||$ p2 $||$ p3 -PA- _ -PA> _ |- _] =>
+            triple_disc_nonTau K; try (exfalso; apply N3; reflexivity);
+            match goal with [K3 : p3 -PA- _ -PA> _ |- _] =>
+              apply TR in K3; discriminate K3 end
+        end.
+      match goal with [K : p1 $||$ p2 $||$ p3 -PA- tauAct -PA> _ |- _] =>
+        destruct (link_reach_triple_tau _ _ _ _ _ _ K PS) as [c [v CC]] end.
+      destruct CC as [[T1 [T2 E0]] | [[T1 [T2 E0]] | [[T1 [T2 E0]] | [[T1 [T2 E0]] |
+        [[T1 [T2 E0]] | [T1 [T2 E0]]]]]]];
+        try (subst; exfalso; apply N3; reflexivity);
+        try (apply TR in T2; discriminate T2).
+      * apply TR in T2. injection T2 as EC EV. subst.
+        eapply broadcast_bad_in_not; eassumption.
+      * apply TR in T2. injection T2 as EC EV. subst.
+        ent_state_comp NS.
+        eapply ovlp_bad_in_notNextSince; eassumption.
+Qed.
+(* end helpers *)
 
 (* If a message with mode m was delivered exactly AN time units ago, and the
 coverage of the message was insufficient with respect to said mode, and we have
 been awaiting a transition to m for some t time units greater than AN, then one
-of two things holds. Either a) A notification of the message and its coverage is
+of three things holds. Either a) A notification of the message and its coverage is
 pending immediately i.e. with timestamp 0 or b) the entity in question is on the
-notification abort path. *)
+notification abort path or c) it is on the notification bad path, as when m is
+also its current mode. *)
 Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
-  (r : Distance) (t : Time) (i : nat) (p : reachableProtNet n) : 
+  (r : Distance) (t : Time) (i : nat) (p : reachableProtNet n) :
   delivered ([-[baseMode m, basePosition l], l0, r-]) adaptNotif i n p -> ~sufficient m r ->
   nextSince m t i n p -> adaptNotif < t ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n \/
-  notifAbortPathNet i n. 
+  notifAbortPathNet i n \/ notifBadPathNet i n.
   (*Induction on delivered. BaseType case fails because of AN not equal 0.*)
   intros H H0 H1 H2.
   (*Induction on delivered. BaseType case fails because of AN not equal 0.*)
@@ -426,16 +579,20 @@ Theorem instant_insuff_abort (n : Network) (m : Mode) (l l0 : Position)
   (*Now we do a case analysis on this disjunction. First off we have
   incomingNetNotif <r, m, l> 0 i n. We can show then by (insuff_incomingNet_abort) that our
   goal holds in the next state.*)
-  elim_intro IHdisc D1 D2.
   assert (nextModeNet m i n) as Q. eapply nextSince_next. apply H1.
+  destruct IHdisc as [D1 | [D2 | D3]].
   eapply insuff_incomingNotif_abort. apply p. apply Q.
   apply w. assumption. assumption.
   (*Then there's the case where notifAbortPath m r i n. In this case, we can show by
   (notifAbort_not_nextSince) that either notifAbortPath m r i n' or ~nextSineState m i n'.*)
   lets G : notifAbort_not_nextSince p D2 w. elim_intro G G1 G2.
   (*The former gives us our goal by the RHS.*)
-  right. assumption.
+  right. left. assumption.
   (*The latter gives us a contradiction by nextSinceState*)
+  false.
+  (*Likewise for the notification bad path, by (notifBad_not_nextSince).*)
+  lets G : notifBad_not_nextSince p Q D3 w. elim_intro G G1 G2.
+  right. right. assumption.
   false.
   (*Delay case: Apply (delivered_incomingNetNotif) to previous state and get
   incomingNetNotif <r, m, l> (AN _ (AN - d)) i n = incomingNetNotif <r, m, l> d i n.*)
@@ -451,12 +608,22 @@ Theorem insuff_incomingNotif_bad (n n' : Network) (a : ActDiscNet) (m : Mode)
   reachableProtNet n -> currModeNet m i n -> n -NA- a -NA> n' -> ~sufficient m r ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n ->
   incomingNetNotif [baseDistance r, baseMode m, basePosition l] zeroTime i n' \/
-  notifBadPathNet i n'. Admitted. (*3*)
+  notifBadPathNet i n'.
+Proof.
+  intros RN CM S NS IN.
+  destruct (incomingNetNotif_zero_disc _ _ _ _ _ RN S IN)
+    as [IN' | [p1 [p2 [p3 [p3' [lp [h [h' [k [E [E' [LS T]]]]]]]]]]]].
+  - left. exact IN'.
+  - (* the listener took the notification into rangeBad m, and the mode is still m *)
+    right. econstructor; [ | exact E']. eapply nbpRng.
+    + constructor. eapply listening_AN_insuff_rangeBad; eassumption.
+    + lets C : liftEntNet_ent CM E. simpl in C. exact C.
+Qed.
 (*Proof: Much like insuff_incomingNotif_abort.*)
 
 (** If the badOvlp state holds at a particular reachable state,
 and in the next state listening holds, then the next state is tfs for some
-time t, with the mode parameter equal to the current mode.*)
+time t, with the mode parameter equal to the current mode, if that is not fail safe.*)
 (* begin helpers for badOvlp_listening_tfs *)
 Ltac badOvlp_listening_tfs_close :=
   unfold bcWaitState, sleepingState, bcReadyState, dormantState, ovWaitState,
@@ -482,14 +649,14 @@ Ltac badOvlp_listening_tfs_close :=
 Theorem badOvlp_listening_tfs n n' a i m 
   (rn : reachableProtNet n) (w : n -NA- a -NA> n') :
   badOvlpStateNet i n -> listeningStateNet i n' ->
-  currModeNet m i n ->
+  currModeNet m i n -> ~ failSafe m ->
   exists t, tfs m t i n' (reachNetDisc n n' a rn w).
 Proof.
-  intros BO LS CM.
+  intros BO LS CM NFS.
   assert (msgBadPathNet i n) as MB.
   { destruct BO as [e E I]. econstructor; [ | exact I].
     inversion E as [q l h k P]; subst. apply mbpBad. exact P. }
-  destruct (msgBad_disc_net n n' a i m rn w MB CM) as [MB' | TF].
+  destruct (msgBad_disc_net n n' a i rn w MB) as [MB' | TS].
   - exfalso. destruct MB' as [e E I]. destruct LS as [e' E' I'].
     pose proof (entInNetUnique _ _ _ _ I I') as EQ. subst e'.
     inversion E' as [q l h k LP]; subst.
@@ -500,7 +667,22 @@ Proof.
     | H : gotRangeStateProt _ _ _ |- _ => inversion H; subst
     | H : badOvlpStateProt _ |- _ => inversion H; subst
     end; badOvlp_listening_tfs_close.
-  - exists zeroTime. exact TF.
+  - (* a tfs state, in mode m still: the listener moved, by its output on bad, which leaves
+       the mode state *)
+    apply tfsState_tfs_exists; [exact TS | | exact NFS].
+    destruct BO as [e E I]. destruct LS as [e' E' I'].
+    inversion E as [q l h k P]; subst. inversion P as [p1 p2 p3 B3]; subst.
+    inversion E' as [q' l' h' k' LP]; subst. inversion LP as [p1' p2' p3' L3]; subst.
+    lets CMe : liftEntNet_ent CM I.
+    econstructor; [ | exact I']. simpl in CMe |- *.
+    destruct (eqDecProcTerm p3 p3') as [EQ | NE].
+    + exfalso. subst p3'. badOvlp_listening_tfs_close.
+    + destruct (link_net_ent_disc _ _ _ _ _ _ w I I') as [EQ | [b B]].
+      * exfalso. apply NE. congruence.
+      * destruct (listener_internal_out_sync_ent _ _ _ _ _ _ _ _ _ _ _ _ _ chanBad
+          (reachableProtNet_triple _ _ _ _ _ _ rn I) B eq_refl
+          (fun b T => badOvlp_step_act _ _ _ B3 T) NE) as [_ KE].
+        subst k'. exact CMe.
 Qed.
 
 (*If an entity is on the notification bad path, and a discrete transition
@@ -582,14 +764,16 @@ Theorem instant_insuff_bad (n : Network) (m : Mode) (l l0 : Position)
   lets PSN2 : paused_switch_net i p'. rewrite <- PSN2 in SSN2.
   lets PSN1 : paused_switch_net i p. rewrite <- PSN1 in SSN1.  
   (*OK, now we're back to the run of the mill, a few contradictions to come later.*)
-  rename H2 into SWIN. elim IIA; [intro IL | intro IR]; clear IIA.
+  rename H2 into SWIN. destruct IIA as [IL | [IR | IB]].
   assert (nextModeNet m i n) as NM. eapply nextSince_next. eassumption.
-  lets IIA : insuff_incomingNotif_abort p NM w H0 IL. elim_intro IIA IIL IIR.
+  lets IIA : insuff_incomingNotif_abort p NM w H0 IL. destruct IIA as [IIL | [IIR | IIB]].
   left. assumption.
   (*OK, so contradictions follow from the assertion of paused contradicting with the
-  notifAbortPath, either now or in the previous state.*)
+  notifAbortPath or the notifBadPath, either now or in the previous state.*)
   false. eapply state_disj_paused_notifAbort. apply SSN2. assumption.
+  false. eapply currModeNet_notifBad_pres_bkwd_paused. apply SSN2. assumption.
   false. eapply state_disj_paused_notifAbort. apply SSN1. assumption.
+  false. eapply currModeNet_notifBad_pres_bkwd_paused. apply SSN1. assumption.
   (*OK, now we're at a case where the previous state is currSince,
   so we can apply I.H. to previous state, yielding
   incomingNetNotif <r, m, l> 0 i n \/ notifAbortPath m r i n \/ tfs 0.*)
@@ -665,7 +849,7 @@ Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
   assert (adaptNotif < t0) as H. simpl in G3. rewrite F2 in G3. Rplus_lt_tac.
   lets G : instant_insuff_abort H0 K2 G1 H.
   (*We case analyse this disjunction.*)
-  elim_intro G H1 H2.
+  destruct G as [H1 | [H2 | H3]].
   (*The first case fails by contradiction via an application of (Basiscs::incomingNetNotif_del)
   yielding d <= 0, impossible for a strictly positive delay.*)
   lets H4 : incomingNetNotif_del p w H1. invertClearAs2 H4 H5 H6. false.
@@ -674,6 +858,8 @@ Theorem deliv_next_suff (n : Network) (m : Mode) (l l0 : Position)
   notifAbortPath m r i n (...EA::notifAbortPath_urgent...). Hence we arrive at
   contradiction and conclude that the coverage is sufficient.*)
   lets nau : notifAbortPathNet_urgent p H2 w. contradiction nau.
+  (*Likewise on the notifBadPath (notifBadPathNet_urgent).*)
+  exfalso. exact (notifBadPathNet_urgent _ _ _ _ p H3 w).
   (*Note, this theorem bears resemblance to incomp_bad in how it is proved.*)
   Qed.
 
