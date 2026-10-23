@@ -19,11 +19,15 @@ GEMINI.md
 *.vo
 *.vos
 *.vok
+*.v.timing
 *Makefile.coq*
 .lia.cache
 .nia.cache
 .nra.cache
 .Makefile.coq.d
+
+# Python's cache, which running the helper scripts' tests writes
+__pycache__/
 
 # Windows image file caches
 Thumbs.db
