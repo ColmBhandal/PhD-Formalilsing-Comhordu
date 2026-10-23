@@ -1,0 +1,26 @@
+Axioms:
+waitSurplus : Delay
+transMax : Time
+trans : Mode -> Time
+speedMax : nonnegreal
+ClassicalDedekindReals.sig_not_dec : forall P : Prop, {~ ~ P} + {~ P}
+ClassicalDedekindReals.sig_forall_dec :
+  forall P : nat -> Prop,
+  (forall n : nat, {P n} + {~ P n}) ->
+  {n : nat | ~ P n} + {forall n : nat, P n}
+proof_irrelevance : forall (P : Prop) (p1 p2 : P), p1 = p2
+period : Mode -> Time
+msgLatency : Time
+modeTransTime : forall m1 m2 : Mode, m1 -mtr-> m2 -> Time
+modeTransRelDec : forall m1 m2 : Mode, {m1 -mtr-> m2} + {~ m1 -mtr-> m2}
+modeTransRel : Mode -> Mode -> Prop
+minDistComp : Mode -> Mode -> Distance
+maxMinDistComp : Mode -> Distance
+functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+failSafeSucc : Mode -> Mode
+eqDecMode : eqDec Mode
+adaptNotif : Time
+Mode : Type
+RC=0

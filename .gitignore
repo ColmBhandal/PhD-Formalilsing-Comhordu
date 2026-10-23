@@ -1,12 +1,33 @@
 CoqDoc/
 
+# Vendor-specific agent files never belong in the repository, not even a pointer file;
+# see AGENTS.md.
+CLAUDE.md
+.claude/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.aider*
+.codex/
+GEMINI.md
+.github/copilot-instructions.md
+
 #Coq Build Output to Ignore
 *.aux
 *.glob
 *.vo
 *.vos
 *.vok
+*.v.timing
 *Makefile.coq*
+.lia.cache
+.nia.cache
+.nra.cache
+.Makefile.coq.d
+
+# Python's cache, which running the helper scripts' tests writes
+__pycache__/
 
 # Windows image file caches
 Thumbs.db

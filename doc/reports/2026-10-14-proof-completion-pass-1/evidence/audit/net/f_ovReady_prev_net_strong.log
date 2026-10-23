@@ -1,0 +1,38 @@
+Axioms:
+waitSurplus : Delay
+transMax : Time
+trans : Mode -> Time
+speedMax : nonnegreal
+ClassicalDedekindReals.sig_not_dec : forall P : Prop, {~ ~ P} + {~ P}
+ClassicalDedekindReals.sig_forall_dec :
+  forall P : nat -> Prop,
+  (forall n : nat, {P n} + {~ P n}) ->
+  {n : nat | ~ P n} + {forall n : nat, P n}
+reachableProt_triple :
+  forall p : ProcTerm, reachableProt p -> protocolState p
+proof_irrelevance : forall (P : Prop) (p1 p2 : P), p1 = p2
+period : Mode -> Time
+ovReady_prev :
+  forall (p p' : ProcTerm) (a : DiscAct) (m : Mode) (t : Time) (l : Position),
+  p -PA- a -PA> p' ->
+  overlapState p ->
+  ovReadyState m t l p' -> exists x, ovWaitState m t x zeroTime p
+msgLatency : Time
+modeTransTime : forall m1 m2 : Mode, m1 -mtr-> m2 -> Time
+modeTransRelDec : forall m1 m2 : Mode, {m1 -mtr-> m2} + {~ m1 -mtr-> m2}
+modeTransRel : Mode -> Mode -> Prop
+minDistComp : Mode -> Mode -> Distance
+maxMinDistComp : Mode -> Distance
+link_net_prot_reach :
+  forall (n : Network) (p : ProcTerm) (l : Position) 
+    (h : Interface) (k : ModeState) (i : nat),
+  reachableNet n -> [|p, l, h, k|] @ i .: n -> reachableProt p
+functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+failSafeSucc : Mode -> Mode
+failSafe : Mode -> Prop
+eqDecMode : eqDec Mode
+adaptNotif : Time
+Mode : Type
+rc=0

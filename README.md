@@ -1,102 +1,84 @@
-## Overview
+# Comhordú in Rocq
 
-This repository is based on my PhD thesis [Formalising a real-time coordination model](http://www.tara.tcd.ie/bitstream/handle/2262/77596/Bhandal%2c%20Colm_TCD-SCSS-PHD-2014-08.pdf?sequence=1&isAllowed=y). In that thesis, I define a process algebgra for the description of hybrid systems with the ability to communicate over wireless networks and also perform internal computations. The process algebra is "multi-tiered", meaning it is defined in several tiers. Roughly, it can be thought of as an "inner" language running the software and an "outer" language encoding nodes which can move around in space and communicate over a wireless network. The separation of the language into components like this allows a separation-of concers in defining aspects of the system which are really orthogonal. Also, by defining the language separately to the protocol, the language lends itself for reuse i.e. specifying other protocols in similar environments.
+This repository holds a proof, checked by the [Rocq prover](https://rocq-prover.org), that the Comhordú coordination protocol is safe. It formalises my PhD thesis, [*Formalising a Real-Time Coordination Model*](doc/thesis/2014-10-28-phd-thesis.pdf) (Trinity College Dublin, 2014).
 
-Using the multi-tiered language I define, I write a protocol which builds upon the work of [Bouroche, 2007](https://www.scss.tcd.ie/publications/theses/phd/TCD-SCSS-PHD-2007-07.pdf). Then, I prove a safety condition of that protocol. Safety is an abstract concept defined in terms of modes and distances; concrete instantiations of this protocol must specify what the modes are and what the minimum distance of separation is for any pair of modes.
+## History
 
-The proof found in my thesis has been formalised in Coq. However, some of the results in Coq are not proved completely. Those are marked as ``Admitted``, meaning we are assuming the results to be true without proof. There is more information on this in the future work section below.
+Comhordú coordinates mobile entities, such as cars, robots or drones, that move in real time and talk over an unreliable wireless network. Each entity is in a mode, and each pair of modes has a minimum distance. Safety means that no two entities are closer than their modes allow. A fail-safe mode needs no distance at all. So the protocol has an entity broadcast a new mode for a set time before entering it. That gives any entity it might threaten the time to switch to a fail-safe mode.
 
-## Warning
+Comhordú began in Mélanie Bouroche's PhD thesis, [*Real-Time Coordination of Mobile Autonomous Entities*](https://publications.scss.tcd.ie/theses/phd/TCD-SCSS-PHD-2007-07.pdf) (Trinity College Dublin, 2007). Her goal was to help build autonomous mobile entities, such as robots, drones and, in future, cars, that keep to system-wide safety constraints with only unreliable information to go on (p.9). Her thesis gave neither a formal definition of the model nor a proof that it is correct (p.10). In mine, I revise her model so that it can be made formal, so my version differs from hers. I define a language for such systems, write the protocol in it and prove the protocol safe (Theorem 6.1, p.140). That is, if every entity starts in a fail-safe mode and runs the protocol, every state the system can reach is safe.
 
-In its current state, this code is not recommended for inclusion in any downstream projects. The code contains many ``Admitted`` results which are effectively axioms, and thus there is no guarantee of consistency. If various modules of the code were refactored to separate repos e.g. ``StandardResults.v``, then those would be fine for reuse. But as of the time of writing, this is not planned.
+I also encoded the language, the protocol and the proof in Coq. The proof was only partly checked, though: its main theorem rested on lower-level results, and many of them were assumed without proof (Summary, p.ii). In 2015, with 693 results proved and 254 still unproved, I wrote [a plan](doc/archive/2015-05-08-coq-project-plan.pdf) to finish it.
 
-## Building the Project
+In 2026 I finished the proof with AI agents, reviewing every change as it went in. It now runs on Rocq 9.2, and its main theorem, `safety`, rests on no unproved result. Besides the model's parameters and their constraints, it assumes only six axioms from Rocq's standard library, such as classical logic. [A concrete model](src/model/ModelConsistency.v), built without axioms, shows that the constraints can all be met.
 
-### Prerequisites
+Finishing the proof turned up small errors in the thesis, and safety does not hold without their corrections. The [thesis corrections](doc/thesis/thesis-corrections.md) list them, and the [thesis remarks](doc/thesis/thesis-remarks.md) note other things worth knowing. The Rocq proof also differs from the thesis's in its details, but the heart of the argument is the same. Where they differ, the Rocq proof is the one to trust.
 
-[Install Coq with OPAM](https://coq.inria.fr/opam-using.html). Unfortunately this is not supported on Windows but there is a workaround.
+The thesis suggested that its language could be reused for other protocols (p.197). Now it can be. The language takes a protocol's processes as parameters, and its general results sit apart from the protocol, in [`src/lang/`](src/lang/README.md).
 
-### Windows Workaround
+## Collision freedom
 
-The idea is to run install and use Coq through WSL and then expose any graphical applications through VcXsrv (since WSL doesn't have a UI). An excellent outline of how to do this is found at [CoqWSL](https://lemonidas.github.io/CoqWSL.html).
+My version of Comhordú can't promise, on its own, that entities never collide. A fail-safe mode must be compatible with every other mode at every distance, even zero, yet two physical entities can't occupy the same point in space.
 
-### Local Build
+Under some assumptions, though, it can. In my version, space is somewhat abstract: all that matters is the distance between entities and the maximum speed at which they move. Say a car's fail-safe mode is to be stopped on the hard shoulder, its other modes are to be in the traffic lanes, and distance is measured only along the road, in its direction of travel. The Rocq code defines space as a plane, but the road fits in it: keep one coordinate at zero and track only the other. Two cars can then be "at the same point" without touching, as when one is stopped on the hard shoulder and the other is in a lane. So here a fail-safe mode really is compatible with every other mode, even at distance zero.
 
-There is a top-level ``Makefile`` in the root directory of this repository. To build the Coq project just open a terminal in that directory and run:
+The idea builds on a scenario in Bouroche's thesis, in which cars change lane to make way for an emergency vehicle (p.140). One weakness is the assumption that every car can reach an empty slot on the hard shoulder, and stop there, in a bounded time. If coverage suddenly degraded for every car and they all rushed for the hard shoulder, this would likely fail. Still, this is the closest example I can think of where Comhordú guarantees freedom from collisions (Remark 4.20, p.97).
 
-``make``
+Even there, I don't know if Comhordú in its current form is the best protocol for the job. It ignores velocities, so I feel it may be overly conservative.
 
-This ultimately ends up calling Coq's ``coq_makefile`` command, if necessary, to make an intermediary make file called ``Makefile.coq`` and then the top-level target of _that_ make file does all the heavy lifting, converting source ``.v`` files into output ``.vo`` files.
+## Model your own system
 
-### Cleaning
+If you want to use Comhordú for a system of your own, build on this formalisation rather than on the thesis alone.
 
-You may want to clean the project. All files cleaned are not checked into this repo - they are produced by various make/build commands. You can either clean the compiled files, the "Coq makefiles", or both. To clean the compiled files:
+Write your system's model as a value of the class [`ComhModel`](src/model/ComhBasics.v). The model gives your system's modes, which of them are fail-safe, how long each change of mode takes, the message latency, the maximum speed, the minimum distances, and so on. Rocq accepts the value only once you have proved that it meets every constraint of the model. `safety` then holds for your model:
 
-``make clean-compiled``
+```coq
+Require Import ComhCoq.model.ComhBasics ComhCoq.protocol.Main.
 
-To clean the auto-generated make files, run:
+Definition my_model : ComhModel := {| (* your system's model *) |}.
 
-``make clean-make``
+Check @safety my_model.
+```
 
-To clean everything, just do:
+[`concrete_model`](src/model/ModelConsistency.v) shows what such a value looks like. It is trivial, though: it exists only to show that the model's constraints can all be met, not to model any real system.
 
-``make clean``
+Then check that your system runs exactly Comhordú's protocol, as [`src/protocol/Protocol.v`](src/protocol/Protocol.v) defines it. `safety` says nothing about a protocol that differs, however slightly. A test oracle, which checks what your system does against what the protocol allows, is one way to check.
 
-## Repo Roadmap
+A formal refinement, from the protocol down to your system, is another way, but a limited one. The model runs in real time, so any refinement must include a timed semantics. The language's tiers may also make standard refinement techniques hard to apply. Still, refinement is not out of reach: existing techniques could be adapted to it.
 
-All source ``.v`` files can be found in the repo ``src``. The folder ``Extras`` contains content which I did not write but needed to include - this was not available through standard import.
+## Build and check
 
-### Top-Level Result
+You need Rocq 9.2 and its standard library, which [`rocq-comhordu.opam`](rocq-comhordu.opam) lists. To install them with opam, run `opam install . --deps-only` from the root of the repository. On Windows, use WSL.
 
-The top-level safety condition is proved in [Main.v](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/Main.v). The top-level Theorem is called ``safety``:
+To use Docker instead, run `make` in the official image, `rocq/rocq-prover:9.2.0`, which is the one CI uses:
 
-``Theorem safety (n : Network) : reachableNet n -> safe n.``
+```sh
+docker run --rm -it -v "$PWD:/work" -w /work --user root -e OPAMROOT=/home/rocq/.opam -e PATH=/home/rocq/.opam/4.14.2+flambda/bin:/usr/local/bin:/usr/bin:/bin rocq/rocq-prover:9.2.0 make
+```
 
-### Software Language & Protocol
+If you can use neither, [`helper-scripts/install_rocq.sh`](helper-scripts/README.md) unpacks the same image's Rocq for you.
 
-The software component of the language is the language in which the protocol itself is written. It is a language with a flavour similar to [CCS](https://en.wikipedia.org/wiki/Calculus_of_communicating_systems#:~:text=The%20calculus%20of%20communicating%20systems,communications%20between%20exactly%20two%20participants.) or [CBS](https://link.springer.com/content/pdf/10.1007%2F3-540-53982-4_19.pdf). The language and protocol are defined in [SoftwareLanguage.v](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/SoftwareLanguage.v). The language gives a discrete semantics - to represent computations, as well as a "delay" semantics - to capture the behaviour of terms in the presence of continuous time.
+Then, from the root of the repository:
 
-### Other Modules
+- `make` checks every proof.
+- `make assumptions` lists what `safety` rests on.
+- `python3 helper-scripts/check_proof_layout.py`, after `make`, checks how every proof is laid out.
+- `make coqdoc` builds web pages of the code in `CoqDoc/`.
+- `make clean` removes everything the build made.
 
-There are a number of other modules for defining other components of the language and proving results. These can be explored through the documentation comments inline in the files themselves or the CoqDoc - see CoqDoc section for more. The [PhD thesis](http://www.tara.tcd.ie/bitstream/handle/2262/77596/Bhandal%2c%20Colm_TCD-SCSS-PHD-2014-08.pdf?sequence=1&isAllowed=y) itself also contains a roadmap of the repo, although it may go out of date if the repo evolves. 
+CI runs the first three on every pull request.
 
-## CoqDoc
+## Folders
 
-### Online DocDoc
+Each folder in `src/` builds only on the ones before it.
 
-The code is pretty-printed online. There are two versions - one with proofs, one without. Below are links to the table of contents for each:
- 1. [Without Proofs](https://colmbhandal.github.io/PhD-Comhordu-CoqDoc/light/toc.html)
- 2. [With Proofs](https://colmbhandal.github.io/PhD-Comhordu-CoqDoc/verbose/toc.html)
-
-### Building the CoqDoc Locally
-
-CoqDoc is pretty-printed documentation of Coq code. For more info, see [Documenting Files...](https://coq.inria.fr/refman/using/tools/coqdoc.html)
-
-The directory ``CoqDoc/`` is ignored via the ``.gitignore`` file and so it is recommended to build any CoqDoc locally here. There are many arguments you can pass to CoqDoc e.g. you can choose to omit proofs; for a full explanation of those arguments just run ``coqdoc --help``. Here are just two options that I think are useful:
-
- 1. To build standard HTML docs, including full proofs, into a ``verbose`` directory, use: ``coqdoc --html -d "CoqDoc/verbose" src/*.v --no-index --toc``
- 1. To build light HTML, without proofs, use: ``coqdoc --html -g -d "CoqDoc/light" src/*.v --no-index --toc``
-
-Note: the ``Index.html`` file renders with a bunch of broken links so I ignore it with ``--no-index`` and instead use a table of contents file as the entry point, using ``--toc``. This could probably be improved in future.
-
-You can also build the CoqDoc via ``make`` with:
-
-``make coqdoc``
-
-This will build both a light and verbose version of the CoqDoc as specified above.
-
-## Potential Improvements
-
-I originally started to entitle this section "Future Work" but that would be misleading: I do not at the moment plan to carry out any future updates to this repository. That could change though, or others may want to contribute, so for that reason I am documenting a number of potential improvements to this project. More or less, they are in order of priority, by my estimation.
-
- - All general-purpose results in ``StandardResults.v`` should be extracted from this repo and shared as a standalone library. However, when doing so, any results which already exist in other libraries should be removed, and their usage should be replaced with usage of the more standard results. Similar reasoning applies to ``GenTacs.v``, which contains mostly general-purose tactics.
- - Ideally, this project should be decomposed into a number of repos, to make it clear what the various components do and to better expose and document them for reuse. As an MVP, the language components should be separated to their own repo, with results proved about the language independent of the protocol. This would allow for reuse of the language. It may also yield some research papers e.g. a paper defining the language, proving some general properties e.g. non-Zenoness, showing some examples and example applications. Such a paper would be a modular extraction of the content of my PhD thesis in much the same manner as the extraction of repos from this one would modularise the code.
- - Once this project is decomposed into various repos, they should be published and made available for others to use.
- - Not all results in this project were proved in Coq. About 30% of the results were ``Admitted``. The file [coq_proj.pdf](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/blob/develop/coq_proj.pdf) gives more detail on this. In particular, it outlines what needs to be done and how. It would be nice to prove everything completely, but strategically I think a better move would be to first decompose and better modularise the repo. It's unclear whether there is high demand for the proof of safety for this protocol itself, and unless/until there is I don't see much merit in completing a lengthy proof just for the sake of it.
-
-More improvements are outlined in [Issues](https://github.com/ColmBhandal/PhD-Formalilsing-Comhordu/issues).
-
-## Notes
-
-These files were written by Colm Bhandal, PhD student, Foundations and Methods group,
-School of Computer Science and Statistics, Trinity College, Dublin, Ireland.
+- [`src/lib/`](src/lib/README.md): general tools that know nothing about Comhordú.
+- [`src/model/`](src/model/README.md): the model, as the class `ComhModel`.
+- [`src/lang/`](src/lang/README.md): the language.
+- [`src/protocol/`](src/protocol/README.md): the protocol, and the proof of `safety` in `Main.v`.
+- [`doc/thesis/`](doc/thesis/README.md): the thesis, with its corrections and remarks.
+- [`doc/adr/`](doc/adr): a record of each design decision.
+- [`doc/reports/`](doc/reports): reports on the work, such as the first pass at the proofs.
+- [`doc/archive/`](doc/archive/README.md): old documents, such as the 2015 plan.
+- [`doc/workstreams/`](doc/workstreams): ideas on how this could be improved.
+- [`helper-scripts/`](helper-scripts/README.md): scripts that the build does not need.
